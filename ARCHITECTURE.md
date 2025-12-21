@@ -615,4 +615,110 @@ CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.
 
 **Created:** 2025-12-21
 **Last Updated:** 2025-12-21
-**Status:** Planning Phase
+**Status:** ✅ DEPLOYED & RUNNING
+
+## 🎉 Deployment Status (2025-12-21)
+
+### ✅ Production Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    www.dabrock.info                         │
+│                  (Strato - SSL pending)                     │
+│         ┌──────────────────────────────────────┐           │
+│         │  Admin Panel: /admin/                 │           │
+│         │  (React + Vite)                       │           │
+│         └──────────────────────────────────────┘           │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼ HTTPS
+┌─────────────────────────────────────────────────────────────┐
+│              GENERAL BACKEND (Railway)                      │
+│   https://general-backend-production-a734.up.railway.app   │
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │ FastAPI Backend (general-backend)                  │    │
+│  │  ✅ FastAPI + async SQLAlchemy                      │    │
+│  │  ✅ fastapi-users Authentication                    │    │
+│  │  ✅ JWT Tokens                                      │    │
+│  │  ✅ Admin API                                       │    │
+│  │  ✅ Document Management                             │    │
+│  │  ✅ Project Management                              │    │
+│  │  ✅ LLM Gateway (Multi-provider)                    │    │
+│  │  ✅ Vector Search with pgvector                     │    │
+│  └────────────────────────────────────────────────────┘    │
+│                            │                                │
+│              ┌─────────────┼─────────────┐                 │
+│              ▼             ▼             ▼                  │
+│  ┌─────────────────┐  ┌──────────┐  ┌──────────────┐      │
+│  │ pgVector-Railway│  │  Ollama  │  │  Cloud APIs  │      │
+│  │   PostgreSQL    │  │  Service │  │              │      │
+│  │  + pgvector     │  │ (GDPR!)  │  │ • Anthropic  │      │
+│  │                 │  │          │  │ • Grok       │      │
+│  │ ✅ Users         │  │ ✅ llama  │  │              │      │
+│  │ ✅ Projects      │  │  3.2:3b  │  │ (Optional)   │      │
+│  │ ✅ Documents     │  │          │  │              │      │
+│  │ ✅ Chats         │  │ CPU-opt  │  └──────────────┘      │
+│  │ ✅ Matches       │  │ GDPR ✅  │                         │
+│  │ ✅ Embeddings    │  │          │                         │
+│  └─────────────────┘  └──────────┘                         │
+│      (Private Network)                                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🚀 Live Services
+
+**Railway Project:** Generalbackend
+
+1. **general-backend** ✅ RUNNING
+   - URL: `https://general-backend-production-a734.up.railway.app`
+   - Health: `https://general-backend-production-a734.up.railway.app/health`
+   - API Docs: `https://general-backend-production-a734.up.railway.app/docs`
+   - FastAPI + async SQLAlchemy + pgvector
+   - Auto-deploy from GitHub (SSH)
+
+2. **pgVector-Railway** ✅ RUNNING
+   - PostgreSQL 16 + pgvector extension
+   - All tables created
+   - Vector embeddings enabled
+   - Private network: `postgres.railway.internal`
+
+3. **ollama** ✅ RUNNING
+   - Ollama server with llama3.2:3b
+   - CPU-optimized (3B parameters, ~2GB)
+   - GDPR-compliant (data stays in Railway EU)
+   - Private network: `ollama:11434`
+   - Upgrade path: GPU support coming Q1 2026
+
+4. **Admin Frontend** ✅ DEPLOYED
+   - URL: `https://www.dabrock.info/admin/` (SSL pending)
+   - React 19 + Vite
+   - Hosted on Strato
+   - Connected to Railway backend
+
+### 🔧 Key Configuration Changes
+
+**Vector Database Migration:**
+- ❌ ChromaDB removed (NumPy 2.0 conflicts)
+- ✅ pgvector implemented (PostgreSQL native)
+- ✅ sentence-transformers for embeddings
+- ✅ Cosine similarity search
+- Model: `all-MiniLM-L6-v2` (384 dimensions)
+
+**Database Schema Updates:**
+- `documents.metadata` → `documents.doc_metadata` (SQLAlchemy reserved keyword)
+- `chats.metadata` → `chats.chat_metadata` (SQLAlchemy reserved keyword)
+- `documents.embedding` added: `Vector(384)` for pgvector
+- `documents.vector_collection_id` removed (not needed with pgvector)
+
+**LLM Architecture:**
+- ✅ Ollama: Local, GDPR-compliant, free
+- ✅ Anthropic: Premium quality (API key configured)
+- ✅ Grok: Fast & cheap (API key configured)
+- Provider selection via API parameter
+
+**Deployment Improvements:**
+- ✅ SSH Keys for GitHub (no token re-entry)
+- ✅ Retry logic for database connection (30 attempts)
+- ✅ pgvector extension auto-enabled on startup
+- ✅ No Alembic migrations (tables auto-created via SQLAlchemy)
