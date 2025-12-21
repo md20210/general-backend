@@ -617,9 +617,9 @@ CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.
 **Last Updated:** 2025-12-21
 **Status:** ✅ DEPLOYED & RUNNING
 
-## 🎉 Deployment Status (2025-12-21)
+## 🎉 Deployment Status (2025-12-21 22:50 CET)
 
-### ✅ Production Architecture
+### ✅ Production Architecture - FULLY OPERATIONAL
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -684,10 +684,12 @@ CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.
    - Private network: `postgres.railway.internal`
 
 3. **ollama** ✅ RUNNING
-   - Ollama server with llama3.2:3b
-   - CPU-optimized (3B parameters, ~2GB)
+   - Ollama server with qwen3-coder:30b
+   - Model: 18.5GB, 30B parameters
    - GDPR-compliant (data stays in Railway EU)
-   - Private network: `ollama:11434`
+   - Private network: `ollama.railway.internal:11434`
+   - ⚠️ **NOTE**: CPU inference is slow (~2min timeout)
+   - Recommendation: Use Claude/Grok for production until GPU available
    - Upgrade path: GPU support coming Q1 2026
 
 4. **Admin Frontend** ✅ DEPLOYED
@@ -716,6 +718,53 @@ CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.
 - ✅ Anthropic: Premium quality (API key configured)
 - ✅ Grok: Fast & cheap (API key configured)
 - Provider selection via API parameter
+
+---
+
+## 📖 API Documentation
+
+**Complete API Documentation:** See `API_DOCUMENTATION.md` for full endpoint reference with request/response examples.
+
+**Interactive API Docs:**
+- Swagger UI: https://general-backend-production-a734.up.railway.app/docs
+- ReDoc: https://general-backend-production-a734.up.railway.app/redoc
+
+### Quick API Reference
+
+**Authentication (`/auth`):**
+- `POST /auth/register` - Create new user
+- `POST /auth/login` - Get JWT token
+- `GET /auth/me` - Get current user
+- `POST /auth/forgot-password` - Request password reset
+- `POST /auth/verify` - Verify email
+
+**LLM (`/llm`):**
+- `GET /llm/models` - List available models (Ollama, Claude, Grok)
+- `POST /llm/generate` - Generate text with LLM
+- `POST /llm/embed` - Generate embeddings
+
+**Projects (`/projects`):**
+- `POST /projects` - Create project
+- `GET /projects` - List projects
+- `GET /projects/{id}` - Get project
+- `PATCH /projects/{id}` - Update project
+- `DELETE /projects/{id}` - Delete project
+
+**Documents (`/documents`):**
+- `POST /documents/upload` - Upload PDF/DOCX
+- `POST /documents/url` - Scrape URL
+- `POST /documents/text` - Add text
+- `GET /documents` - List documents
+- `GET /documents/search?query=...` - Semantic search (pgvector)
+- `DELETE /documents/{id}` - Delete document
+
+**Admin (`/admin`):**
+- `GET /admin/stats` - System statistics (admin only)
+
+All endpoints (except register/login) require JWT authentication:
+```
+Authorization: Bearer <your_jwt_token>
+```
 
 **Deployment Improvements:**
 - ✅ SSH Keys for GitHub (no token re-entry)
