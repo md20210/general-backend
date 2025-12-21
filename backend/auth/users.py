@@ -9,6 +9,7 @@ from uuid import UUID
 from backend.config import settings
 from backend.database import get_async_session
 from backend.models.user import User
+from backend.auth.password import BcryptPasswordHelper
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
@@ -16,6 +17,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
 
     reset_password_token_secret = settings.SECRET_KEY
     verification_token_secret = settings.SECRET_KEY
+
+    def __init__(self, user_db: SQLAlchemyUserDatabase):
+        """Initialize user manager with custom password helper."""
+        super().__init__(user_db)
+        # Use custom bcrypt password helper instead of passlib
+        self.password_helper = BcryptPasswordHelper(rounds=12)
 
     async def on_after_register(self, user: User, request: Optional[Request] = None):
         """Called after user registration."""
