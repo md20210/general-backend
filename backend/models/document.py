@@ -29,7 +29,7 @@ class Document(Base):
     filename: Mapped[str] = mapped_column(String(255), nullable=True)
     url: Mapped[str] = mapped_column(Text, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
+    doc_metadata: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
     vector_collection_id: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

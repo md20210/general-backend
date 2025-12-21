@@ -42,7 +42,7 @@ async def _add_to_vector_store(user_id: UUID, document: Document):
                     "type": document.type.value,
                     "filename": document.filename or "",
                     "url": document.url or "",
-                    **(document.metadata or {})
+                    **(document.doc_metadata or {})
                 }
             }]
         )
@@ -102,7 +102,7 @@ async def upload_document(
             type=doc_type,
             filename=file.filename,
             content=content,
-            metadata={"original_size": os.path.getsize(temp_path)}
+            doc_metadata={"original_size": os.path.getsize(temp_path)}
         )
 
         session.add(document)
@@ -143,7 +143,7 @@ async def add_url_document(
             type=DocumentType.URL,
             url=request.url,
             content=scraped_data["content"],
-            metadata={
+            doc_metadata={
                 "title": scraped_data["title"],
                 "description": scraped_data["description"],
                 **(request.metadata or {})
@@ -184,7 +184,7 @@ async def add_text_document(
         project_id=request.project_id,
         type=DocumentType.TEXT,
         content=request.content,
-        metadata={
+        doc_metadata={
             "title": request.title,
             **(request.metadata or {})
         }

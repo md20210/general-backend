@@ -10,7 +10,7 @@ class DocumentBase(BaseModel):
     """Base document schema."""
     filename: Optional[str] = None
     url: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    doc_metadata: Optional[Dict[str, Any]] = None
 
 
 class DocumentCreate(DocumentBase):
@@ -22,7 +22,7 @@ class DocumentCreate(DocumentBase):
 
 class DocumentUpdate(BaseModel):
     """Schema for updating a document."""
-    metadata: Optional[Dict[str, Any]] = None
+    doc_metadata: Optional[Dict[str, Any]] = None
 
 
 class DocumentRead(DocumentBase):
