@@ -36,11 +36,29 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
 
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def create_db_and_tables():
-    """Create all database tables and enable pgvector extension."""
-    async with engine.begin() as conn:
-        # Enable pgvector extension
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        # Create tables
-        await conn.run_sync(Base.metadata.create_all)
+    """Create all database tables and enable pgvector extension with retry logic."""
+    max_attempts = 30
+    delay = 2  # seconds
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            async with engine.begin() as conn:
+                # Enable pgvector extension
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                # Create tables
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("✅ Database tables created/verified and pgvector enabled")
+            return  # Erfolg → raus aus der Funktion
+
+        except Exception as e:
+            logger.warning(f"DB connection attempt {attempt}/{max_attempts} failed: {e}")
+            if attempt == max_attempts:
+                logger.error("Could not connect to database after multiple attempts")
+                raise  # Let the app crash if all attempts fail
+            await asyncio.sleep(delay)
