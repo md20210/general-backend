@@ -1,25 +1,24 @@
-"""Monkey-patch passlib to fix bcrypt 72-byte limit bug."""
-import passlib.handlers.bcrypt
+"""Monkey-patch bcrypt to fix passlib 72-byte limit bug."""
+import bcrypt as _bcrypt_module
+
+# Store original bcrypt.hashpw
+_original_hashpw = _bcrypt_module.hashpw
 
 
-# Monkey-patch passlib's bcrypt to truncate passwords to 72 bytes
-_original_calc_checksum = passlib.handlers.bcrypt._BcryptCommon._calc_checksum
-
-
-def _patched_calc_checksum(self, secret):
+def _patched_hashpw(password, salt):
     """Truncate password to 72 bytes before hashing."""
-    if isinstance(secret, str):
-        secret = secret.encode('utf-8')
+    if isinstance(password, str):
+        password = password.encode('utf-8')
 
     # Truncate to 72 bytes to avoid bcrypt error
-    if len(secret) > 72:
-        secret = secret[:72]
+    if len(password) > 72:
+        password = password[:72]
 
-    # Call original method with truncated secret
-    return _original_calc_checksum(self, secret)
+    # Call original bcrypt.hashpw with truncated password
+    return _original_hashpw(password, salt)
 
 
-# Apply the patch
-passlib.handlers.bcrypt._BcryptCommon._calc_checksum = _patched_calc_checksum
+# Patch bcrypt.hashpw directly
+_bcrypt_module.hashpw = _patched_hashpw
 
-print("✅ Passlib bcrypt patch applied - passwords will be truncated to 72 bytes")
+print("✅ Bcrypt patch applied - passwords will be truncated to 72 bytes")
