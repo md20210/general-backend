@@ -19,41 +19,23 @@ from backend.schemas.document import (
     DocumentTextRequest,
 )
 from backend.services.document_processor import document_processor
-from backend.services.vector_store import vector_store, CHROMADB_AVAILABLE
+from backend.services.vector_service import vector_service
 from backend.config import settings
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-async def _add_to_vector_store(user_id: UUID, document: Document):
-    """Helper to add document to vector store."""
-    if not CHROMADB_AVAILABLE:
-        return
-
+async def _add_embedding(session: AsyncSession, document: Document):
+    """Helper to generate and add embedding to document."""
     try:
-        chunks_added = vector_store.add_documents(
-            user_id=user_id,
-            project_id=document.project_id,
-            documents=[{
-                "id": str(document.id),
-                "content": document.content,
-                "metadata": {
-                    "type": document.type.value,
-                    "filename": document.filename or "",
-                    "url": document.url or "",
-                    **(document.doc_metadata or {})
-                }
-            }]
-        )
-
-        # Update vector_collection_id
-        collection_name = vector_store._get_collection_name(user_id, document.project_id)
-        document.vector_collection_id = collection_name
-
-        print(f"Added {chunks_added} chunks to vector store for document {document.id}")
+        success = await vector_service.add_document_embedding(session, document)
+        if success:
+            print(f"✅ Added embedding to document {document.id}")
+        else:
+            print(f"⚠️ Embedding generation skipped for document {document.id}")
     except Exception as e:
-        print(f"Warning: Failed to add to vector store: {e}")
+        print(f"❌ Failed to add embedding: {e}")
 
 
 @router.post("/upload", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)
@@ -109,9 +91,8 @@ async def upload_document(
         await session.commit()
         await session.refresh(document)
 
-        # Add to vector store
-        await _add_to_vector_store(user.id, document)
-        await session.commit()
+        # Generate and add embedding
+        await _add_embedding(session, document)
 
         return document
 
@@ -154,9 +135,8 @@ async def add_url_document(
         await session.commit()
         await session.refresh(document)
 
-        # Add to vector store
-        await _add_to_vector_store(user.id, document)
-        await session.commit()
+        # Generate and add embedding
+        await _add_embedding(session, document)
 
         return document
 
@@ -270,10 +250,40 @@ async def delete_document(
             detail="Access denied"
         )
 
-    # Note: Vector store chunks will remain but become orphaned
-    # Could implement cleanup if needed
-
     await session.delete(document)
     await session.commit()
 
     return None
+
+
+@router.get("/search", response_model=List[DocumentRead])
+async def search_documents(
+    query: str,
+    project_id: Optional[UUID] = None,
+    limit: int = 5,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """
+    Search documents using vector similarity (semantic search).
+
+    Uses pgvector to find documents similar to the query text.
+    Results are ordered by relevance (cosine similarity).
+    """
+    if not query or len(query.strip()) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Query must be at least 3 characters"
+        )
+
+    # Search using vector similarity
+    results = await vector_service.search_similar_documents(
+        session=session,
+        query_text=query,
+        user_id=user.id,
+        project_id=project_id,
+        limit=limit
+    )
+
+    # Return just the documents (without distance scores)
+    return [doc for doc, distance in results]

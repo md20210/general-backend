@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from uuid import uuid4
 import enum
+from pgvector.sqlalchemy import Vector
 
 from backend.database import Base
 
@@ -30,7 +31,7 @@ class Document(Base):
     url: Mapped[str] = mapped_column(Text, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     doc_metadata: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
-    vector_collection_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    embedding: Mapped[Vector] = mapped_column(Vector(384), nullable=True)  # sentence-transformers default size
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
