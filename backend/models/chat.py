@@ -26,7 +26,7 @@ class Chat(Base):
     project_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
     role: Mapped[ChatRole] = mapped_column(SQLEnum(ChatRole), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
+    chat_metadata: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
