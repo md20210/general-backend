@@ -20,9 +20,21 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, UUID]):
 
     def __init__(self, user_db: SQLAlchemyUserDatabase):
         """Initialize user manager with custom password helper."""
+        # MUST call super().__init__ FIRST
         super().__init__(user_db)
-        # Use custom bcrypt password helper instead of passlib
-        self.password_helper = BcryptPasswordHelper(rounds=12)
+
+    @property
+    def password_helper(self):
+        """Override password helper to use bcrypt directly."""
+        if not hasattr(self, '_password_helper'):
+            self._password_helper = BcryptPasswordHelper(rounds=12)
+        return self._password_helper
+
+    @password_helper.setter
+    def password_helper(self, value):
+        """Ignore any attempts to set password_helper from parent class."""
+        # Just store it but we'll override it in the getter
+        self._password_helper = BcryptPasswordHelper(rounds=12)
 
     async def on_after_register(self, user: User, request: Optional[Request] = None):
         """Called after user registration."""
