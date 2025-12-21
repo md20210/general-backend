@@ -1,173 +1,397 @@
-# General Backend - Zentrale Backend-Architektur
+# General Backend - Central Architecture & Services
 
-## 🎯 Vision
+**Last Updated:** 2025-12-21
+**Status:** ✅ PRODUCTION READY
+**Base URL:** https://general-backend-production-a734.up.railway.app
 
-Ein zentrales Backend auf Railway, das alle Showcases (CV Matcher, PrivateGPT, TellMeLife) unterstützt mit:
-- Benutzerverwaltung (Admin + Users)
-- Multi-LLM Support (Ollama, GROK, Anthropic)
-- Vector Store (ChromaDB + pgvector)
-- PostgreSQL Database
-- Admin Panel auf www.dabrock.info
+---
 
-## 🏗️ Architektur
+## 📖 Table of Contents
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    www.dabrock.info                         │
-│              (Strato - Static Homepage)                     │
-│         ┌──────────────────────────────────────┐           │
-│         │  Landing Page + Admin Button         │           │
-│         └──────────────────────────────────────┘           │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│              CENTRAL BACKEND (Railway)                      │
-│                  api.dabrock.info                           │
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │ FastAPI Core Services                               │    │
-│  │  • Auth & User Management (JWT)                     │    │
-│  │  • Admin Panel API                                  │    │
-│  │  • LLM Gateway (Ollama, GROK, Anthropic)           │    │
-│  │  • Document Processing                              │    │
-│  │  • Vector Store (ChromaDB + pgvector)              │    │
-│  │  • PostgreSQL Database                              │    │
-│  └────────────────────────────────────────────────────┘    │
-│                                                              │
-│  Database Layer:                                            │
-│  • PostgreSQL (Users, Projects, Documents, Chats)          │
-│  • ChromaDB (Vector embeddings)                            │
-│  • Redis (Session/Cache - optional)                        │
-└─────────────────────────────────────────────────────────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        ▼                   ▼                   ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  CV Matcher  │   │  PrivateGPT  │   │ TellMeLife   │
-│   (Railway)  │   │   (Railway)  │   │  (Railway)   │
-│   Frontend   │   │   Frontend   │   │   Frontend   │
-└──────────────┘   └──────────────┘   └──────────────┘
-```
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Services](#services)
+4. [API Documentation](#api-documentation)
+5. [Use Case Integration](#use-case-integration)
+6. [Database Schema](#database-schema)
+7. [Deployment](#deployment)
+8. [Configuration](#configuration)
 
-## 📚 Tech Stack
+---
 
-### Backend
-- **FastAPI** - Modern, fast web framework
-- **PostgreSQL** - Relational database
-- **SQLAlchemy** - ORM
-- **Alembic** - Database migrations
-- **fastapi-users** - Authentication system
-- **JWT** - Token-based auth
-- **ChromaDB** - Vector database
-- **pgvector** - PostgreSQL extension for vectors
-- **Pydantic** - Data validation
-- **Python 3.11+**
+## 🎯 Overview
 
-### LLMs
-- **Ollama** (Railway Volume) - qwen2.5:3b, llama3.2:3b, qwen3-coder:30b
-- **GROK API** - xAI's model
-- **Anthropic API** - Claude models
-- **Extensible** - Easy to add more
+General Backend ist ein zentrales, produktionsreifes Backend-System das alle Showcases (CV Matcher, PrivateGPT, TellMeLife) mit folgenden Services unterstützt:
 
-### Frontend (Admin Panel)
-- **React 19**
-- **Vite**
-- **Axios**
-- **React Router**
-- **TailwindCSS** or existing CSS
+### Core Features
+- ✅ **Authentication & User Management** (JWT, Email Verification)
+- ✅ **Multi-LLM Support** (Ollama, Claude, Grok)
+- ✅ **Document Management** (PDF, DOCX, URL, Text)
+- ✅ **Vector Search** (pgvector, Semantic Search)
+- ✅ **Project Management** (Showcase Instances)
+- ✅ **GDPR Compliant** (EU-Hosting, Local LLM Option)
 
-### Deployment
-- **Railway** - Backend + Database
-- **Docker** - Containerization
-- **Strato** - Static homepage
+### Tech Stack
+- **Backend:** FastAPI + Python 3.12
+- **Database:** PostgreSQL 16 + pgvector
+- **LLMs:** Ollama (local), Anthropic Claude, Grok
+- **Embeddings:** sentence-transformers (all-MiniLM-L6-v2, 384 dims)
+- **Deployment:** Railway (EU Region)
+- **Frontend:** React 19 + Vite (Admin Panel)
 
-## 📁 Projektstruktur
+---
+
+## 🏗️ Architecture
 
 ```
-GeneralBackend/
-├── backend/
-│   ├── __init__.py
-│   ├── main.py                 # FastAPI App Entry
-│   ├── config.py              # Settings (DATABASE_URL, etc.)
-│   ├── database.py            # SQLAlchemy setup
-│   │
-│   ├── models/                # SQLAlchemy Models
-│   │   ├── __init__.py
-│   │   ├── user.py           # User model
-│   │   ├── document.py       # Document model
-│   │   ├── project.py        # Project model (Showcase instances)
-│   │   └── chat.py           # Chat history model
-│   │
-│   ├── schemas/               # Pydantic Schemas
-│   │   ├── __init__.py
-│   │   ├── user.py
-│   │   ├── document.py
-│   │   ├── project.py
-│   │   └── chat.py
-│   │
-│   ├── auth/                  # Authentication
-│   │   ├── __init__.py
-│   │   ├── users.py          # fastapi-users setup
-│   │   ├── jwt.py            # JWT configuration
-│   │   └── dependencies.py   # Auth dependencies
-│   │
-│   ├── services/              # Business Logic
-│   │   ├── __init__.py
-│   │   ├── llm_gateway.py    # LLM abstraction layer
-│   │   ├── vector_store.py   # ChromaDB + pgvector
-│   │   ├── document_processor.py # PDF/DOCX/URL processing
-│   │   └── admin.py          # Admin-specific logic
-│   │
-│   ├── api/                   # API Routes
-│   │   ├── __init__.py
-│   │   ├── auth.py           # Auth endpoints
-│   │   ├── admin.py          # Admin endpoints (/admin/*)
-│   │   ├── cv_matcher.py     # CV Matcher endpoints
-│   │   ├── chat.py           # Chat endpoints (PrivateGPT)
-│   │   ├── documents.py      # Document management
-│   │   └── projects.py       # Project management
-│   │
-│   └── alembic/              # Database Migrations
-│       ├── env.py
-│       └── versions/
-│
-├── admin-frontend/            # React Admin Panel
-│   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── UserManagement.jsx
-│   │   │   ├── LLMConfig.jsx
-│   │   │   ├── SystemStats.jsx
-│   │   │   └── Login.jsx
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   └── vite.config.js
-│
-├── data/                      # Local development data
-│   ├── chroma_db/
-│   └── uploads/
-│
-├── tests/                     # Tests
-│   ├── test_auth.py
-│   ├── test_llm_gateway.py
-│   └── test_api.py
-│
-├── .env.example              # Environment variables template
-├── .gitignore
-├── docker-compose.yml        # Local development
-├── Dockerfile                # Railway deployment
-├── railway.json              # Railway configuration
-├── requirements.txt          # Python dependencies
-├── alembic.ini              # Alembic config
-├── README.md
-└── ARCHITECTURE.md          # This file
+┌─────────────────────────────────────────────────────────────────┐
+│                     www.dabrock.info                            │
+│                   (Strato - Static Hosting)                     │
+│                                                                  │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐   │
+│  │  CV Matcher    │  │  PrivateGPT    │  │  TellMeLife    │   │
+│  │  /cv-matcher/  │  │  /privategpt/  │  │  /tellmelife/  │   │
+│  └────────────────┘  └────────────────┘  └────────────────┘   │
+│           │                   │                   │             │
+│           └───────────────────┼───────────────────┘             │
+└───────────────────────────────┼─────────────────────────────────┘
+                                │
+                    HTTPS (JWT Authentication)
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              GENERAL BACKEND (Railway Production)               │
+│   https://general-backend-production-a734.up.railway.app       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │ FastAPI Application (general-backend service)          │    │
+│  │  • Authentication (/auth, /users)                      │    │
+│  │  • LLM Gateway (/llm)                                  │    │
+│  │  • Projects (/projects)                                │    │
+│  │  • Documents (/documents)                              │    │
+│  │  • Admin (/admin)                                      │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                          │                                      │
+│         ┌────────────────┼────────────────┐                    │
+│         ▼                ▼                ▼                     │
+│  ┌──────────────┐  ┌──────────┐  ┌────────────────┐           │
+│  │ PostgreSQL   │  │  Ollama  │  │  Cloud APIs    │           │
+│  │ + pgvector   │  │  Service │  │                │           │
+│  │              │  │          │  │  • Claude      │           │
+│  │ Tables:      │  │ Models:  │  │  • Grok        │           │
+│  │  • users     │  │  qwen3   │  │                │           │
+│  │  • projects  │  │  -coder  │  │  (Optional)    │           │
+│  │  • documents │  │  :30b    │  └────────────────┘           │
+│  │  • chats     │  │          │                                │
+│  │  • matches   │  │ GDPR ✅  │                                │
+│  └──────────────┘  └──────────┘                                │
+│   Private Network   Private Network                            │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🗄️ Database Schema
+---
+
+## 🔧 Services
+
+### 1. Authentication Service (`/auth`, `/users`)
+
+**Purpose:** JWT-based authentication with user management
+
+**Endpoints:**
+- `POST /auth/register` - Create new user
+- `POST /auth/login` - Get JWT token
+- `GET /auth/me` - Get current user
+- `POST /auth/forgot-password` - Request password reset
+- `POST /auth/reset-password` - Reset password
+- `POST /auth/request-verify-token` - Request email verification
+- `POST /auth/verify` - Verify email
+- `GET /users/{user_id}` - Get user by ID
+- `PATCH /users/{user_id}` - Update user
+- `DELETE /users/{user_id}` - Delete user (admin)
+
+**Authentication:**
+All endpoints (except register/login) require JWT token:
+```http
+Authorization: Bearer <your_jwt_token>
+```
+
+**Example Usage:**
+```bash
+# Register
+curl -X POST https://general-backend-production-a734.up.railway.app/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePassword123!",
+    "is_active": true
+  }'
+
+# Login
+curl -X POST https://general-backend-production-a734.up.railway.app/auth/login \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'username=user@example.com&password=SecurePassword123!'
+
+# Response
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+---
+
+### 2. LLM Service (`/llm`)
+
+**Purpose:** Multi-provider LLM gateway with unified API
+
+**Available Providers:**
+1. **Ollama** (GDPR-compliant, local, free)
+   - Model: qwen3-coder:30b (30B parameters, 18.5GB)
+   - ⚠️ **Note:** CPU inference is slow (~2min timeout)
+   - Recommendation: Use Claude/Grok until GPU available
+
+2. **Anthropic Claude** (Premium quality)
+   - claude-3-5-sonnet-20241022
+   - claude-3-opus-20240229
+   - claude-3-haiku-20240307
+
+3. **Grok** (Fast & affordable)
+   - grok-beta
+   - grok-vision-beta
+
+**Endpoints:**
+- `GET /llm/models?provider=ollama` - List available models
+- `POST /llm/generate` - Generate text
+- `POST /llm/embed` - Generate embeddings (Ollama only)
+
+**Example Usage:**
+```bash
+# List models
+curl -X GET https://general-backend-production-a734.up.railway.app/llm/models \
+  -H 'Authorization: Bearer <token>'
+
+# Generate text (Claude)
+curl -X POST https://general-backend-production-a734.up.railway.app/llm/generate \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "prompt": "Explain quantum computing in simple terms",
+    "model": "claude-3-5-sonnet-20241022",
+    "provider": "anthropic",
+    "temperature": 0.7,
+    "max_tokens": 500
+  }'
+
+# Response
+{
+  "response": "Quantum computing is...",
+  "model": "claude-3-5-sonnet-20241022",
+  "provider": "anthropic",
+  "tokens_used": 342
+}
+```
+
+**Integration for Use Cases:**
+```javascript
+// Frontend integration example
+const generateText = async (prompt, model = "claude-3-5-sonnet-20241022") => {
+  const response = await fetch(`${API_URL}/llm/generate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      prompt,
+      model,
+      provider: 'anthropic',
+      temperature: 0.7
+    })
+  });
+  return await response.json();
+};
+```
+
+---
+
+### 3. Document Management Service (`/documents`)
+
+**Purpose:** Upload, store, and search documents with automatic embedding generation
+
+**Supported Types:**
+- PDF files
+- DOCX files
+- URLs (web scraping)
+- Raw text
+
+**Features:**
+- Automatic text extraction
+- Vector embeddings (sentence-transformers)
+- Semantic search (pgvector cosine similarity)
+- Project-based organization
+
+**Endpoints:**
+- `POST /documents/upload` - Upload PDF/DOCX
+- `POST /documents/url` - Scrape URL
+- `POST /documents/text` - Add raw text
+- `GET /documents` - List documents
+- `GET /documents/{id}` - Get document
+- `GET /documents/search?query=...` - Semantic search
+- `DELETE /documents/{id}` - Delete document
+
+**Example Usage:**
+```bash
+# Upload PDF
+curl -X POST https://general-backend-production-a734.up.railway.app/documents/upload \
+  -H 'Authorization: Bearer <token>' \
+  -F 'file=@resume.pdf' \
+  -F 'project_id=<project-uuid>'
+
+# Search documents
+curl -X GET 'https://general-backend-production-a734.up.railway.app/documents/search?query=python+developer&limit=5' \
+  -H 'Authorization: Bearer <token>'
+
+# Response (ordered by relevance)
+[
+  {
+    "id": "uuid",
+    "filename": "resume.pdf",
+    "content": "Senior Python Developer with 5 years...",
+    "embedding": [0.123, -0.456, ...],
+    ...
+  }
+]
+```
+
+**Integration for Use Cases:**
+```javascript
+// CV Matcher: Upload job description
+const uploadJobDescription = async (file, projectId) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('project_id', projectId);
+
+  const response = await fetch(`${API_URL}/documents/upload`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  });
+  return await response.json();
+};
+
+// PrivateGPT: Search documents
+const searchDocuments = async (query) => {
+  const response = await fetch(
+    `${API_URL}/documents/search?query=${encodeURIComponent(query)}&limit=5`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  return await response.json();
+};
+```
+
+---
+
+### 4. Project Management Service (`/projects`)
+
+**Purpose:** Organize showcase instances (CV Matcher projects, PrivateGPT sessions, etc.)
+
+**Project Types:**
+- `cv_matcher` - CV matching projects
+- `privategpt` - Private document chat sessions
+- `tellmelife` - Life story projects
+
+**Endpoints:**
+- `POST /projects` - Create project
+- `GET /projects` - List projects
+- `GET /projects/{id}` - Get project
+- `PATCH /projects/{id}` - Update project
+- `DELETE /projects/{id}` - Delete project (cascades to documents/chats)
+
+**Example Usage:**
+```bash
+# Create CV Matcher project
+curl -X POST https://general-backend-production-a734.up.railway.app/projects \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Senior Developer Hiring Q1 2025",
+    "description": "Hiring campaign for senior Python developers",
+    "type": "cv_matcher",
+    "config": {
+      "llm_provider": "anthropic",
+      "embedding_model": "all-MiniLM-L6-v2"
+    }
+  }'
+
+# Response
+{
+  "id": "project-uuid",
+  "user_id": "user-uuid",
+  "name": "Senior Developer Hiring Q1 2025",
+  "type": "cv_matcher",
+  ...
+}
+```
+
+**Integration for Use Cases:**
+```javascript
+// Create project for specific use case
+const createProject = async (name, type, config) => {
+  const response = await fetch(`${API_URL}/projects`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name, description: '', type, config })
+  });
+  return await response.json();
+};
+
+// Example: CV Matcher
+const cvProject = await createProject(
+  'Q1 Hiring Campaign',
+  'cv_matcher',
+  { llm_provider: 'anthropic' }
+);
+
+// Example: PrivateGPT
+const chatProject = await createProject(
+  'Document Analysis Session',
+  'privategpt',
+  { embedding_model: 'all-MiniLM-L6-v2' }
+);
+```
+
+---
+
+### 5. Admin Service (`/admin`)
+
+**Purpose:** System monitoring and administration (admin users only)
+
+**Endpoints:**
+- `GET /admin/stats` - System statistics
+
+**Example:**
+```bash
+curl -X GET https://general-backend-production-a734.up.railway.app/admin/stats \
+  -H 'Authorization: Bearer <admin-token>'
+
+# Response
+{
+  "total_users": 15,
+  "total_projects": 42,
+  "total_documents": 358,
+  "total_chats": 1203,
+  "system_health": "healthy"
+}
+```
+
+---
+
+## 📊 Database Schema
 
 ### Users Table
 ```sql
@@ -175,9 +399,10 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     hashed_password VARCHAR(255) NOT NULL,
-    is_admin BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
+    is_superuser BOOLEAN DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -188,10 +413,10 @@ CREATE TABLE users (
 CREATE TABLE projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(50) NOT NULL,  -- 'cv_matcher', 'private_gpt', 'tell_me_life'
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    config JSONB,  -- Showcase-specific configuration
+    type VARCHAR(50) NOT NULL,  -- 'cv_matcher', 'privategpt', 'tellmelife'
+    config JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -207,10 +432,12 @@ CREATE TABLE documents (
     filename VARCHAR(255),
     url TEXT,
     content TEXT,
-    metadata JSONB,
-    vector_collection_id VARCHAR(255),  -- ChromaDB collection reference
+    doc_metadata JSONB DEFAULT '{}',
+    embedding VECTOR(384),  -- pgvector for semantic search
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_documents_embedding ON documents USING ivfflat (embedding vector_cosine_ops);
 ```
 
 ### Chats Table
@@ -221,7 +448,7 @@ CREATE TABLE chats (
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     role VARCHAR(20) NOT NULL,  -- 'user', 'assistant', 'system'
     content TEXT NOT NULL,
-    metadata JSONB,
+    chat_metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -247,527 +474,334 @@ CREATE TABLE matches (
 );
 ```
 
-## 🔐 Authentication Flow
+---
 
-1. **Registration**: `POST /auth/register` → User created (is_active=False)
-2. **Email Verification** (optional): `GET /auth/verify?token=...`
-3. **Login**: `POST /auth/login` → Returns JWT access token
-4. **Protected Routes**: Header: `Authorization: Bearer <token>`
-5. **Admin Routes**: Additional check for `is_admin=True`
+## 🚀 Use Case Integration
 
-## 🚀 API Endpoints
+### CV Matcher Integration
 
-### Auth
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get JWT token
-- `GET /auth/me` - Get current user info
-- `POST /auth/logout` - Logout (invalidate token)
-- `POST /auth/forgot-password` - Request password reset
-- `POST /auth/reset-password` - Reset password
+```javascript
+// 1. Create project
+const project = await createProject('Q1 Hiring', 'cv_matcher', {});
 
-### Admin (Admin only)
-- `GET /admin/users` - List all users
-- `POST /admin/users` - Create user
-- `GET /admin/users/{id}` - Get user details
-- `PUT /admin/users/{id}` - Update user
-- `DELETE /admin/users/{id}` - Delete user
-- `GET /admin/stats` - System statistics
-- `GET /admin/llm-config` - Get LLM configuration
-- `PUT /admin/llm-config` - Update LLM configuration
+// 2. Upload job description
+const jobDoc = await uploadDocument(jobDescriptionFile, project.id);
 
-### Projects
-- `GET /projects` - List user's projects
-- `POST /projects` - Create new project
-- `GET /projects/{id}` - Get project details
-- `PUT /projects/{id}` - Update project
-- `DELETE /projects/{id}` - Delete project
+// 3. Upload CVs
+const cvDocs = await Promise.all(
+  cvFiles.map(file => uploadDocument(file, project.id))
+);
 
-### Documents
-- `GET /documents` - List user's documents
-- `POST /documents/upload` - Upload file
-- `POST /documents/url` - Add URL
-- `POST /documents/text` - Add text
-- `GET /documents/{id}` - Get document
-- `DELETE /documents/{id}` - Delete document
+// 4. Find matching candidates (semantic search)
+const candidates = await fetch(
+  `${API_URL}/documents/search?query=${jobDoc.content}&project_id=${project.id}&limit=10`,
+  { headers: { 'Authorization': `Bearer ${token}` } }
+);
 
-### CV Matcher
-- `POST /cv-matcher/match` - Create new match
-- `GET /cv-matcher/matches` - List matches
-- `GET /cv-matcher/matches/{id}` - Get match details
-- `DELETE /cv-matcher/matches/{id}` - Delete match
-- `GET /cv-matcher/matches/{id}/report` - Download PDF report
-
-### Chat (PrivateGPT)
-- `POST /chat/{project_id}` - Send message
-- `GET /chat/{project_id}` - Get chat history
-- `DELETE /chat/{project_id}` - Clear chat history
-
-### LLM
-- `POST /llm/generate` - Generate response (generic)
-- `GET /llm/models` - List available models
-- `POST /llm/embed` - Generate embeddings
-
-## 🔧 Configuration (Environment Variables)
-
-```bash
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/generalbackend
-
-# JWT
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# LLM APIs
-OLLAMA_BASE_URL=http://localhost:11434
-GROK_API_KEY=xai-...
-ANTHROPIC_API_KEY=sk-ant-...
-
-# ChromaDB
-CHROMA_PERSIST_DIRECTORY=./data/chroma_db
-
-# Railway
-PORT=8000
-
-# Admin
-ADMIN_EMAIL=admin@dabrock.info
-ADMIN_PASSWORD=change-me-in-production
-
-# CORS
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,https://www.dabrock.info
+// 5. Generate detailed analysis with LLM
+for (const candidate of candidates) {
+  const analysis = await fetch(`${API_URL}/llm/generate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      prompt: `Compare this job description with this CV and provide a detailed analysis:\n\nJob: ${jobDoc.content}\n\nCV: ${candidate.content}`,
+      model: 'claude-3-5-sonnet-20241022',
+      provider: 'anthropic'
+    })
+  });
+}
 ```
 
-## 📦 Dependencies (requirements.txt)
+### PrivateGPT Integration
 
-```
-# Web Framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-python-multipart==0.0.6
+```javascript
+// 1. Create chat session
+const project = await createProject('Document Analysis', 'privategpt', {});
 
-# Database
-sqlalchemy==2.0.25
-alembic==1.13.1
-psycopg2-binary==2.9.9
-asyncpg==0.29.0
+// 2. Upload documents
+await uploadDocument(document1, project.id);
+await uploadDocument(document2, project.id);
 
-# Authentication
-fastapi-users[sqlalchemy]==12.1.3
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-pydantic[email]==2.5.3
+// 3. User asks question
+const userQuestion = "What are the key findings in these documents?";
 
-# LLM & Vector Store
-openai>=1.0.0
-requests>=2.31.0
-chromadb>=0.4.22
-sentence-transformers>=2.2.2
-pgvector==0.2.4
+// 4. Search relevant context
+const context = await fetch(
+  `${API_URL}/documents/search?query=${encodeURIComponent(userQuestion)}&project_id=${project.id}&limit=3`,
+  { headers: { 'Authorization': `Bearer ${token}` } }
+);
 
-# Document Processing
-PyPDF2==3.0.1
-python-docx==1.1.0
-beautifulsoup4>=4.12.0
-lxml>=4.9.0
-
-# PDF Generation
-reportlab>=4.0.0
-
-# Utilities
-python-dotenv==1.0.0
-pydantic-settings==2.1.0
-
-# Testing
-pytest==7.4.3
-httpx==0.26.0
-```
-
-## 🎯 Implementation Roadmap
-
-### Phase 1: Core Backend Setup (Week 1)
-- [ ] Initialize FastAPI project structure
-- [ ] Setup PostgreSQL with SQLAlchemy
-- [ ] Implement User model and migrations
-- [ ] Setup fastapi-users authentication
-- [ ] Create JWT token system
-- [ ] Implement basic auth endpoints
-- [ ] Add admin middleware/dependencies
-
-**Aider Prompts:**
-```
-1. "Create a FastAPI project with PostgreSQL, SQLAlchemy, and fastapi-users.
-   Schema: Users table with email, hashed_password, is_admin, is_active fields."
-
-2. "Add JWT authentication with /auth/login, /auth/register, /auth/me endpoints.
-   Use python-jose for JWT tokens."
-
-3. "Create admin-only endpoints for user management:
-   GET/POST/PUT/DELETE /admin/users with proper authorization checks."
-```
-
-### Phase 2: Database Models & Services (Week 1-2)
-- [ ] Create Projects model
-- [ ] Create Documents model
-- [ ] Create Chats model
-- [ ] Create Matches model
-- [ ] Implement database migrations
-- [ ] Add CRUD operations for each model
-
-**Aider Prompts:**
-```
-4. "Create Projects, Documents, Chats, and Matches SQLAlchemy models
-   with proper relationships and foreign keys."
-
-5. "Implement CRUD services for all models with user isolation
-   (users can only access their own data)."
-```
-
-### Phase 3: LLM Gateway (Week 2)
-- [ ] Create LLM Gateway abstraction
-- [ ] Implement Ollama client
-- [ ] Implement GROK API client
-- [ ] Implement Anthropic API client
-- [ ] Add model selection logic
-- [ ] Add error handling and retries
-
-**Aider Prompts:**
-```
-6. "Create an LLM Gateway service that supports Ollama (Railway Volume),
-   GROK, and Anthropic APIs. Make it easily extensible for new providers."
-
-7. "Add endpoints /llm/generate and /llm/models with provider selection."
-```
-
-### Phase 4: Vector Store Integration (Week 2)
-- [ ] Setup ChromaDB
-- [ ] Add pgvector to PostgreSQL
-- [ ] Implement vector store service
-- [ ] Add embedding generation
-- [ ] Implement semantic search
-- [ ] Add per-user collection isolation
-
-**Aider Prompts:**
-```
-8. "Integrate ChromaDB with per-user collections.
-   Copy logic from /mnt/e/CodeLocalLLM/cvmatcher/backend/vector_store.py"
-
-9. "Add pgvector to PostgreSQL and implement hybrid search
-   (vector + keyword)."
-```
-
-### Phase 5: Document Processing (Week 3)
-- [ ] Implement PDF extraction
-- [ ] Implement DOCX extraction
-- [ ] Implement URL scraping
-- [ ] Add file upload handling
-- [ ] Implement document chunking
-- [ ] Add vector embeddings on upload
-
-**Aider Prompts:**
-```
-10. "Add document processing service for PDF, DOCX, and URL extraction.
-    Copy from /mnt/e/CodeLocalLLM/cvmatcher/backend/document_processor.py"
-
-11. "Implement automatic vector embedding when documents are uploaded."
-```
-
-### Phase 6: CV Matcher Integration (Week 3)
-- [ ] Port CV Matcher endpoints
-- [ ] Migrate matching logic
-- [ ] Update to use PostgreSQL instead of JSON
-- [ ] Add user isolation
-- [ ] Test with existing CV Matcher frontend
-
-**Aider Prompts:**
-```
-12. "Create CV Matcher endpoints under /cv-matcher/*
-    that use the centralized database and LLM gateway."
-
-13. "Port the matching logic from
-    /mnt/e/CodeLocalLLM/cvmatcher/backend/matcher.py"
-```
-
-### Phase 7: Admin Panel Frontend (Week 4)
-- [ ] Initialize React app
-- [ ] Create login page
-- [ ] Create user management UI
-- [ ] Create LLM configuration UI
-- [ ] Add system statistics dashboard
-- [ ] Implement API integration
-- [ ] Deploy to www.dabrock.info/admin
-
-**Aider Prompts:**
-```
-14. "Create a React admin dashboard with:
-    - User Management (list, create, edit, delete)
-    - LLM Configuration
-    - System Statistics
-    Use existing CSS from CV Matcher"
-
-15. "Add authentication flow with JWT tokens and protected routes."
-```
-
-### Phase 8: Railway Deployment (Week 4)
-- [ ] Create Dockerfile
-- [ ] Setup docker-compose for local dev
-- [ ] Configure railway.json
-- [ ] Setup PostgreSQL on Railway
-- [ ] Deploy backend service
-- [ ] Setup Ollama on Railway Volume
-- [ ] Configure environment variables
-- [ ] Test deployment
-
-### Phase 9: PrivateGPT Integration (Week 5)
-- [ ] Port PrivateGPT chat logic
-- [ ] Implement RAG with vector store
-- [ ] Create chat endpoints
-- [ ] Test with existing PrivateGPT frontend
-
-### Phase 10: TellMeLife Integration (Week 5-6)
-- [ ] Design TellMeLife schema
-- [ ] Implement story/memory storage
-- [ ] Add AI conversation logic
-- [ ] Create API endpoints
-
-## 🚂 Railway Configuration
-
-**railway.json:**
-```json
-{
-  "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile"
+// 5. Generate response with context
+const response = await fetch(`${API_URL}/llm/generate`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
   },
-  "deploy": {
-    "startCommand": "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port $PORT",
-    "healthcheckPath": "/health",
-    "healthcheckTimeout": 100,
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+  body: JSON.stringify({
+    prompt: `Context:\n${context.map(d => d.content).join('\n\n')}\n\nQuestion: ${userQuestion}`,
+    model: 'claude-3-5-sonnet-20241022',
+    provider: 'anthropic'
+  })
+});
+```
+
+### TellMeLife Integration
+
+```javascript
+// 1. Create life story project
+const project = await createProject('My Life Story', 'tellmelife', {});
+
+// 2. Add text entries
+await fetch(`${API_URL}/documents/text`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    title: 'Childhood Memories',
+    content: 'I was born in...',
+    project_id: project.id,
+    metadata: { category: 'childhood', year: 1990 }
+  })
+});
+
+// 3. Generate narrative with LLM
+const narrative = await fetch(`${API_URL}/llm/generate`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    prompt: 'Transform these life events into a compelling narrative...',
+    model: 'claude-3-5-sonnet-20241022',
+    provider: 'anthropic'
+  })
+});
+```
+
+---
+
+## 🌐 Deployment
+
+### Production Services (Railway)
+
+**Project:** Generalbackend
+**Region:** EU (Amsterdam, Netherlands)
+
+1. **general-backend** ✅
+   - URL: https://general-backend-production-a734.up.railway.app
+   - Health: `/health`
+   - API Docs: `/docs`
+   - Auto-deploy from GitHub (main branch)
+
+2. **pgVector-Railway** ✅
+   - PostgreSQL 16 + pgvector extension
+   - Private network: `postgres.railway.internal`
+   - All tables created with vector indices
+
+3. **ollama** ✅
+   - Ollama server with qwen3-coder:30b
+   - Private network: `ollama.railway.internal:11434`
+   - GDPR-compliant (EU hosting)
+   - ⚠️ CPU inference is slow (use Claude/Grok for production)
+
+4. **Admin Frontend** ✅
+   - URL: https://www.dabrock.info/admin/ (SSL pending)
+   - React 19 + Vite
+   - Hosted on Strato
+
+### Environment Variables
+
+**Backend Service:**
+```env
+DATABASE_URL=postgresql+asyncpg://user:pass@postgres.railway.internal:5432/railway
+OLLAMA_BASE_URL=http://ollama.railway.internal:11434
+SECRET_KEY=<your-secret-key>
+ANTHROPIC_API_KEY=<your-anthropic-key>
+GROK_API_KEY=<your-grok-key>
+ALLOWED_ORIGINS=https://www.dabrock.info,http://localhost:5173
+```
+
+### Deployment Notes
+
+**Key Fixes Applied:**
+1. Bcrypt password hashing (72-byte limit patch)
+2. ChromaDB removed → pgvector implemented
+3. SQLAlchemy reserved keywords fixed (`metadata` → `doc_metadata`)
+4. Auto-deploy from GitHub enabled
+5. Database retry logic (30 attempts)
+
+---
+
+## ⚙️ Configuration
+
+### Frontend Configuration
+
+Create `.env` file in your use case frontend:
+
+```env
+VITE_API_URL=https://general-backend-production-a734.up.railway.app
+```
+
+### API Client Setup
+
+```javascript
+// api.js
+const API_URL = import.meta.env.VITE_API_URL;
+
+export class APIClient {
+  constructor(token) {
+    this.token = token;
+    this.baseURL = API_URL;
+  }
+
+  async request(endpoint, options = {}) {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'API request failed');
+    }
+
+    return await response.json();
+  }
+
+  // Authentication
+  async register(email, password) {
+    return this.request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, is_active: true })
+    });
+  }
+
+  async login(email, password) {
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
+
+    const response = await fetch(`${this.baseURL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData
+    });
+
+    const data = await response.json();
+    this.token = data.access_token;
+    return data;
+  }
+
+  // Projects
+  async createProject(name, type, config = {}) {
+    return this.request('/projects', {
+      method: 'POST',
+      body: JSON.stringify({ name, description: '', type, config })
+    });
+  }
+
+  // Documents
+  async uploadDocument(file, projectId) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('project_id', projectId);
+
+    const response = await fetch(`${this.baseURL}/documents/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${this.token}` },
+      body: formData
+    });
+
+    return await response.json();
+  }
+
+  async searchDocuments(query, projectId = null, limit = 5) {
+    let url = `/documents/search?query=${encodeURIComponent(query)}&limit=${limit}`;
+    if (projectId) url += `&project_id=${projectId}`;
+
+    return this.request(url);
+  }
+
+  // LLM
+  async generateText(prompt, model = 'claude-3-5-sonnet-20241022', provider = 'anthropic') {
+    return this.request('/llm/generate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, model, provider, temperature: 0.7 })
+    });
+  }
+
+  async listModels(provider = null) {
+    let url = '/llm/models';
+    if (provider) url += `?provider=${provider}`;
+    return this.request(url);
   }
 }
 ```
 
-**Dockerfile:**
-```dockerfile
-FROM python:3.11-slim
+### Usage Example
 
-WORKDIR /app
+```javascript
+// In your use case frontend
+import { APIClient } from './api';
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+const api = new APIClient();
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+// Login
+await api.login('user@example.com', 'password');
 
-# Copy application
-COPY . .
+// Create project
+const project = await api.createProject('My Project', 'cv_matcher');
 
-# Run migrations and start server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+// Upload document
+const doc = await api.uploadDocument(file, project.id);
+
+// Search
+const results = await api.searchDocuments('python developer', project.id);
+
+// Generate text
+const response = await api.generateText('Analyze this document...');
 ```
 
-## 🧪 Testing Strategy
+---
 
-1. **Unit Tests** - Test individual services
-2. **Integration Tests** - Test API endpoints
-3. **Auth Tests** - Test authentication flow
-4. **Database Tests** - Test CRUD operations
-5. **LLM Tests** - Mock LLM responses
+## 📚 Additional Documentation
 
-## 📊 Migration from CV Matcher
+- **Full API Reference:** See `API_DOCUMENTATION.md`
+- **Interactive API Docs:** https://general-backend-production-a734.up.railway.app/docs
+- **ReDoc:** https://general-backend-production-a734.up.railway.app/redoc
 
-### Files to Reuse
-✅ `document_processor.py` - Copy as-is
-✅ `vector_store.py` - Adapt for multi-user
-✅ `pdf_generator.py` - Copy as-is
-✅ `llm_client.py` - Integrate into LLM Gateway
-✅ `matcher.py` - Port to new service
+---
 
-### Files to Replace
-❌ JSON file storage → PostgreSQL
-❌ No auth → fastapi-users
-❌ Single user → Multi-user
+## 🔒 Security
 
-## 🎯 Success Criteria
+- JWT token authentication
+- Password hashing with bcrypt
+- CORS enabled for whitelisted origins only
+- GDPR-compliant (EU hosting, local LLM option)
+- Private network for database and Ollama
 
-- [ ] Users can register and login
-- [ ] Admins can manage users
-- [ ] CV Matcher works with new backend
-- [ ] PrivateGPT works with new backend
-- [ ] All data is isolated per user
-- [ ] Vector search works
-- [ ] Multiple LLMs supported
-- [ ] Deployed on Railway
-- [ ] Admin panel accessible at www.dabrock.info
+---
 
-## 📝 Next Steps
+## 📞 Support
 
-1. Review this architecture
-2. Confirm approach
-3. Start Phase 1 with Aider
-4. Iterate and deploy
+For issues or questions:
+- Check `/docs` for interactive API documentation
+- Review `API_DOCUMENTATION.md` for detailed examples
+- Check Railway logs for deployment issues
 
 ---
 
 **Created:** 2025-12-21
-**Last Updated:** 2025-12-21
-**Status:** ✅ DEPLOYED & RUNNING
-
-## 🎉 Deployment Status (2025-12-21 22:50 CET)
-
-### ✅ Production Architecture - FULLY OPERATIONAL
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    www.dabrock.info                         │
-│                  (Strato - SSL pending)                     │
-│         ┌──────────────────────────────────────┐           │
-│         │  Admin Panel: /admin/                 │           │
-│         │  (React + Vite)                       │           │
-│         └──────────────────────────────────────┘           │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼ HTTPS
-┌─────────────────────────────────────────────────────────────┐
-│              GENERAL BACKEND (Railway)                      │
-│   https://general-backend-production-a734.up.railway.app   │
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │ FastAPI Backend (general-backend)                  │    │
-│  │  ✅ FastAPI + async SQLAlchemy                      │    │
-│  │  ✅ fastapi-users Authentication                    │    │
-│  │  ✅ JWT Tokens                                      │    │
-│  │  ✅ Admin API                                       │    │
-│  │  ✅ Document Management                             │    │
-│  │  ✅ Project Management                              │    │
-│  │  ✅ LLM Gateway (Multi-provider)                    │    │
-│  │  ✅ Vector Search with pgvector                     │    │
-│  └────────────────────────────────────────────────────┘    │
-│                            │                                │
-│              ┌─────────────┼─────────────┐                 │
-│              ▼             ▼             ▼                  │
-│  ┌─────────────────┐  ┌──────────┐  ┌──────────────┐      │
-│  │ pgVector-Railway│  │  Ollama  │  │  Cloud APIs  │      │
-│  │   PostgreSQL    │  │  Service │  │              │      │
-│  │  + pgvector     │  │ (GDPR!)  │  │ • Anthropic  │      │
-│  │                 │  │          │  │ • Grok       │      │
-│  │ ✅ Users         │  │ ✅ llama  │  │              │      │
-│  │ ✅ Projects      │  │  3.2:3b  │  │ (Optional)   │      │
-│  │ ✅ Documents     │  │          │  │              │      │
-│  │ ✅ Chats         │  │ CPU-opt  │  └──────────────┘      │
-│  │ ✅ Matches       │  │ GDPR ✅  │                         │
-│  │ ✅ Embeddings    │  │          │                         │
-│  └─────────────────┘  └──────────┘                         │
-│      (Private Network)                                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 🚀 Live Services
-
-**Railway Project:** Generalbackend
-
-1. **general-backend** ✅ RUNNING
-   - URL: `https://general-backend-production-a734.up.railway.app`
-   - Health: `https://general-backend-production-a734.up.railway.app/health`
-   - API Docs: `https://general-backend-production-a734.up.railway.app/docs`
-   - FastAPI + async SQLAlchemy + pgvector
-   - Auto-deploy from GitHub (SSH)
-
-2. **pgVector-Railway** ✅ RUNNING
-   - PostgreSQL 16 + pgvector extension
-   - All tables created
-   - Vector embeddings enabled
-   - Private network: `postgres.railway.internal`
-
-3. **ollama** ✅ RUNNING
-   - Ollama server with qwen3-coder:30b
-   - Model: 18.5GB, 30B parameters
-   - GDPR-compliant (data stays in Railway EU)
-   - Private network: `ollama.railway.internal:11434`
-   - ⚠️ **NOTE**: CPU inference is slow (~2min timeout)
-   - Recommendation: Use Claude/Grok for production until GPU available
-   - Upgrade path: GPU support coming Q1 2026
-
-4. **Admin Frontend** ✅ DEPLOYED
-   - URL: `https://www.dabrock.info/admin/` (SSL pending)
-   - React 19 + Vite
-   - Hosted on Strato
-   - Connected to Railway backend
-
-### 🔧 Key Configuration Changes
-
-**Vector Database Migration:**
-- ❌ ChromaDB removed (NumPy 2.0 conflicts)
-- ✅ pgvector implemented (PostgreSQL native)
-- ✅ sentence-transformers for embeddings
-- ✅ Cosine similarity search
-- Model: `all-MiniLM-L6-v2` (384 dimensions)
-
-**Database Schema Updates:**
-- `documents.metadata` → `documents.doc_metadata` (SQLAlchemy reserved keyword)
-- `chats.metadata` → `chats.chat_metadata` (SQLAlchemy reserved keyword)
-- `documents.embedding` added: `Vector(384)` for pgvector
-- `documents.vector_collection_id` removed (not needed with pgvector)
-
-**LLM Architecture:**
-- ✅ Ollama: Local, GDPR-compliant, free
-- ✅ Anthropic: Premium quality (API key configured)
-- ✅ Grok: Fast & cheap (API key configured)
-- Provider selection via API parameter
-
----
-
-## 📖 API Documentation
-
-**Complete API Documentation:** See `API_DOCUMENTATION.md` for full endpoint reference with request/response examples.
-
-**Interactive API Docs:**
-- Swagger UI: https://general-backend-production-a734.up.railway.app/docs
-- ReDoc: https://general-backend-production-a734.up.railway.app/redoc
-
-### Quick API Reference
-
-**Authentication (`/auth`):**
-- `POST /auth/register` - Create new user
-- `POST /auth/login` - Get JWT token
-- `GET /auth/me` - Get current user
-- `POST /auth/forgot-password` - Request password reset
-- `POST /auth/verify` - Verify email
-
-**LLM (`/llm`):**
-- `GET /llm/models` - List available models (Ollama, Claude, Grok)
-- `POST /llm/generate` - Generate text with LLM
-- `POST /llm/embed` - Generate embeddings
-
-**Projects (`/projects`):**
-- `POST /projects` - Create project
-- `GET /projects` - List projects
-- `GET /projects/{id}` - Get project
-- `PATCH /projects/{id}` - Update project
-- `DELETE /projects/{id}` - Delete project
-
-**Documents (`/documents`):**
-- `POST /documents/upload` - Upload PDF/DOCX
-- `POST /documents/url` - Scrape URL
-- `POST /documents/text` - Add text
-- `GET /documents` - List documents
-- `GET /documents/search?query=...` - Semantic search (pgvector)
-- `DELETE /documents/{id}` - Delete document
-
-**Admin (`/admin`):**
-- `GET /admin/stats` - System statistics (admin only)
-
-All endpoints (except register/login) require JWT authentication:
-```
-Authorization: Bearer <your_jwt_token>
-```
-
-**Deployment Improvements:**
-- ✅ SSH Keys for GitHub (no token re-entry)
-- ✅ Retry logic for database connection (30 attempts)
-- ✅ pgvector extension auto-enabled on startup
-- ✅ No Alembic migrations (tables auto-created via SQLAlchemy)
+**Status:** ✅ PRODUCTION READY
+**Version:** 1.0.0
