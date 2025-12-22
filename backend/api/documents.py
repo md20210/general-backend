@@ -174,9 +174,8 @@ async def add_text_document(
     await session.commit()
     await session.refresh(document)
 
-    # Add to vector store
-    await _add_to_vector_store(user.id, document)
-    await session.commit()
+    # Generate and add embedding
+    await _add_embedding(session, document)
 
     return document
 
@@ -203,6 +202,39 @@ async def list_documents(
     documents = result.scalars().all()
 
     return documents
+
+
+@router.get("/search", response_model=List[DocumentRead])
+async def search_documents(
+    query: str,
+    project_id: Optional[UUID] = None,
+    limit: int = 5,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """
+    Search documents using vector similarity (semantic search).
+
+    Uses pgvector to find documents similar to the query text.
+    Results are ordered by relevance (cosine similarity).
+    """
+    if not query or len(query.strip()) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Query must be at least 3 characters"
+        )
+
+    # Search using vector similarity
+    results = await vector_service.search_similar_documents(
+        session=session,
+        query_text=query,
+        user_id=user.id,
+        project_id=project_id,
+        limit=limit
+    )
+
+    # Return just the documents (without distance scores)
+    return [doc for doc, distance in results]
 
 
 @router.get("/{document_id}", response_model=DocumentRead)
@@ -254,36 +286,3 @@ async def delete_document(
     await session.commit()
 
     return None
-
-
-@router.get("/search", response_model=List[DocumentRead])
-async def search_documents(
-    query: str,
-    project_id: Optional[UUID] = None,
-    limit: int = 5,
-    session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_active_user),
-):
-    """
-    Search documents using vector similarity (semantic search).
-
-    Uses pgvector to find documents similar to the query text.
-    Results are ordered by relevance (cosine similarity).
-    """
-    if not query or len(query.strip()) < 3:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Query must be at least 3 characters"
-        )
-
-    # Search using vector similarity
-    results = await vector_service.search_similar_documents(
-        session=session,
-        query_text=query,
-        user_id=user.id,
-        project_id=project_id,
-        limit=limit
-    )
-
-    # Return just the documents (without distance scores)
-    return [doc for doc, distance in results]
