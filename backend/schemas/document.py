@@ -32,7 +32,6 @@ class DocumentRead(DocumentBase):
     project_id: Optional[UUID]
     type: DocumentType
     content: str
-    vector_collection_id: Optional[str]
     created_at: datetime
     updated_at: datetime
 
