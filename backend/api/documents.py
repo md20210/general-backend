@@ -27,7 +27,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 
 
 async def _add_embedding(session: AsyncSession, document: Document):
-    """Helper to generate and add embedding to document."""
+    """Helper to generate and add embedding to document (non-blocking)."""
     try:
         success = await vector_service.add_document_embedding(session, document)
         if success:
@@ -35,7 +35,9 @@ async def _add_embedding(session: AsyncSession, document: Document):
         else:
             print(f"⚠️ Embedding generation skipped for document {document.id}")
     except Exception as e:
-        print(f"❌ Failed to add embedding: {e}")
+        # Don't fail document creation if embedding fails
+        print(f"⚠️ Failed to add embedding (non-critical): {e}")
+        # Continue without embedding - document is still valid
 
 
 @router.post("/upload", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)

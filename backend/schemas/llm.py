@@ -10,7 +10,7 @@ class LLMGenerateRequest(BaseModel):
     model: Optional[str] = Field(None, description="Model name (provider-specific)")
     temperature: float = Field(default=0.3, ge=0.0, le=2.0, description="Sampling temperature")
     max_tokens: int = Field(default=2000, ge=1, le=100000, description="Maximum tokens to generate")
-    timeout: int = Field(default=120, ge=1, le=600, description="Request timeout in seconds")
+    timeout: int = Field(default=300, ge=1, le=600, description="Request timeout in seconds (300s default for CPU inference)")
 
 
 class LLMGenerateResponse(BaseModel):
