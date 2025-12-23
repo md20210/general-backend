@@ -607,6 +607,213 @@ class TranslationService:
             "de": "Fehler: {error}",
             "en": "Error: {error}",
             "es": "Error: {error}"
+        },
+
+        # Homepage Translations (dabrock.info)
+        "nav_about": {
+            "de": "Über mich",
+            "en": "About",
+            "es": "Acerca de"
+        },
+        "nav_showcases": {
+            "de": "Projekte",
+            "en": "Showcases",
+            "es": "Proyectos"
+        },
+        "nav_services": {
+            "de": "Services",
+            "en": "Services",
+            "es": "Servicios"
+        },
+        "nav_contact": {
+            "de": "Kontakt",
+            "en": "Contact",
+            "es": "Contacto"
+        },
+        "hero_title": {
+            "de": "KI-Experte & Full-Stack Entwickler",
+            "en": "AI Expert & Full-Stack Developer",
+            "es": "Experto en IA y Desarrollador Full-Stack"
+        },
+        "hero_subtitle": {
+            "de": "Spezialisiert auf LLM, RAG & moderne Web-Anwendungen",
+            "en": "Specialized in LLM, RAG & modern web applications",
+            "es": "Especializado en LLM, RAG y aplicaciones web modernas"
+        },
+        "about_title": {
+            "de": "Über mich",
+            "en": "About Me",
+            "es": "Acerca de mí"
+        },
+        "about_p1": {
+            "de": "Als erfahrener KI-Entwickler und Full-Stack Engineer entwickle ich innovative Lösungen an der Schnittstelle von künstlicher Intelligenz und moderner Webtechnologie.",
+            "en": "As an experienced AI developer and full-stack engineer, I build innovative solutions at the intersection of artificial intelligence and modern web technology.",
+            "es": "Como desarrollador de IA experimentado e ingeniero full-stack, creo soluciones innovadoras en la intersección de la inteligencia artificial y la tecnología web moderna."
+        },
+        "about_p2": {
+            "de": "Mein Fokus liegt auf der Entwicklung intelligenter Systeme mit Large Language Models (LLM), Retrieval-Augmented Generation (RAG) und skalierbaren Backend-Architekturen.",
+            "en": "My focus is on developing intelligent systems with Large Language Models (LLM), Retrieval-Augmented Generation (RAG), and scalable backend architectures.",
+            "es": "Mi enfoque está en desarrollar sistemas inteligentes con Modelos de Lenguaje Grandes (LLM), Generación Aumentada por Recuperación (RAG) y arquitecturas backend escalables."
+        },
+        "about_p3": {
+            "de": "Mit fundiertem Wissen in Python, TypeScript, React und FastAPI realisiere ich End-to-End-Lösungen von der Idee bis zum produktiven Einsatz.",
+            "en": "With deep knowledge in Python, TypeScript, React, and FastAPI, I deliver end-to-end solutions from concept to production deployment.",
+            "es": "Con profundo conocimiento en Python, TypeScript, React y FastAPI, entrego soluciones end-to-end desde el concepto hasta el despliegue en producción."
+        },
+        "showcases_title": {
+            "de": "Projekte",
+            "en": "Showcases",
+            "es": "Proyectos"
+        },
+        "cv_matcher_tagline": {
+            "de": "KI-gestützte Bewerbungsanalyse mit RAG-Chat",
+            "en": "AI-powered application analysis with RAG chat",
+            "es": "Análisis de aplicaciones impulsado por IA con chat RAG"
+        },
+        "live_demo": {
+            "de": "Live Demo",
+            "en": "Live Demo",
+            "es": "Demo en Vivo"
+        },
+        "cv_matcher_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "cv_matcher_functional_desc": {
+            "de": "CV Matcher ist eine intelligente Plattform, die Lebensläufe und Stellenbeschreibungen mithilfe von KI analysiert und bewertet. Die Anwendung nutzt fortschrittliche RAG-Technologie für präzise Matching-Analysen und bietet einen interaktiven Chat zur Vertiefung der Ergebnisse.",
+            "en": "CV Matcher is an intelligent platform that analyzes and evaluates resumes and job descriptions using AI. The application uses advanced RAG technology for precise matching analyses and offers an interactive chat to deepen the results.",
+            "es": "CV Matcher es una plataforma inteligente que analiza y evalúa currículums y descripciones de puestos utilizando IA. La aplicación utiliza tecnología RAG avanzada para análisis de coincidencias precisos y ofrece un chat interactivo para profundizar en los resultados."
+        },
+        "cv_matcher_feature_1": {
+            "de": "KI-gestützte Matching-Analyse mit Llama 3.1 70B (lokal) oder Grok 2 (Cloud)",
+            "en": "AI-powered matching analysis with Llama 3.1 70B (local) or Grok 2 (cloud)",
+            "es": "Análisis de coincidencias impulsado por IA con Llama 3.1 70B (local) o Grok 2 (nube)"
+        },
+        "cv_matcher_feature_2": {
+            "de": "RAG-Chat mit semantischer Suche in hochgeladenen Dokumenten",
+            "en": "RAG chat with semantic search in uploaded documents",
+            "es": "Chat RAG con búsqueda semántica en documentos cargados"
+        },
+        "cv_matcher_feature_3": {
+            "de": "Mehrsprachige Analyse und UI (Deutsch, Englisch, Spanisch)",
+            "en": "Multilingual analysis and UI (German, English, Spanish)",
+            "es": "Análisis e interfaz multilingüe (Alemán, Inglés, Español)"
+        },
+        "cv_matcher_feature_4": {
+            "de": "PDF-Upload und URL-Crawler für Job-Beschreibungen",
+            "en": "PDF upload and URL crawler for job descriptions",
+            "es": "Carga de PDF y rastreador de URL para descripciones de puestos"
+        },
+        "cv_matcher_feature_5": {
+            "de": "Detaillierte Analyseberichte mit Stärken, Lücken und Empfehlungen",
+            "en": "Detailed analysis reports with strengths, gaps, and recommendations",
+            "es": "Informes de análisis detallados con fortalezas, brechas y recomendaciones"
+        },
+        "cv_matcher_technical_title": {
+            "de": "Technische Beschreibung",
+            "en": "Technical Description",
+            "es": "Descripción Técnica"
+        },
+        "cv_matcher_technical_desc": {
+            "de": "Die Anwendung basiert auf einer modernen Full-Stack-Architektur mit React-Frontend, FastAPI-Backend und ChromaDB als Vector Database. Der Tech-Stack umfasst:",
+            "en": "The application is based on a modern full-stack architecture with React frontend, FastAPI backend, and ChromaDB as vector database. The tech stack includes:",
+            "es": "La aplicación se basa en una arquitectura full-stack moderna con frontend React, backend FastAPI y ChromaDB como base de datos vectorial. La pila tecnológica incluye:"
+        },
+        "cv_matcher_tech_frontend": {
+            "de": "Frontend",
+            "en": "Frontend",
+            "es": "Frontend"
+        },
+        "cv_matcher_tech_backend": {
+            "de": "Backend",
+            "en": "Backend",
+            "es": "Backend"
+        },
+        "cv_matcher_tech_ai": {
+            "de": "KI & ML",
+            "en": "AI & ML",
+            "es": "IA y ML"
+        },
+        "cv_matcher_tech_features": {
+            "de": "Features",
+            "en": "Features",
+            "es": "Características"
+        },
+        "general_backend_desc": {
+            "de": "Zentraler Backend-Service für alle Projekte mit LLM Gateway, Translation Service, URL Crawler und mehr.",
+            "en": "Central backend service for all projects with LLM Gateway, Translation Service, URL Crawler and more.",
+            "es": "Servicio backend central para todos los proyectos con LLM Gateway, servicio de traducción, rastreador de URL y más."
+        },
+        "audiobook_desc": {
+            "de": "KI-gestützte Audiobook-Generierung mit natürlicher Sprachsynthese.",
+            "en": "AI-powered audiobook generation with natural speech synthesis.",
+            "es": "Generación de audiolibros impulsada por IA con síntesis de voz natural."
+        },
+        "tellmelife_desc": {
+            "de": "Interaktive Plattform für persönliche Lebensgeschichten mit KI-Unterstützung.",
+            "en": "Interactive platform for personal life stories with AI support.",
+            "es": "Plataforma interactiva para historias de vida personales con soporte de IA."
+        },
+        "privatechatgxt_desc": {
+            "de": "Privater Chat-Assistent mit lokaler LLM-Integration für maximale Datensicherheit.",
+            "en": "Private chat assistant with local LLM integration for maximum data security.",
+            "es": "Asistente de chat privado con integración LLM local para máxima seguridad de datos."
+        },
+        "services_title": {
+            "de": "Services",
+            "en": "Services",
+            "es": "Servicios"
+        },
+        "service_1_title": {
+            "de": "LLM Integration",
+            "en": "LLM Integration",
+            "es": "Integración LLM"
+        },
+        "service_1_desc": {
+            "de": "Entwicklung und Integration von Large Language Models in bestehende Systeme.",
+            "en": "Development and integration of Large Language Models into existing systems.",
+            "es": "Desarrollo e integración de Modelos de Lenguaje Grandes en sistemas existentes."
+        },
+        "service_2_title": {
+            "de": "RAG Systeme",
+            "en": "RAG Systems",
+            "es": "Sistemas RAG"
+        },
+        "service_2_desc": {
+            "de": "Aufbau von Retrieval-Augmented Generation Systemen mit Vector Databases.",
+            "en": "Building Retrieval-Augmented Generation systems with vector databases.",
+            "es": "Construcción de sistemas de Generación Aumentada por Recuperación con bases de datos vectoriales."
+        },
+        "service_3_title": {
+            "de": "API Entwicklung",
+            "en": "API Development",
+            "es": "Desarrollo de API"
+        },
+        "service_3_desc": {
+            "de": "Skalierbare REST APIs mit FastAPI, vollständiger Dokumentation und Testing.",
+            "en": "Scalable REST APIs with FastAPI, complete documentation and testing.",
+            "es": "APIs REST escalables con FastAPI, documentación completa y pruebas."
+        },
+        "contact_title": {
+            "de": "Kontakt",
+            "en": "Contact",
+            "es": "Contacto"
+        },
+        "contact_email": {
+            "de": "E-Mail",
+            "en": "Email",
+            "es": "Correo Electrónico"
+        },
+        "contact_location": {
+            "de": "Standort",
+            "en": "Location",
+            "es": "Ubicación"
+        },
+        "footer_rights": {
+            "de": "Alle Rechte vorbehalten",
+            "en": "All rights reserved",
+            "es": "Todos los derechos reservados"
         }
     }
 
