@@ -1,8 +1,9 @@
 """Vector Service using pgvector (PostgreSQL native)."""
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+import re
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -29,6 +30,52 @@ class VectorService:
                 print(f"⚠️ Failed to load embedding model: {e}")
                 self.model = None
 
+    def chunk_text(
+        self,
+        text: str,
+        chunk_size: int = 500,
+        overlap: int = 50
+    ) -> List[Tuple[str, int]]:
+        """
+        Split text into overlapping chunks for better embeddings.
+
+        Args:
+            text: Input text to chunk
+            chunk_size: Target chunk size in words
+            overlap: Number of overlapping words between chunks
+
+        Returns:
+            List of (chunk_text, start_position) tuples
+        """
+        # Clean text
+        text = re.sub(r'\s+', ' ', text).strip()
+
+        # Split into words
+        words = text.split()
+
+        if len(words) <= chunk_size:
+            # Text is small enough - return as single chunk
+            return [(text, 0)]
+
+        chunks = []
+        start = 0
+
+        while start < len(words):
+            # Extract chunk
+            end = min(start + chunk_size, len(words))
+            chunk_words = words[start:end]
+            chunk_text = ' '.join(chunk_words)
+
+            chunks.append((chunk_text, start))
+
+            # Move to next chunk with overlap
+            if end >= len(words):
+                break
+
+            start += chunk_size - overlap
+
+        return chunks
+
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """
         Generate embedding vector for text.
@@ -53,14 +100,24 @@ class VectorService:
     async def add_document_embedding(
         self,
         session: AsyncSession,
-        document: Document
+        document: Document,
+        use_chunking: bool = True,
+        chunk_size: int = 500,
+        overlap: int = 50
     ) -> bool:
         """
         Generate and add embedding to document.
 
+        For large documents (>500 words), splits into overlapping chunks
+        and creates separate document records for each chunk to improve
+        RAG search quality.
+
         Args:
             session: Database session
-            document: Document instance
+            document: Document instance (will be updated with first chunk or whole doc)
+            use_chunking: Whether to split large documents into chunks
+            chunk_size: Target chunk size in words
+            overlap: Number of overlapping words between chunks
 
         Returns:
             True if successful, False otherwise
@@ -70,16 +127,81 @@ class VectorService:
             return False
 
         try:
-            # Generate embedding from content
-            embedding = self.generate_embedding(document.content)
+            word_count = len(document.content.split())
 
-            if embedding:
+            # Use chunking for large documents
+            if use_chunking and word_count > chunk_size:
+                chunks = self.chunk_text(document.content, chunk_size, overlap)
+                print(f"📄 Document has {word_count} words - splitting into {len(chunks)} chunks")
+
+                # Update original document with first chunk
+                first_chunk_text, _ = chunks[0]
+                embedding = self.generate_embedding(first_chunk_text)
+
+                if not embedding:
+                    return False
+
+                document.content = first_chunk_text
                 document.embedding = embedding
+                document.doc_metadata = document.doc_metadata or {}
+                document.doc_metadata.update({
+                    'is_chunk': True,
+                    'chunk_index': 0,
+                    'total_chunks': len(chunks),
+                    'chunk_size': chunk_size,
+                    'original_word_count': word_count
+                })
+
+                # Create additional document records for remaining chunks
+                for idx, (chunk_text, start_pos) in enumerate(chunks[1:], 1):
+                    chunk_embedding = self.generate_embedding(chunk_text)
+
+                    if not chunk_embedding:
+                        continue
+
+                    from uuid import uuid4
+                    chunk_doc = Document(
+                        id=uuid4(),
+                        user_id=document.user_id,
+                        project_id=document.project_id,
+                        type=document.type,
+                        filename=document.filename,
+                        url=document.url,
+                        content=chunk_text,
+                        embedding=chunk_embedding,
+                        doc_metadata={
+                            'is_chunk': True,
+                            'chunk_index': idx,
+                            'total_chunks': len(chunks),
+                            'chunk_size': chunk_size,
+                            'parent_id': str(document.id),
+                            'start_position': start_pos,
+                            'original_word_count': word_count
+                        }
+                    )
+                    session.add(chunk_doc)
+
                 await session.commit()
-                print(f"✅ Added embedding to document {document.id}")
+                print(f"✅ Added {len(chunks)} chunk embeddings for document {document.id}")
                 return True
 
-            return False
+            else:
+                # Small document - single embedding
+                embedding = self.generate_embedding(document.content)
+
+                if not embedding:
+                    return False
+
+                document.embedding = embedding
+                document.doc_metadata = document.doc_metadata or {}
+                document.doc_metadata.update({
+                    'is_chunk': False,
+                    'word_count': word_count
+                })
+
+                await session.commit()
+                print(f"✅ Added embedding to document {document.id} (no chunking needed)")
+                return True
 
         except Exception as e:
             print(f"❌ Error adding embedding: {e}")
