@@ -64,6 +64,113 @@ class TranslationService:
             "es": "Eliminar"
         },
 
+        # Document Section - Tabs
+        "doc_tab_upload": {
+            "de": "Upload",
+            "en": "Upload",
+            "es": "Subir"
+        },
+        "doc_tab_url": {
+            "de": "URL",
+            "en": "URL",
+            "es": "URL"
+        },
+        "doc_tab_text": {
+            "de": "Text",
+            "en": "Text",
+            "es": "Texto"
+        },
+
+        # Document Section - Upload
+        "doc_drop_file": {
+            "de": "Datei hier ablegen oder",
+            "en": "Drop file here or",
+            "es": "Arrastra el archivo aquí o"
+        },
+        "doc_select_file": {
+            "de": "Datei auswählen",
+            "en": "Select File",
+            "es": "Seleccionar Archivo"
+        },
+        "doc_loading": {
+            "de": "Lädt...",
+            "en": "Loading...",
+            "es": "Cargando..."
+        },
+
+        # Document Section - URL
+        "doc_url_placeholder": {
+            "de": "https://example.com/stellenanzeige",
+            "en": "https://example.com/job-posting",
+            "es": "https://example.com/oferta-empleo"
+        },
+        "doc_add_url": {
+            "de": "URL hinzufügen",
+            "en": "Add URL",
+            "es": "Agregar URL"
+        },
+
+        # Document Section - Text
+        "doc_text_placeholder": {
+            "de": "Text hier eingeben...",
+            "en": "Enter text here...",
+            "es": "Ingresa texto aquí..."
+        },
+        "doc_add_text": {
+            "de": "Text hinzufügen",
+            "en": "Add Text",
+            "es": "Agregar Texto"
+        },
+
+        # Document Section - List
+        "doc_no_documents": {
+            "de": "Keine Dokumente hinzugefügt",
+            "en": "No documents added",
+            "es": "No se agregaron documentos"
+        },
+        "doc_preview": {
+            "de": "Vorschau",
+            "en": "Preview",
+            "es": "Vista previa"
+        },
+        "doc_delete": {
+            "de": "Löschen",
+            "en": "Delete",
+            "es": "Eliminar"
+        },
+
+        # Document Section - Preview Modal
+        "doc_type_file": {
+            "de": "Datei",
+            "en": "File",
+            "es": "Archivo"
+        },
+        "doc_type_url": {
+            "de": "URL",
+            "en": "URL",
+            "es": "URL"
+        },
+        "doc_type_text": {
+            "de": "Text",
+            "en": "Text",
+            "es": "Texto"
+        },
+        "doc_content_length": {
+            "de": "Inhaltslänge",
+            "en": "Content length",
+            "es": "Longitud del contenido"
+        },
+        "doc_characters": {
+            "de": "Zeichen",
+            "en": "characters",
+            "es": "caracteres"
+        },
+        "doc_close": {
+            "de": "Schließen",
+            "en": "Close",
+            "es": "Cerrar"
+        },
+
         # Matching View
         "match_button": {
             "de": "Match Starten",
