@@ -8,7 +8,7 @@ a centralized dictionary with variable interpolation support.
 
 See docs/TRANSLATION_SERVICE.md for complete documentation.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path, Query
 from typing import Dict, Literal
 from pydantic import BaseModel, Field
 
@@ -113,7 +113,7 @@ const { translations } = await response.json();
     }
 )
 async def get_translations(
-    language: Literal["de", "en", "es"] = Field(
+    language: Literal["de", "en", "es"] = Path(
         ...,
         description="Language code: 'de' (German), 'en' (English), or 'es' (Spanish)",
         example="en"
@@ -182,12 +182,12 @@ See docs/TRANSLATION_SERVICE.md for complete list of ~70 keys.
     }
 )
 async def get_translation_key(
-    key: str = Field(
+    key: str = Path(
         ...,
         description="Translation key to retrieve",
         example="match_button"
     ),
-    language: Literal["de", "en", "es"] = Field(
+    language: Literal["de", "en", "es"] = Query(
         "de",
         description="Language code (defaults to German)",
         example="en"
