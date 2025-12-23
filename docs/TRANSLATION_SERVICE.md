@@ -319,7 +319,63 @@ prompt = translation_service.get_llm_prompt(
 - `error_pdf_failed`: PDF download failure (uses `{error}` variable)
 - `error_chat_failed`: Chat error (uses `{error}` variable)
 
-**Total**: ~70 translation keys
+### Homepage (dabrock.info)
+#### Navigation
+- `nav_about`: About navigation link
+- `nav_showcases`: Showcases/Projects navigation link
+- `nav_services`: Services navigation link
+- `nav_contact`: Contact navigation link
+
+#### Hero Section
+- `hero_title`: Main headline (e.g., "AI Expert & Full-Stack Developer")
+- `hero_subtitle`: Subtitle tagline
+
+#### About Section
+- `about_title`: About section title
+- `about_p1`: About paragraph 1
+- `about_p2`: About paragraph 2
+- `about_p3`: About paragraph 3
+
+#### Showcases Section
+- `showcases_title`: Showcases section title
+- `cv_matcher_tagline`: CV Matcher short description
+- `live_demo`: Live demo button text
+- `cv_matcher_functional_title`: Functional description section title
+- `cv_matcher_functional_desc`: CV Matcher functional description
+- `cv_matcher_feature_1`: Feature 1 - AI matching analysis
+- `cv_matcher_feature_2`: Feature 2 - RAG chat
+- `cv_matcher_feature_3`: Feature 3 - Multilingual support
+- `cv_matcher_feature_4`: Feature 4 - PDF & URL processing
+- `cv_matcher_feature_5`: Feature 5 - Detailed reports
+- `cv_matcher_technical_title`: Technical description section title
+- `cv_matcher_technical_desc`: CV Matcher technical overview
+- `cv_matcher_tech_frontend`: Frontend tech stack label
+- `cv_matcher_tech_backend`: Backend tech stack label
+- `cv_matcher_tech_ai`: AI & ML stack label
+- `cv_matcher_tech_features`: Features label
+- `general_backend_desc`: General Backend project description
+- `audiobook_desc`: Audiobook project description
+- `tellmelife_desc`: TellmeLife project description
+- `privatechatgxt_desc`: PrivateChatGxT project description
+
+#### Services Section
+- `services_title`: Services section title
+- `service_1_title`: Service 1 title (LLM Integration)
+- `service_1_desc`: Service 1 description
+- `service_2_title`: Service 2 title (RAG Systems)
+- `service_2_desc`: Service 2 description
+- `service_3_title`: Service 3 title (API Development)
+- `service_3_desc`: Service 3 description
+
+#### Contact Section
+- `contact_title`: Contact section title
+- `contact_email`: Email label
+- `contact_location`: Location label
+
+#### Footer
+- `footer_rights`: Copyright/rights reserved text
+
+**Total**: ~110 translation keys (70 CV Matcher + 40 Homepage)
 
 ---
 
