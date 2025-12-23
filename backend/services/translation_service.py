@@ -66,7 +66,7 @@ class TranslationService:
 
         # Document Section - Tabs
         "doc_tab_upload": {
-            "de": "Upload",
+            "de": "Hochladen",
             "en": "Upload",
             "es": "Subir"
         },
@@ -170,6 +170,123 @@ class TranslationService:
             "en": "Close",
             "es": "Cerrar"
         },
+        "doc_summary_button": {
+            "de": "📊 Zusammenfassung",
+            "en": "📊 Summary",
+            "es": "📊 Resumen"
+        },
+        "doc_summary_title": {
+            "de": "Zusammenfassung",
+            "en": "Summary",
+            "es": "Resumen"
+        },
+        "doc_summary_loading": {
+            "de": "Generiere Zusammenfassung...",
+            "en": "Generating summary...",
+            "es": "Generando resumen..."
+        },
+        "doc_summary_total_docs": {
+            "de": "Dokumente gesamt",
+            "en": "Total documents",
+            "es": "Documentos totales"
+        },
+        "doc_summary_total_content": {
+            "de": "Gesamtinhalt",
+            "en": "Total content",
+            "es": "Contenido total"
+        },
+        "doc_summary_words": {
+            "de": "Wörter",
+            "en": "words",
+            "es": "palabras"
+        },
+        "doc_summary_details": {
+            "de": "Dokumente Details",
+            "en": "Document Details",
+            "es": "Detalles de Documentos"
+        },
+
+        # Job Description Input
+        "job_desc_title": {
+            "de": "Stellenbeschreibung eingeben",
+            "en": "Enter Job Description",
+            "es": "Ingresar Descripción del Puesto"
+        },
+        "job_desc_subtitle": {
+            "de": "Fügen Sie die Stellenbeschreibung ein, um sie mit dem Lebenslauf zu vergleichen",
+            "en": "Paste the job description to compare it with the resume",
+            "es": "Pegue la descripción del puesto para compararla con el currículum"
+        },
+        "job_title_label": {
+            "de": "Stellentitel (optional)",
+            "en": "Job Title (optional)",
+            "es": "Título del Puesto (opcional)"
+        },
+        "job_title_placeholder": {
+            "de": "z.B. Senior Software Engineer",
+            "en": "e.g. Senior Software Engineer",
+            "es": "ej. Ingeniero de Software Senior"
+        },
+        "company_name_label": {
+            "de": "Unternehmen (optional)",
+            "en": "Company (optional)",
+            "es": "Empresa (opcional)"
+        },
+        "company_name_placeholder": {
+            "de": "z.B. Tech Company GmbH",
+            "en": "e.g. Tech Company Inc.",
+            "es": "ej. Tech Company SA"
+        },
+        "job_description_label": {
+            "de": "Stellenbeschreibung *",
+            "en": "Job Description *",
+            "es": "Descripción del Puesto *"
+        },
+        "characters": {
+            "de": "Zeichen",
+            "en": "characters",
+            "es": "caracteres"
+        },
+        "job_description_placeholder": {
+            "de": "Fügen Sie hier die vollständige Stellenbeschreibung ein...\n\nBeispiel:\nWir suchen einen erfahrenen Software Engineer für unser Team...\n\nAnforderungen:\n- 5+ Jahre Erfahrung in der Softwareentwicklung\n- Kenntnisse in React, TypeScript, Node.js\n- Erfahrung mit Cloud-Technologien (AWS, Azure)\n...",
+            "en": "Paste the complete job description here...\n\nExample:\nWe are looking for an experienced Software Engineer for our team...\n\nRequirements:\n- 5+ years of software development experience\n- Knowledge of React, TypeScript, Node.js\n- Experience with cloud technologies (AWS, Azure)\n...",
+            "es": "Pegue la descripción completa del puesto aquí...\n\nEjemplo:\nBuscamos un Ingeniero de Software experimentado para nuestro equipo...\n\nRequisitos:\n- 5+ años de experiencia en desarrollo de software\n- Conocimiento de React, TypeScript, Node.js\n- Experiencia con tecnologías en la nube (AWS, Azure)\n..."
+        },
+        "job_desc_min_required": {
+            "de": "Mindestens {count} Zeichen erforderlich",
+            "en": "At least {count} characters required",
+            "es": "Al menos {count} caracteres requeridos"
+        },
+        "job_desc_chars_remaining": {
+            "de": "Noch {count} Zeichen erforderlich",
+            "en": "Still {count} characters required",
+            "es": "Aún se requieren {count} caracteres"
+        },
+        "job_desc_ready": {
+            "de": "Stellenbeschreibung ist bereit für die Analyse",
+            "en": "Job description is ready for analysis",
+            "es": "La descripción del puesto está lista para el análisis"
+        },
+        "analyze_match": {
+            "de": "Match analysieren",
+            "en": "Analyze Match",
+            "es": "Analizar Coincidencia"
+        },
+        "reset": {
+            "de": "Zurücksetzen",
+            "en": "Reset",
+            "es": "Restablecer"
+        },
+        "job_desc_error_empty": {
+            "de": "Bitte geben Sie eine Stellenbeschreibung ein",
+            "en": "Please enter a job description",
+            "es": "Por favor ingrese una descripción del puesto"
+        },
+        "job_desc_error_min_chars": {
+            "de": "Die Stellenbeschreibung muss mindestens {count} Zeichen enthalten",
+            "en": "The job description must contain at least {count} characters",
+            "es": "La descripción del puesto debe contener al menos {count} caracteres"
+        },
 
         # Matching View
         "match_button": {
@@ -270,17 +387,17 @@ class TranslationService:
             "es": "Coincidencia del Candidato"
         },
         "comparison_details": {
-            "de": "Details",
+            "de": "Einzelheiten",
             "en": "Details",
             "es": "Detalles"
         },
         "comparison_level": {
-            "de": "Level",
+            "de": "Stufe",
             "en": "Level",
             "es": "Nivel"
         },
         "comparison_confidence": {
-            "de": "Confidence",
+            "de": "Sicherheit",
             "en": "Confidence",
             "es": "Confianza"
         },
@@ -413,19 +530,19 @@ class TranslationService:
 
         # Gap Claims Section
         "gap_claims_title": {
-            "de": "Fehlende Qualifikationen - Haben Sie diese doch?",
-            "en": "Missing Qualifications - Do you have these?",
-            "es": "Calificaciones Faltantes - ¿Las tiene?"
+            "de": "Qualifikationen nachtragen",
+            "en": "Add Missing Qualifications",
+            "es": "Agregar Calificaciones Faltantes"
         },
         "gap_claims_description": {
-            "de": "Wenn Sie eine der als fehlend identifizierten Qualifikationen doch besitzen, können Sie dies hier angeben. Wir generieren dann einen aktualisierten Lebenslauf für Sie.",
-            "en": "If you possess any of the identified missing qualifications, you can indicate this here. We will then generate an updated resume for you.",
-            "es": "Si posee alguna de las calificaciones faltantes identificadas, puede indicarlo aquí. Luego generaremos un currículum actualizado para usted."
+            "de": "Die Analyse hat einige Qualifikationen als fehlend markiert. Falls Sie diese Fähigkeiten tatsächlich besitzen, können Sie sie hier nachweisen. Wir erstellen dann einen aktualisierten Lebenslauf, der diese Kompetenzen hervorhebt.",
+            "en": "The analysis marked some qualifications as missing. If you actually possess these skills, you can document them here. We will then create an updated resume highlighting these competencies.",
+            "es": "El análisis marcó algunas calificaciones como faltantes. Si realmente posee estas habilidades, puede documentarlas aquí. Luego crearemos un currículum actualizado que destaque estas competencias."
         },
         "gap_claims_i_have_this": {
-            "de": "Habe ich",
-            "en": "I have this",
-            "es": "Lo tengo"
+            "de": "Diese Qualifikation besitze ich",
+            "en": "I have this qualification",
+            "es": "Tengo esta calificación"
         },
         "gap_claims_justification": {
             "de": "Begründung / Nachweis",

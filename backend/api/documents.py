@@ -20,6 +20,7 @@ from backend.schemas.document import (
 )
 from backend.services.document_processor import document_processor
 from backend.services.vector_service import vector_service
+from backend.services.document_summary_service import document_summary_service
 from backend.config import settings
 
 
@@ -276,6 +277,32 @@ async def get_document(
         )
 
     return document
+
+
+@router.get("/summary/all")
+async def get_documents_summary(
+    project_id: Optional[UUID] = None,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """
+    Get comprehensive summary of all user documents in vector database.
+
+    Returns aggregated statistics including:
+    - Total documents count
+    - Total words and characters
+    - Documents grouped by type (pdf, url, text, etc.)
+    - Individual document details with full content
+
+    This endpoint is used by CV Matcher's "Zusammenfassung" button
+    to show ALL documents including URLs from the vector database.
+    """
+    summary = await document_summary_service.get_user_summary(
+        session=session,
+        user_id=user.id,
+        project_id=project_id
+    )
+    return summary
 
 
 @router.delete("/cleanup", status_code=status.HTTP_200_OK)

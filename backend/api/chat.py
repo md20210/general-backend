@@ -55,12 +55,12 @@ async def send_chat_message(
             if not relevant_docs:
                 context = "No relevant content found in provided documents."
             else:
-                # Build context from in-memory docs
+                # Build context from in-memory docs with FULL content
                 context_parts = []
                 for idx, (doc, distance) in enumerate(relevant_docs, 1):
-                    # Truncate long content
-                    content_preview = doc['content'][:500] + "..." if len(doc['content']) > 500 else doc['content']
-                    context_parts.append(f"[Document {idx} - {doc['filename']}]: {content_preview}")
+                    # Use FULL content for better answers (no truncation)
+                    full_content = doc['content']
+                    context_parts.append(f"[Document {idx} - {doc['filename']}]:\n{full_content}")
 
                     # Build sources list
                     sources.append(DocumentSource(
@@ -70,7 +70,7 @@ async def send_chat_message(
                         relevance_score=1.0 - distance
                     ))
 
-                context = "\n\n".join(context_parts)
+                context = "\n\n---\n\n".join(context_parts)
 
         # Mode 2: Database RAG (traditional flow)
         else:
