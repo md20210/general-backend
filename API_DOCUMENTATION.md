@@ -708,6 +708,139 @@ Authorization: Bearer <jwt_token>
 
 ---
 
+## 7. Reports Endpoints (`/reports`)
+
+### 7.1 Generate PDF Report
+
+**POST** `/reports/generate`
+
+Generate PDF report for CV match analysis with chat history.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "match_result": {
+    "overallScore": 85,
+    "strengths": [
+      "10+ years Python experience",
+      "AWS certification",
+      "Team leadership experience"
+    ],
+    "gaps": [
+      "No Kubernetes experience",
+      "Limited frontend skills"
+    ],
+    "recommendations": [
+      "Consider Kubernetes training",
+      "Pair with frontend developer"
+    ],
+    "comparison": [
+      {
+        "requirement": "Python 5+ years",
+        "applicant_match": "10 years Python",
+        "details": "Exceeds requirement significantly",
+        "match_level": "full",
+        "confidence": 95
+      }
+    ],
+    "detailedAnalysis": "Candidate shows strong backend skills..."
+  },
+  "chat_history": [
+    {
+      "role": "user",
+      "content": "Warum ist der Match Score 85%?",
+      "timestamp": "2025-12-23T18:30:00Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Der Match Score ist 85%, weil...",
+      "timestamp": "2025-12-23T18:30:15Z"
+    }
+  ]
+}
+```
+
+**Response** (200 OK):
+- Content-Type: `application/pdf`
+- Content-Disposition: `attachment; filename=cv_match_report.pdf`
+- PDF file as binary stream
+
+**PDF Contents:**
+1. Overall match score with color-coded indicator
+2. 2-column layout: Strengths | Gaps
+3. Recommendations (if available)
+4. Detailed comparison table with confidence %
+5. Detailed analysis text
+6. Complete chat conversation history
+
+**Errors:**
+- 401: Unauthorized (missing/invalid JWT)
+- 500: PDF generation failed
+
+---
+
+## 8. Chat Endpoints (`/chat`)
+
+### 8.1 Send Chat Message with RAG
+
+**POST** `/chat/message`
+
+Send a chat message with Retrieval-Augmented Generation (RAG).
+
+Uses vector search to find relevant documents, then generates response using LLM with retrieved context.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "message": "Hat der Bewerber AWS Erfahrung?",
+  "project_id": "uuid-here",
+  "system_context": "Match Analysis Summary: Overall Score: 85%...",
+  "provider": "ollama",
+  "model": "qwen2.5:3b",
+  "temperature": 0.7,
+  "max_tokens": 500,
+  "context_limit": 3
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "message": "Ja, der Bewerber hat 5 Jahre AWS Erfahrung mit...",
+  "sources": [
+    {
+      "document_id": "uuid-here",
+      "filename": "cv.pdf",
+      "type": "pdf",
+      "relevance_score": 0.89
+    }
+  ],
+  "model": "qwen2.5:3b",
+  "provider": "ollama"
+}
+```
+
+**Features:**
+- German language responses by default
+- Vector search across uploaded documents
+- Top 3 most relevant sources included
+- Relevance scores show search quality
+- Optional system context for custom instructions
+
+---
+
 ## Error Responses
 
 All endpoints may return these error codes:
