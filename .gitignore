@@ -63,3 +63,4 @@ htmlcov/
 node_modules/
 dist/
 .cache/
+.aider*

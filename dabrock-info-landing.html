@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Michael Dabrock - AI Showcases</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            padding: 2rem;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .subtitle {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            margin-bottom: 3rem;
+        }
+        .showcases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .card p {
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+        .badge {
+            display: inline-block;
+            background: #4CAF50;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .badge.coming {
+            background: #FF9800;
+        }
+        .admin-link {
+            margin-top: 3rem;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+        .admin-link a {
+            color: white;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 AI Showcases</h1>
+        <p class="subtitle">Enterprise-Grade AI Applications by Michael Dabrock</p>
+
+        <div class="showcases">
+            <a href="/cv-matcher/" class="card">
+                <span class="badge coming">Coming Soon</span>
+                <h2>📄 CV Matcher</h2>
+                <p>AI-powered resume analysis and job matching. Upload CVs and job descriptions to get intelligent matching scores and recommendations.</p>
+            </a>
+
+            <a href="/privategpt/" class="card">
+                <span class="badge coming">Coming Soon</span>
+                <h2>🔒 PrivateGPT</h2>
+                <p>Privacy-first document chat with local LLM. Upload documents and chat with your data without sending it to external APIs.</p>
+            </a>
+
+            <a href="/tellmelife/" class="card">
+                <span class="badge coming">Coming Soon</span>
+                <h2>📖 TellMeLife</h2>
+                <p>AI-assisted life story creation. Transform memories and experiences into beautifully written narratives.</p>
+            </a>
+        </div>
+
+        <div class="admin-link">
+            <a href="/admin/">Admin Panel</a> |
+            <a href="https://www.dabrock.eu">Personal Website</a>
+        </div>
+    </div>
+</body>
+</html>

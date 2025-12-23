@@ -51,12 +51,12 @@ function App() {
 
   return (
     <div className="container">
-      <header style={{ marginBottom: '2rem', borderBottom: '1px solid #333', paddingBottom: '1rem' }}>
-        <h1>General Backend - Admin Panel</h1>
+      <header style={{ marginBottom: '2rem', borderBottom: '2px solid #e0e0e0', paddingBottom: '1rem' }}>
+        <h1 style={{ color: '#1a1a1a', marginBottom: '0.5rem' }}>General Backend - Admin Panel</h1>
         {currentUser && (
           <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>
-              Logged in as: <strong>{currentUser.email}</strong>
+            <span style={{ color: '#666' }}>
+              Logged in as: <strong style={{ color: '#1a1a1a' }}>{currentUser.email}</strong>
               {currentUser.is_admin && <span className="badge badge-admin" style={{ marginLeft: '0.5rem' }}>Admin</span>}
             </span>
             <button onClick={handleLogout}>Logout</button>
@@ -64,10 +64,14 @@ function App() {
         )}
       </header>
 
-      <nav style={{ marginBottom: '2rem' }}>
+      <nav style={{ marginBottom: '2rem', display: 'flex', gap: '0.5rem' }}>
         <button
           onClick={() => setCurrentView('dashboard')}
-          style={{ marginRight: '0.5rem', backgroundColor: currentView === 'dashboard' ? '#646cff' : '#1a1a1a' }}
+          style={{
+            backgroundColor: currentView === 'dashboard' ? '#1a1a1a' : '#f5f5f5',
+            color: currentView === 'dashboard' ? '#ffffff' : '#1a1a1a',
+            border: '1px solid #e0e0e0'
+          }}
         >
           Dashboard
         </button>
@@ -75,19 +79,31 @@ function App() {
           <>
             <button
               onClick={() => setCurrentView('users')}
-              style={{ marginRight: '0.5rem', backgroundColor: currentView === 'users' ? '#646cff' : '#1a1a1a' }}
+              style={{
+                backgroundColor: currentView === 'users' ? '#1a1a1a' : '#f5f5f5',
+                color: currentView === 'users' ? '#ffffff' : '#1a1a1a',
+                border: '1px solid #e0e0e0'
+              }}
             >
               Users
             </button>
             <button
               onClick={() => setCurrentView('llm')}
-              style={{ marginRight: '0.5rem', backgroundColor: currentView === 'llm' ? '#646cff' : '#1a1a1a' }}
+              style={{
+                backgroundColor: currentView === 'llm' ? '#1a1a1a' : '#f5f5f5',
+                color: currentView === 'llm' ? '#ffffff' : '#1a1a1a',
+                border: '1px solid #e0e0e0'
+              }}
             >
               LLM Config
             </button>
             <button
               onClick={() => setCurrentView('stats')}
-              style={{ backgroundColor: currentView === 'stats' ? '#646cff' : '#1a1a1a' }}
+              style={{
+                backgroundColor: currentView === 'stats' ? '#1a1a1a' : '#f5f5f5',
+                color: currentView === 'stats' ? '#ffffff' : '#1a1a1a',
+                border: '1px solid #e0e0e0'
+              }}
             >
               System Stats
             </button>

@@ -1,0 +1,9 @@
+# Strato Multi-Domain Configuration
+# Place in /htdocs/.htaccess
+
+RewriteEngine On
+
+# Redirect www.dabrock.info to /dabrock-info/ subdirectory
+RewriteCond %{HTTP_HOST} ^(www\.)?dabrock\.info$ [NC]
+RewriteCond %{REQUEST_URI} !^/dabrock-info/
+RewriteRule ^(.*)$ /dabrock-info/$1 [L]

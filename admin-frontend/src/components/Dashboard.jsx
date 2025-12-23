@@ -31,31 +31,43 @@ function Dashboard({ apiUrl, token }) {
     }
   }
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div className="error">{error}</div>
+  if (loading) return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h2 style={{ color: '#1a1a1a' }}>Loading Dashboard...</h2>
+      <p style={{ color: '#666', marginTop: '1rem' }}>Please wait while we fetch your data.</p>
+    </div>
+  )
+
+  if (error) return (
+    <div className="error">
+      <h3 style={{ marginBottom: '0.5rem' }}>Error Loading Dashboard</h3>
+      <p>{error}</p>
+      <button onClick={fetchData} style={{ marginTop: '1rem' }}>Retry</button>
+    </div>
+  )
 
   return (
     <div>
-      <h2>Dashboard</h2>
+      <h2 style={{ color: '#1a1a1a', marginBottom: '1.5rem' }}>Dashboard</h2>
 
       <div className="card">
-        <h3>Quick Stats</h3>
+        <h3 style={{ color: '#1a1a1a', marginBottom: '1rem' }}>Quick Stats</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-          <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '8px' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#646cff' }}>{projects.length}</div>
-            <div style={{ color: '#888' }}>Projects</div>
+          <div style={{ padding: '1.5rem', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>{projects.length}</div>
+            <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.5rem' }}>Projects</div>
           </div>
-          <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '8px' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#51cf66' }}>{documents.length}</div>
-            <div style={{ color: '#888' }}>Documents</div>
+          <div style={{ padding: '1.5rem', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1a1a1a' }}>{documents.length}</div>
+            <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.5rem' }}>Documents</div>
           </div>
         </div>
       </div>
 
       <div className="card">
-        <h3>Recent Projects</h3>
+        <h3 style={{ color: '#1a1a1a', marginBottom: '1rem' }}>Recent Projects</h3>
         {projects.length === 0 ? (
-          <p style={{ color: '#888' }}>No projects yet</p>
+          <p style={{ color: '#666', marginTop: '1rem' }}>No projects yet. Create your first project to get started.</p>
         ) : (
           <table className="table">
             <thead>
@@ -79,9 +91,9 @@ function Dashboard({ apiUrl, token }) {
       </div>
 
       <div className="card">
-        <h3>Recent Documents</h3>
+        <h3 style={{ color: '#1a1a1a', marginBottom: '1rem' }}>Recent Documents</h3>
         {documents.length === 0 ? (
-          <p style={{ color: '#888' }}>No documents yet</p>
+          <p style={{ color: '#666', marginTop: '1rem' }}>No documents yet. Upload your first document to see it here.</p>
         ) : (
           <table className="table">
             <thead>

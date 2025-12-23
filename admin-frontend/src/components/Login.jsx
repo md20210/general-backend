@@ -13,9 +13,15 @@ function Login({ onLogin, apiUrl }) {
     setLoading(true)
 
     try {
-      const response = await axios.post(`${apiUrl}/auth/login`, {
-        username: email,
-        password: password,
+      // Backend expects form-urlencoded data
+      const formData = new URLSearchParams()
+      formData.append('username', email)
+      formData.append('password', password)
+
+      const response = await axios.post(`${apiUrl}/auth/login`, formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       })
 
       const token = response.data.access_token
@@ -30,13 +36,13 @@ function Login({ onLogin, apiUrl }) {
   return (
     <div className="container" style={{ maxWidth: '400px', marginTop: '5rem' }}>
       <div className="card">
-        <h1 style={{ marginBottom: '2rem', textAlign: 'center' }}>Admin Login</h1>
+        <h1 style={{ marginBottom: '2rem', textAlign: 'center', color: '#1a1a1a' }}>Admin Login</h1>
 
         {error && <div className="error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem' }}>
+            <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem', color: '#1a1a1a', fontWeight: '500' }}>
               Email
             </label>
             <input
@@ -51,7 +57,7 @@ function Login({ onLogin, apiUrl }) {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label htmlFor="password" style={{ display: 'block', marginBottom: '0.5rem' }}>
+            <label htmlFor="password" style={{ display: 'block', marginBottom: '0.5rem', color: '#1a1a1a', fontWeight: '500' }}>
               Password
             </label>
             <input
