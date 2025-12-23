@@ -393,9 +393,95 @@ class TranslationService:
         "error_need_documents": {
             "de": "Bitte fügen Sie Dokumente für beide Seiten hinzu",
             "en": "Please add documents for both sides",
-            "es": "Por favor, agregue documentos para ambos lados"
+            "es": "Por favor agregue documentos para ambos lados"
         },
         "error_pdf_failed": {
+            "de": "PDF-Generierung fehlgeschlagen: {error}",
+            "en": "PDF generation failed: {error}",
+            "es": "Error al generar PDF: {error}"
+        },
+        "error_no_claims": {
+            "de": "Bitte wählen Sie mindestens eine Qualifikation aus und geben Sie eine Begründung ein",
+            "en": "Please select at least one qualification and provide a justification",
+            "es": "Por favor seleccione al menos una calificación y proporcione una justificación"
+        },
+        "error_cv_regenerate_failed": {
+            "de": "CV-Generierung fehlgeschlagen",
+            "en": "CV generation failed",
+            "es": "Error al generar CV"
+        },
+
+        # Gap Claims Section
+        "gap_claims_title": {
+            "de": "Fehlende Qualifikationen - Haben Sie diese doch?",
+            "en": "Missing Qualifications - Do you have these?",
+            "es": "Calificaciones Faltantes - ¿Las tiene?"
+        },
+        "gap_claims_description": {
+            "de": "Wenn Sie eine der als fehlend identifizierten Qualifikationen doch besitzen, können Sie dies hier angeben. Wir generieren dann einen aktualisierten Lebenslauf für Sie.",
+            "en": "If you possess any of the identified missing qualifications, you can indicate this here. We will then generate an updated resume for you.",
+            "es": "Si posee alguna de las calificaciones faltantes identificadas, puede indicarlo aquí. Luego generaremos un currículum actualizado para usted."
+        },
+        "gap_claims_i_have_this": {
+            "de": "Habe ich",
+            "en": "I have this",
+            "es": "Lo tengo"
+        },
+        "gap_claims_justification": {
+            "de": "Begründung / Nachweis",
+            "en": "Justification / Evidence",
+            "es": "Justificación / Evidencia"
+        },
+        "gap_claims_justification_placeholder": {
+            "de": "z.B. '5 Jahre Erfahrung mit AWS in meiner aktuellen Position bei Firma XYZ...'",
+            "en": "e.g., '5 years experience with AWS in my current position at Company XYZ...'",
+            "es": "ej., '5 años de experiencia con AWS en mi puesto actual en la Empresa XYZ...'"
+        },
+
+        # CV Regeneration Section
+        "cv_regenerate_title": {
+            "de": "Neuen Lebenslauf generieren",
+            "en": "Generate New Resume",
+            "es": "Generar Nuevo Currículum"
+        },
+        "cv_regenerate_description": {
+            "de": "Basierend auf Ihren Angaben erstellen wir einen aktualisierten Lebenslauf, der Ihre zusätzlichen Qualifikationen hervorhebt.",
+            "en": "Based on your input, we will create an updated resume highlighting your additional qualifications.",
+            "es": "Basándonos en su información, crearemos un currículum actualizado que destaque sus calificaciones adicionales."
+        },
+        "cv_regenerate_button": {
+            "de": "Aktualisierten Lebenslauf generieren",
+            "en": "Generate Updated Resume",
+            "es": "Generar Currículum Actualizado"
+        },
+        "cv_regenerate_generating": {
+            "de": "Generiere...",
+            "en": "Generating...",
+            "es": "Generando..."
+        },
+        "cv_regenerate_note": {
+            "de": "Der aktualisierte Lebenslauf wird als Textdatei heruntergeladen",
+            "en": "The updated resume will be downloaded as a text file",
+            "es": "El currículum actualizado se descargará como archivo de texto"
+        },
+        "cv_regenerate_success": {
+            "de": "Lebenslauf erfolgreich generiert und heruntergeladen!",
+            "en": "Resume successfully generated and downloaded!",
+            "es": "¡Currículum generado y descargado exitosamente!"
+        },
+        "cv_regenerate_prompt": {
+            "de": "Du bist ein professioneller CV-Schreiber. Erstelle einen aktualisierten Lebenslauf basierend auf dem Original-CV und füge die folgenden zusätzlichen Qualifikationen ein:",
+            "en": "You are a professional resume writer. Create an updated resume based on the original CV and incorporate the following additional qualifications:",
+            "es": "Eres un escritor profesional de currículums. Crea un currículum actualizado basado en el CV original e incorpora las siguientes calificaciones adicionales:"
+        },
+        "cv_regenerate_instructions": {
+            "de": "Integriere diese Qualifikationen nahtlos in den Lebenslauf. Behalte das Format und den Stil bei. Gib den vollständigen, aktualisierten Lebenslauf zurück.",
+            "en": "Seamlessly integrate these qualifications into the resume. Maintain the format and style. Return the complete, updated resume.",
+            "es": "Integra estas calificaciones sin problemas en el currículum. Mantén el formato y el estilo. Devuelve el currículum completo y actualizado."
+        },
+
+        # Existing error messages continue...
+        "error_pdf_failed_old": {
             "de": "PDF-Download fehlgeschlagen: {error}",
             "en": "PDF download failed: {error}",
             "es": "Error al descargar PDF: {error}"
