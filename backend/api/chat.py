@@ -54,25 +54,25 @@ async def send_chat_message(
 
             context = "\n\n".join(context_parts)
 
-        # 3. Build RAG prompt
+        # 3. Build RAG prompt (auf Deutsch für bessere Ergebnisse)
         if request.system_context:
             # Include custom context (e.g., match result summary)
-            rag_prompt = f"""System Context:
+            rag_prompt = f"""System-Kontext:
 {request.system_context}
 
-Retrieved Documents:
+Relevante Dokumente:
 {context}
 
-User Question: {request.message}
+Benutzerfrage: {request.message}
 
-Answer the question based on the system context and retrieved documents. Be concise and helpful."""
+Beantworte die Frage auf Deutsch basierend auf dem System-Kontext und den relevanten Dokumenten. Sei präzise und hilfreich. Zitiere spezifische Details aus den Dokumenten."""
         else:
-            rag_prompt = f"""Context from documents:
+            rag_prompt = f"""Kontext aus Dokumenten:
 {context}
 
-User Question: {request.message}
+Benutzerfrage: {request.message}
 
-Answer based on the context above. If the context doesn't contain relevant information, say so."""
+Beantworte die Frage auf Deutsch basierend auf dem obigen Kontext. Wenn der Kontext keine relevanten Informationen enthält, sage es deutlich."""
 
         # 4. LLM Generation
         llm_response = llm_gateway.generate(
