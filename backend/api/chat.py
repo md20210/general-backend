@@ -28,31 +28,83 @@ async def send_chat_message(
     Uses vector search to find relevant documents, then generates
     a response using the LLM with the retrieved context.
 
+    **Two RAG modes:**
+    1. **Database RAG** (default): Searches user's stored documents in PostgreSQL
+    2. **In-Memory RAG** (CV Matcher): Pass documents directly in request body
+
     Perfect for CV Matcher: Ask questions about match results,
     specific skills, requirements, etc.
     """
     try:
-        # 1. Vector Search: Find relevant documents
-        relevant_docs = await vector_service.search_similar_documents(
-            session=session,
-            query_text=request.message,
-            user_id=user.id,
-            project_id=request.project_id,
-            limit=request.context_limit or 3
-        )
+        sources = []
 
-        if not relevant_docs:
-            # No documents found - answer without context
-            context = "No relevant documents found in the database."
+        # Mode 1: In-Memory RAG (bypasses database)
+        if request.documents:
+            print(f"📄 In-Memory RAG mode: {len(request.documents)} documents provided")
+
+            # Convert Pydantic models to dicts
+            docs_dict = [doc.dict() for doc in request.documents]
+
+            # Search in-memory documents
+            relevant_docs = vector_service.search_in_memory_documents(
+                query_text=request.message,
+                documents=docs_dict,
+                limit=request.context_limit or 3
+            )
+
+            if not relevant_docs:
+                context = "No relevant content found in provided documents."
+            else:
+                # Build context from in-memory docs
+                context_parts = []
+                for idx, (doc, distance) in enumerate(relevant_docs, 1):
+                    # Truncate long content
+                    content_preview = doc['content'][:500] + "..." if len(doc['content']) > 500 else doc['content']
+                    context_parts.append(f"[Document {idx} - {doc['filename']}]: {content_preview}")
+
+                    # Build sources list
+                    sources.append(DocumentSource(
+                        document_id=f"memory_{idx}",
+                        filename=doc['filename'],
+                        type=doc['type'],
+                        relevance_score=1.0 - distance
+                    ))
+
+                context = "\n\n".join(context_parts)
+
+        # Mode 2: Database RAG (traditional flow)
         else:
-            # 2. Build context from top documents
-            context_parts = []
-            for idx, (doc, distance) in enumerate(relevant_docs, 1):
-                # Truncate long content
-                content_preview = doc.content[:500] + "..." if len(doc.content) > 500 else doc.content
-                context_parts.append(f"[Document {idx}]: {content_preview}")
+            print(f"💾 Database RAG mode: searching user documents")
 
-            context = "\n\n".join(context_parts)
+            # Vector Search: Find relevant documents in database
+            relevant_docs = await vector_service.search_similar_documents(
+                session=session,
+                query_text=request.message,
+                user_id=user.id,
+                project_id=request.project_id,
+                limit=request.context_limit or 3
+            )
+
+            if not relevant_docs:
+                # No documents found - answer without context
+                context = "No relevant documents found in the database."
+            else:
+                # Build context from database documents
+                context_parts = []
+                for idx, (doc, distance) in enumerate(relevant_docs, 1):
+                    # Truncate long content
+                    content_preview = doc.content[:500] + "..." if len(doc.content) > 500 else doc.content
+                    context_parts.append(f"[Document {idx}]: {content_preview}")
+
+                    # Build sources list
+                    sources.append(DocumentSource(
+                        document_id=str(doc.id),
+                        filename=doc.filename,
+                        type=doc.type,
+                        relevance_score=1.0 - distance
+                    ))
+
+                context = "\n\n".join(context_parts)
 
         # 3. Build RAG prompt (auf Deutsch für bessere Ergebnisse)
         if request.system_context:
@@ -83,20 +135,10 @@ Beantworte die Frage auf Deutsch basierend auf dem obigen Kontext. Wenn der Kont
             max_tokens=request.max_tokens or 500,
         )
 
-        # 5. Build response with sources
-        sources = [
-            DocumentSource(
-                document_id=str(doc.id),
-                filename=doc.filename,
-                type=doc.type,
-                relevance_score=1.0 - distance  # Convert distance to similarity
-            )
-            for doc, distance in relevant_docs[:3]  # Top 3 sources
-        ]
-
+        # 5. Return response with sources (already built above)
         return ChatMessageResponse(
             message=llm_response["response"],
-            sources=sources,
+            sources=sources,  # Sources were built in Mode 1 or Mode 2
             model=llm_response["model"],
             provider=llm_response["provider"]
         )

@@ -316,6 +316,69 @@ class VectorService:
 
         return "\n\n---\n\n".join(context_parts)
 
+    def search_in_memory_documents(
+        self,
+        query_text: str,
+        documents: List[dict],
+        limit: int = 3
+    ) -> List[tuple[dict, float]]:
+        """
+        Search for similar documents in a list of in-memory documents.
+
+        Uses embedding similarity without database access.
+        Perfect for CV Matcher RAG without persistence.
+
+        Args:
+            query_text: Search query
+            documents: List of dicts with 'filename', 'content', 'type' keys
+            limit: Maximum number of results
+
+        Returns:
+            List of (document, distance) tuples, ordered by similarity
+        """
+        if not self.model:
+            print("⚠️ Embedding model not available - returning all documents")
+            # Fallback: return all documents with neutral score
+            return [(doc, 0.5) for doc in documents[:limit]]
+
+        try:
+            # Generate query embedding
+            query_embedding = self.generate_embedding(query_text)
+            if not query_embedding:
+                return [(doc, 0.5) for doc in documents[:limit]]
+
+            # Generate embeddings for all documents and calculate distances
+            results = []
+            for doc in documents:
+                content = doc.get('content', '')
+                if not content:
+                    continue
+
+                # Generate document embedding
+                doc_embedding = self.generate_embedding(content)
+                if not doc_embedding:
+                    continue
+
+                # Calculate cosine distance
+                import numpy as np
+                query_vec = np.array(query_embedding)
+                doc_vec = np.array(doc_embedding)
+
+                # Cosine distance = 1 - cosine_similarity
+                cosine_sim = np.dot(query_vec, doc_vec) / (np.linalg.norm(query_vec) * np.linalg.norm(doc_vec))
+                distance = 1.0 - cosine_sim
+
+                results.append((doc, float(distance)))
+
+            # Sort by distance (lower is better) and limit
+            results.sort(key=lambda x: x[1])
+            return results[:limit]
+
+        except Exception as e:
+            print(f"❌ Error searching in-memory documents: {e}")
+            # Fallback: return all documents
+            return [(doc, 0.5) for doc in documents[:limit]]
+
 
 # Global instance
 vector_service = VectorService()
