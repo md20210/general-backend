@@ -48,7 +48,7 @@ async def upload_document(
     user: User = Depends(current_active_user),
 ):
     """
-    Upload PDF or DOCX file.
+    Upload PDF, DOC, DOCX, or TXT file.
 
     Automatically extracts text, creates embeddings, and adds to vector store.
     """
@@ -56,12 +56,16 @@ async def upload_document(
     filename = file.filename.lower()
     if filename.endswith('.pdf'):
         doc_type = DocumentType.PDF
+    elif filename.endswith('.doc'):
+        doc_type = DocumentType.DOC
     elif filename.endswith('.docx'):
         doc_type = DocumentType.DOCX
+    elif filename.endswith('.txt'):
+        doc_type = DocumentType.TXT
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF and DOCX files are supported"
+            detail="Only PDF, DOC, DOCX, and TXT files are supported"
         )
 
     # Save file temporarily
@@ -73,11 +77,22 @@ async def upload_document(
             shutil.copyfileobj(file.file, buffer)
 
         # Extract text
-        with open(temp_path, "rb") as f:
-            if doc_type == DocumentType.PDF:
-                content = document_processor.extract_from_pdf(f)
-            else:
-                content = document_processor.extract_from_docx(f)
+        if doc_type == DocumentType.TXT:
+            # Plain text file - read directly
+            with open(temp_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        else:
+            # Binary files (PDF, DOC, DOCX)
+            with open(temp_path, "rb") as f:
+                if doc_type == DocumentType.PDF:
+                    content = document_processor.extract_from_pdf(f)
+                elif doc_type in (DocumentType.DOC, DocumentType.DOCX):
+                    content = document_processor.extract_from_docx(f)
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Unsupported document type: {doc_type}"
+                    )
 
         # Create document
         document = Document(

@@ -13,7 +13,9 @@ from backend.database import Base
 class DocumentType(str, enum.Enum):
     """Document types."""
     PDF = "pdf"
+    DOC = "doc"
     DOCX = "docx"
+    TXT = "txt"
     URL = "url"
     TEXT = "text"
 
