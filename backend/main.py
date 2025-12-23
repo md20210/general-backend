@@ -47,7 +47,9 @@ app = FastAPI(
 cors_origins = list(set(settings.allowed_origins_list + [
     "https://www.dabrock.info",
     "http://localhost:5173",
-    "http://localhost:5174"
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://localhost:3001"
 ]))
 logger.info(f"CORS allowed origins: {cors_origins}")
 
