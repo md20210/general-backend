@@ -127,7 +127,7 @@ class LLMGateway:
         if not self.grok_client:
             raise ValueError("GROK API key not configured")
 
-        model = model or "grok-beta"
+        model = model or "grok-3"
 
         completion = self.grok_client.chat.completions.create(
             model=model,
