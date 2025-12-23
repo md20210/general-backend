@@ -13,6 +13,7 @@ from backend.api.admin import router as admin_router
 from backend.api.llm import router as llm_router
 from backend.api.projects import router as projects_router
 from backend.api.documents import router as documents_router
+from backend.api.chat import router as chat_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -55,6 +56,7 @@ app.include_router(admin_router)
 app.include_router(llm_router)
 app.include_router(projects_router)
 app.include_router(documents_router)
+app.include_router(chat_router)
 
 
 @app.get("/")
