@@ -263,6 +263,35 @@ async def get_document(
     return document
 
 
+@router.delete("/cleanup", status_code=status.HTTP_200_OK)
+async def cleanup_all_documents(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """
+    Delete ALL documents for current user.
+
+    Used for showcase demo reset - clears all uploaded documents
+    and their embeddings when page is reloaded.
+
+    Returns count of deleted documents.
+    """
+    from sqlalchemy import delete as sql_delete
+
+    # Get count before deletion
+    count_query = select(Document).where(Document.user_id == user.id)
+    result = await session.execute(count_query)
+    documents = result.scalars().all()
+    count = len(documents)
+
+    # Delete all user's documents (cascade will handle embeddings)
+    delete_query = sql_delete(Document).where(Document.user_id == user.id)
+    await session.execute(delete_query)
+    await session.commit()
+
+    return {"deleted_count": count, "message": f"Deleted {count} document(s)"}
+
+
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
     document_id: UUID,
