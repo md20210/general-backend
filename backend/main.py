@@ -47,6 +47,9 @@ app = FastAPI(
 # Always include production frontend origin
 cors_origins = list(set(settings.allowed_origins_list + [
     "https://www.dabrock.info",
+    "https://dabrock.info",
+    "http://dabrock.info",
+    "http://www.dabrock.info",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
