@@ -228,7 +228,7 @@ class PrivateGxTService:
     async def chat(
         self,
         message: str,
-        provider: str = "anthropic",
+        provider: str = "ollama",
         model: Optional[str] = None,
         temperature: float = 0.7,
         n_results: int = 5
@@ -238,7 +238,7 @@ class PrivateGxTService:
 
         Args:
             message: User message
-            provider: LLM provider (anthropic, grok, ollama)
+            provider: LLM provider (ollama, anthropic, grok)
             model: Optional model override
             temperature: Sampling temperature
             n_results: Number of chunks to retrieve

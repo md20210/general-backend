@@ -12,7 +12,7 @@ router = APIRouter(prefix="/privategxt", tags=["PrivateGxT"])
 class ChatRequest(BaseModel):
     """Chat request model."""
     message: str
-    provider: str = "anthropic"
+    provider: str = "ollama"
     model: Optional[str] = None
     temperature: float = 0.7
 
