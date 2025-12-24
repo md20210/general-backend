@@ -220,9 +220,9 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
 
         # Updated Hero Title
         "hero_title": {
-            "de": "AI Architekt & AI Consultant mit Full-Stack und Projekt Management Background",
-            "en": "AI Architect & AI Consultant with Full-Stack and Project Management Background",
-            "es": "Arquitecto de IA y Consultor de IA con experiencia en Full-Stack y Gestión de Proyectos"
+            "de": "AI Consultant",
+            "en": "AI Consultant",
+            "es": "Consultor de IA"
         },
 
         # General Backend - Additional Keys
