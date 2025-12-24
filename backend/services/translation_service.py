@@ -814,6 +814,137 @@ class TranslationService:
             "de": "Alle Rechte vorbehalten",
             "en": "All rights reserved",
             "es": "Todos los derechos reservados"
+        },
+
+        # Updated Hero Title
+        "hero_title": {
+            "de": "KI-Experte & AI Consultant mit Full-Stack Background",
+            "en": "AI Expert & AI Consultant with Full-Stack Background",
+            "es": "Experto en IA y Consultor de IA con experiencia Full-Stack"
+        },
+
+        # General Backend - Additional Keys
+        "general_backend_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "general_backend_functional_desc": {
+            "de": "Zentraler Backend-Service für alle Projekte mit LLM Gateway, Translation Service, URL Crawler und mehr.",
+            "en": "Central backend service for all projects with LLM Gateway, Translation Service, URL Crawler, and more.",
+            "es": "Servicio backend central para todos los proyectos con LLM Gateway, servicio de traducción, rastreador de URL y más."
+        },
+        "general_backend_feature_1": {
+            "de": "Multil LLM Gateway für OpenAI, Anthropic, Grok und lokale Modelle",
+            "en": "Multi-LLM Gateway for OpenAI, Anthropic, Grok, and local models",
+            "es": "Gateway multi-LLM para OpenAI, Anthropic, Grok y modelos locales"
+        },
+        "general_backend_feature_2": {
+            "de": "Zentraler Translation Service mit 150+ Übersetzungsschlüsseln",
+            "en": "Central Translation Service with 150+ translation keys",
+            "es": "Servicio de traducción central con más de 150 claves de traducción"
+        },
+        "general_backend_feature_3": {
+            "de": "URL Crawler Service für automatische Content-Extraktion",
+            "en": "URL Crawler Service for automatic content extraction",
+            "es": "Servicio de rastreador de URL para extracción automática de contenido"
+        },
+        "general_backend_feature_4": {
+            "de": "ChromaDB Vector Database für RAG und semantische Suche",
+            "en": "ChromaDB Vector Database for RAG and semantic search",
+            "es": "Base de datos vectorial ChromaDB para RAG y búsqueda semántica"
+        },
+        "general_backend_technical_title": {
+            "de": "Technische Beschreibung",
+            "en": "Technical Description",
+            "es": "Descripción Técnica"
+        },
+        "general_backend_technical_desc": {
+            "de": "Moderne FastAPI-basierte Backend-Architektur mit PostgreSQL, ChromaDB und vollständiger OpenAPI-Dokumentation.",
+            "en": "Modern FastAPI-based backend architecture with PostgreSQL, ChromaDB, and full OpenAPI documentation.",
+            "es": "Arquitectura backend moderna basada en FastAPI con PostgreSQL, ChromaDB y documentación OpenAPI completa."
+        },
+        "general_backend_tech_core": {
+            "de": "Core Stack",
+            "en": "Core Stack",
+            "es": "Stack Principal"
+        },
+        "general_backend_tech_data": {
+            "de": "Datenbanken",
+            "en": "Databases",
+            "es": "Bases de Datos"
+        },
+        "general_backend_tech_ai": {
+            "de": "KI & ML",
+            "en": "AI & ML",
+            "es": "IA y ML"
+        },
+        "general_backend_tech_deploy": {
+            "de": "Deployment",
+            "en": "Deployment",
+            "es": "Despliegue"
+        },
+
+        # Homepage Project - Additional Keys
+        "homepage_tagline": {
+            "de": "Mehrsprachige Showcase-Website",
+            "en": "Multilingual Showcase Website",
+            "es": "Sitio web de presentación multilingüe"
+        },
+        "homepage_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "homepage_functional_desc": {
+            "de": "Diese Homepage präsentiert KI-Projekte und Services mit vollständiger Mehrsprachigkeit und modernem Design.",
+            "en": "This homepage showcases AI projects and services with full multilingual support and modern design.",
+            "es": "Esta página de inicio presenta proyectos y servicios de IA con soporte multilingüe completo y diseño moderno."
+        },
+        "homepage_feature_1": {
+            "de": "Dynamische Übersetzungen in Deutsch, Englisch und Spanisch über General Backend",
+            "en": "Dynamic translations in German, English, and Spanish via General Backend",
+            "es": "Traducciones dinámicas en alemán, inglés y español a través del General Backend"
+        },
+        "homepage_feature_2": {
+            "de": "Responsive Design mit Tailwind CSS v4 und modernen Gradients",
+            "en": "Responsive design with Tailwind CSS v4 and modern gradients",
+            "es": "Diseño responsive con Tailwind CSS v4 y gradientes modernos"
+        },
+        "homepage_feature_3": {
+            "de": "SEO-optimiert mit Meta-Tags und strukturiertem Content",
+            "en": "SEO-optimized with meta tags and structured content",
+            "es": "Optimizado para SEO con meta tags y contenido estructurado"
+        },
+        "homepage_technical_title": {
+            "de": "Technische Beschreibung",
+            "en": "Technical Description",
+            "es": "Descripción Técnica"
+        },
+        "homepage_technical_desc": {
+            "de": "React 18 Single-Page-Application mit TypeScript, Vite und Tailwind CSS v4.",
+            "en": "React 18 Single-Page-Application with TypeScript, Vite, and Tailwind CSS v4.",
+            "es": "Aplicación de página única React 18 con TypeScript, Vite y Tailwind CSS v4."
+        },
+        "homepage_tech_frontend": {
+            "de": "Frontend",
+            "en": "Frontend",
+            "es": "Frontend"
+        },
+        "homepage_tech_backend": {
+            "de": "Backend",
+            "en": "Backend",
+            "es": "Backend"
+        },
+        "homepage_tech_features": {
+            "de": "Features",
+            "en": "Features",
+            "es": "Características"
+        },
+        "homepage_tech_deploy": {
+            "de": "Deployment",
+            "en": "Deployment",
+            "es": "Despliegue"
         }
     }
 
