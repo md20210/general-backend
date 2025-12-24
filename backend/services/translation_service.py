@@ -818,9 +818,9 @@ class TranslationService:
 
         # Updated Hero Title
         "hero_title": {
-            "de": "KI-Experte & AI Consultant mit Full-Stack Background",
-            "en": "AI Expert & AI Consultant with Full-Stack Background",
-            "es": "Experto en IA y Consultor de IA con experiencia Full-Stack"
+            "de": "AI Architekt & AI Consultant mit Full-Stack und Projekt Management Background",
+            "en": "AI Architect & AI Consultant with Full-Stack and Project Management Background",
+            "es": "Arquitecto de IA y Consultor de IA con experiencia en Full-Stack y Gestión de Proyectos"
         },
 
         # General Backend - Additional Keys
@@ -945,6 +945,105 @@ class TranslationService:
             "de": "Deployment",
             "en": "Deployment",
             "es": "Despliegue"
+        },
+
+        # Audiobook Project
+        "audiobook_title": {
+            "de": "AI AUDIOBOOK PROJECT",
+            "en": "AI AUDIOBOOK PROJECT",
+            "es": "PROYECTO DE AUDIOLIBRO CON IA"
+        },
+        "audiobook_tagline": {
+            "de": "Ein Hörbuch in einem Tag erstellen",
+            "en": "Creating an Audiobook in One Day",
+            "es": "Creando un audiolibro en un día"
+        },
+        "audiobook_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "audiobook_functional_desc": {
+            "de": "Experimentelles Projekt zur Erstellung eines über 6-stündigen Hörbuchs an einem einzigen Tag. Die Herausforderung bestand darin, KI-Technologien optimal zu kombinieren: Grok für die Struktur, Claude für die Kreativität, ChatGPT für die Details und ElevenLabs für die professionelle Sprachausgabe.",
+            "en": "Experimental project to create a 6+ hour audiobook in a single day. The challenge was to optimally combine AI technologies: Grok for structure, Claude for creativity, ChatGPT for details, and ElevenLabs for professional voice output.",
+            "es": "Proyecto experimental para crear un audiolibro de más de 6 horas en un solo día. El desafío consistió en combinar óptimamente las tecnologías de IA: Grok para la estructura, Claude para la creatividad, ChatGPT para los detalles y ElevenLabs para la salida de voz profesional."
+        },
+        "audiobook_feature_1": {
+            "de": "Grok für Handlungsstruktur und Charakterentwicklung",
+            "en": "Grok for plot structure and character development",
+            "es": "Grok para la estructura de la trama y el desarrollo de personajes"
+        },
+        "audiobook_feature_2": {
+            "de": "Claude für kreative Dialoge und narrative Tiefe",
+            "en": "Claude for creative dialogues and narrative depth",
+            "es": "Claude para diálogos creativos y profundidad narrativa"
+        },
+        "audiobook_feature_3": {
+            "de": "ChatGPT für Detailarbeit und Konsistenz",
+            "en": "ChatGPT for detail work and consistency",
+            "es": "ChatGPT para trabajo de detalle y consistencia"
+        },
+        "audiobook_feature_4": {
+            "de": "ElevenLabs für professionelle Text-to-Speech Konvertierung",
+            "en": "ElevenLabs for professional text-to-speech conversion",
+            "es": "ElevenLabs para conversión profesional de texto a voz"
+        },
+        "audiobook_technical_title": {
+            "de": "Technische Beschreibung",
+            "en": "Technical Description",
+            "es": "Descripción Técnica"
+        },
+        "audiobook_technical_desc": {
+            "de": "Multi-LLM Pipeline mit orchestrierter Zusammenarbeit verschiedener KI-Modelle für optimale Ergebnisse.",
+            "en": "Multi-LLM pipeline with orchestrated collaboration of different AI models for optimal results.",
+            "es": "Pipeline multi-LLM con colaboración orquestada de diferentes modelos de IA para resultados óptimos."
+        },
+        "audiobook_tech_ai": {
+            "de": "KI-Modelle",
+            "en": "AI Models",
+            "es": "Modelos de IA"
+        },
+        "audiobook_tech_voice": {
+            "de": "Sprachsynthese",
+            "en": "Voice Synthesis",
+            "es": "Síntesis de Voz"
+        },
+        "audiobook_tech_format": {
+            "de": "Format",
+            "en": "Format",
+            "es": "Formato"
+        },
+        "audiobook_tech_production": {
+            "de": "Produktion",
+            "en": "Production",
+            "es": "Producción"
+        },
+        "audiobook_listen_button": {
+            "de": "Hörbuch anhören",
+            "en": "Listen to Audiobook",
+            "es": "Escuchar audiolibro"
+        },
+        "audiobook_metadata_size": {
+            "de": "Dateigröße: 364 MB",
+            "en": "File size: 364 MB",
+            "es": "Tamaño del archivo: 364 MB"
+        },
+        "audiobook_metadata_duration": {
+            "de": "Dauer: 6+ Stunden",
+            "en": "Duration: 6+ hours",
+            "es": "Duración: 6+ horas"
+        },
+        "audiobook_metadata_format": {
+            "de": "Format: MP3",
+            "en": "Format: MP3",
+            "es": "Formato: MP3"
+        },
+
+        # General Backend Architecture
+        "view_architecture": {
+            "de": "Architektur ansehen",
+            "en": "View Architecture",
+            "es": "Ver arquitectura"
         }
     }
 
