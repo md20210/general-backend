@@ -156,6 +156,40 @@ PRIVATEGXT_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
         "en": "Sources",
         "es": "Fuentes"
     },
+    "privategxt_chat_ask_question": {
+        "de": "Stellen Sie eine Frage zu Ihren Dokumenten",
+        "en": "Ask a question about your documents",
+        "es": "Haz una pregunta sobre tus documentos"
+    },
+
+    # LLM Provider Toggles
+    "privategxt_llm_local": {
+        "de": "Lokal (DSGVO)",
+        "en": "Local (GDPR)",
+        "es": "Local (RGPD)"
+    },
+    "privategxt_llm_grok": {
+        "de": "Grok",
+        "en": "Grok",
+        "es": "Grok"
+    },
+    "privategxt_llm_anthropic": {
+        "de": "Claude",
+        "en": "Claude",
+        "es": "Claude"
+    },
+
+    # External API Warning
+    "privategxt_warning_external_title": {
+        "de": "⚠️ Externe API - Keine DSGVO-Konformität",
+        "en": "⚠️ External API - No GDPR Compliance",
+        "es": "⚠️ API Externa - Sin Cumplimiento RGPD"
+    },
+    "privategxt_warning_external_message": {
+        "de": "Sie verwenden eine externe API (Grok/Claude). Ihre Dokumente werden an externe Server gesendet. Für DSGVO-konforme Verarbeitung verwenden Sie bitte das lokale Ollama-Modell.",
+        "en": "You are using an external API (Grok/Claude). Your documents will be sent to external servers. For GDPR-compliant processing, please use the local Ollama model.",
+        "es": "Estás usando una API externa (Grok/Claude). Tus documentos se enviarán a servidores externos. Para un procesamiento conforme al RGPD, utiliza el modelo local Ollama."
+    },
 
     # Footer
     "privategxt_footer_powered_by": {
