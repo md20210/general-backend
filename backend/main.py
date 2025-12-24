@@ -17,6 +17,7 @@ from backend.api.chat import router as chat_router
 from backend.api.reports import router as reports_router
 from backend.api.translations import router as translations_router
 from backend.api.crawler import router as crawler_router
+from backend.api.privategxt import router as privategxt_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -76,6 +77,7 @@ app.include_router(chat_router)
 app.include_router(reports_router)
 app.include_router(translations_router)
 app.include_router(crawler_router)
+app.include_router(privategxt_router)
 
 
 @app.get("/")

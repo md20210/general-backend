@@ -1304,6 +1304,240 @@ Documentos Relevantes:
 Pregunta del Usuario: {message}
 
 Responde la pregunta en español basándote en el contexto del sistema y los documentos relevantes."""
+        },
+
+        # PrivateGxT Translations
+        "app_title": {
+            "de": "PrivateGxT",
+            "en": "PrivateGxT",
+            "es": "PrivateGxT"
+        },
+        "app_subtitle": {
+            "de": "RAG-gestützte Dokumenten-Unterhaltung mit Multi-LLM-Gateway",
+            "en": "RAG-powered Document Chat with Multi-LLM Gateway",
+            "es": "Chat de Documentos con RAG y Gateway Multi-LLM"
+        },
+        "upload_title": {
+            "de": "Dokument hochladen",
+            "en": "Upload Document",
+            "es": "Subir Documento"
+        },
+        "upload_drag_drop": {
+            "de": "Datei hierher ziehen oder klicken zum Auswählen",
+            "en": "Drag & drop file here or click to select",
+            "es": "Arrastra y suelta el archivo aquí o haz clic para seleccionar"
+        },
+        "upload_supported_formats": {
+            "de": "PDF, DOCX, TXT (max. 10 MB)",
+            "en": "PDF, DOCX, TXT (max 10 MB)",
+            "es": "PDF, DOCX, TXT (máx. 10 MB)"
+        },
+        "uploading": {
+            "de": "Wird hochgeladen...",
+            "en": "Uploading...",
+            "es": "Subiendo..."
+        },
+        "upload_error_type": {
+            "de": "Ungültiger Dateityp. Nur PDF, DOCX und TXT erlaubt.",
+            "en": "Invalid file type. Only PDF, DOCX, and TXT allowed.",
+            "es": "Tipo de archivo no válido. Solo se permiten PDF, DOCX y TXT."
+        },
+        "upload_error_size": {
+            "de": "Datei zu groß. Maximale Größe: 10 MB.",
+            "en": "File too large. Maximum size: 10 MB.",
+            "es": "Archivo demasiado grande. Tamaño máximo: 10 MB."
+        },
+        "upload_error_generic": {
+            "de": "Fehler beim Hochladen. Bitte versuchen Sie es erneut.",
+            "en": "Upload failed. Please try again.",
+            "es": "Error al subir. Por favor, inténtalo de nuevo."
+        },
+        "documents_title": {
+            "de": "Dokumente",
+            "en": "Documents",
+            "es": "Documentos"
+        },
+        "no_documents": {
+            "de": "Noch keine Dokumente hochgeladen",
+            "en": "No documents uploaded yet",
+            "es": "Aún no se han subido documentos"
+        },
+        "chunks": {
+            "de": "Abschnitte",
+            "en": "chunks",
+            "es": "fragmentos"
+        },
+        "delete_document": {
+            "de": "Dokument löschen",
+            "en": "Delete document",
+            "es": "Eliminar documento"
+        },
+        "clear_all": {
+            "de": "Alle löschen",
+            "en": "Clear All",
+            "es": "Borrar Todo"
+        },
+        "confirm_delete": {
+            "de": "Möchten Sie dieses Dokument wirklich löschen?",
+            "en": "Are you sure you want to delete this document?",
+            "es": "¿Estás seguro de que quieres eliminar este documento?"
+        },
+        "confirm_clear_all": {
+            "de": "Möchten Sie wirklich alle Dokumente und den Chat-Verlauf löschen?",
+            "en": "Are you sure you want to clear all documents and chat history?",
+            "es": "¿Estás seguro de que quieres borrar todos los documentos y el historial de chat?"
+        },
+        "delete_error": {
+            "de": "Fehler beim Löschen des Dokuments",
+            "en": "Failed to delete document",
+            "es": "Error al eliminar el documento"
+        },
+        "clear_error": {
+            "de": "Fehler beim Löschen aller Daten",
+            "en": "Failed to clear all data",
+            "es": "Error al borrar todos los datos"
+        },
+        "chat_title": {
+            "de": "Chat mit Ihren Dokumenten",
+            "en": "Chat with Your Documents",
+            "es": "Chatea con Tus Documentos"
+        },
+        "chat_empty": {
+            "de": "Noch keine Nachrichten",
+            "en": "No messages yet",
+            "es": "Aún no hay mensajes"
+        },
+        "chat_ask_question": {
+            "de": "Stellen Sie eine Frage zu Ihren Dokumenten",
+            "en": "Ask a question about your documents",
+            "es": "Haz una pregunta sobre tus documentos"
+        },
+        "chat_upload_first": {
+            "de": "Laden Sie zuerst ein Dokument hoch",
+            "en": "Upload a document first",
+            "es": "Sube primero un documento"
+        },
+        "chat_input_placeholder": {
+            "de": "Stellen Sie eine Frage...",
+            "en": "Ask a question...",
+            "es": "Haz una pregunta..."
+        },
+        "chat_error": {
+            "de": "Fehler beim Senden der Nachricht",
+            "en": "Failed to send message",
+            "es": "Error al enviar el mensaje"
+        },
+        "sources": {
+            "de": "Quellen",
+            "en": "Sources",
+            "es": "Fuentes"
+        },
+        "chunk": {
+            "de": "Abschnitt",
+            "en": "Chunk",
+            "es": "Fragmento"
+        },
+        "stats_documents": {
+            "de": "Dokumente",
+            "en": "Documents",
+            "es": "Documentos"
+        },
+        "stats_chunks": {
+            "de": "Abschnitte",
+            "en": "Chunks",
+            "es": "Fragmentos"
+        },
+        "stats_messages": {
+            "de": "Nachrichten",
+            "en": "Messages",
+            "es": "Mensajes"
+        },
+        "footer_powered_by": {
+            "de": "Powered by",
+            "en": "Powered by",
+            "es": "Desarrollado con"
+        },
+
+        # PrivateGxT Showcase (Homepage)
+        "privategxt_title": {
+            "de": "PrivateGxT - RAG Document Chat",
+            "en": "PrivateGxT - RAG Document Chat",
+            "es": "PrivateGxT - Chat RAG de Documentos"
+        },
+        "privategxt_subtitle": {
+            "de": "Intelligente Dokumenten-Unterhaltung mit Retrieval-Augmented Generation",
+            "en": "Intelligent Document Chat with Retrieval-Augmented Generation",
+            "es": "Chat Inteligente de Documentos con Generación Aumentada por Recuperación"
+        },
+        "privategxt_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "privategxt_functional_desc": {
+            "de": "PrivateGxT ist eine RAG-basierte Showcase-Anwendung, die intelligente Konversationen mit hochgeladenen Dokumenten ermöglicht. Nutzer können PDF-, DOCX- oder TXT-Dateien hochladen und Fragen stellen, die durch ChromaDB-gestützte Vektorsuche und Multi-LLM-Integration beantwortet werden.",
+            "en": "PrivateGxT is a RAG-based showcase application that enables intelligent conversations with uploaded documents. Users can upload PDF, DOCX, or TXT files and ask questions answered through ChromaDB-powered vector search and Multi-LLM integration.",
+            "es": "PrivateGxT es una aplicación de demostración basada en RAG que permite conversaciones inteligentes con documentos cargados. Los usuarios pueden cargar archivos PDF, DOCX o TXT y hacer preguntas respondidas mediante búsqueda vectorial con ChromaDB e integración Multi-LLM."
+        },
+        "privategxt_feature_1": {
+            "de": "Multi-Format-Upload: PDF, DOCX, TXT Dokumente",
+            "en": "Multi-Format Upload: PDF, DOCX, TXT documents",
+            "es": "Carga Multi-Formato: documentos PDF, DOCX, TXT"
+        },
+        "privategxt_feature_2": {
+            "de": "RAG-Technologie: ChromaDB Vektordatenbank für intelligente Retrieval",
+            "en": "RAG Technology: ChromaDB vector database for intelligent retrieval",
+            "es": "Tecnología RAG: base de datos vectorial ChromaDB para recuperación inteligente"
+        },
+        "privategxt_feature_3": {
+            "de": "Multi-LLM Gateway: Anthropic Claude, Grok, Ollama (lokal)",
+            "en": "Multi-LLM Gateway: Anthropic Claude, Grok, Ollama (local)",
+            "es": "Gateway Multi-LLM: Anthropic Claude, Grok, Ollama (local)"
+        },
+        "privategxt_feature_4": {
+            "de": "Quellenangaben: Zeigt verwendete Dokument-Chunks",
+            "en": "Source Attribution: Shows used document chunks",
+            "es": "Atribución de Fuentes: muestra fragmentos de documentos utilizados"
+        },
+        "privategxt_feature_5": {
+            "de": "Mehrsprachig: Deutsche, englische und spanische Oberfläche",
+            "en": "Multilingual: German, English, and Spanish interface",
+            "es": "Multilingüe: interfaz en alemán, inglés y español"
+        },
+        "privategxt_technical_title": {
+            "de": "Technische Highlights",
+            "en": "Technical Highlights",
+            "es": "Aspectos Técnicos Destacados"
+        },
+        "privategxt_tech_1": {
+            "de": "Frontend: React 18 + TypeScript + Vite",
+            "en": "Frontend: React 18 + TypeScript + Vite",
+            "es": "Frontend: React 18 + TypeScript + Vite"
+        },
+        "privategxt_tech_2": {
+            "de": "Backend: FastAPI mit ChromaDB Integration",
+            "en": "Backend: FastAPI with ChromaDB integration",
+            "es": "Backend: FastAPI con integración ChromaDB"
+        },
+        "privategxt_tech_3": {
+            "de": "Text-Chunking: 500 Zeichen mit 50 Zeichen Überlappung",
+            "en": "Text Chunking: 500 characters with 50 character overlap",
+            "es": "Fragmentación de Texto: 500 caracteres con 50 de superposición"
+        },
+        "privategxt_tech_4": {
+            "de": "Embeddings: Automatische Vektorisierung via ChromaDB",
+            "en": "Embeddings: Automatic vectorization via ChromaDB",
+            "es": "Embeddings: vectorización automática vía ChromaDB"
+        },
+        "privategxt_tech_5": {
+            "de": "Similarity Search: Top-5 relevante Chunks pro Anfrage",
+            "en": "Similarity Search: Top-5 relevant chunks per query",
+            "es": "Búsqueda por Similitud: Top-5 fragmentos relevantes por consulta"
+        },
+        "privategxt_demo_button": {
+            "de": "Demo starten",
+            "en": "Launch Demo",
+            "es": "Iniciar Demo"
         }
     }
 
