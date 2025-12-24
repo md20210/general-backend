@@ -535,5 +535,87 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
             "de": "Demo starten",
             "en": "Launch Demo",
             "es": "Iniciar Demo"
+        },
+
+        # LifeChronicle Translations
+        "lifechonicle_title": {
+            "de": "LifeChronicle - Persönliche Timeline",
+            "en": "LifeChronicle - Personal Timeline",
+            "es": "LifeChronicle - Línea de Tiempo Personal"
+        },
+        "lifechonicle_subtitle": {
+            "de": "Verwandle deine Lebensgeschichte in ein literarisches Meisterwerk mit lokaler KI",
+            "en": "Transform your life story into a literary masterpiece with local AI",
+            "es": "Transforma tu historia de vida en una obra maestra literaria con IA local"
+        },
+        "lifechonicle_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "lifechonicle_functional_desc": {
+            "de": "LifeChronicle ist eine persönliche Timeline-Anwendung, die deine Lebensgeschichte aufzeichnet und mit lokaler KI in literarische Buchkapitel verwandelt. 100% DSGVO-konform - alle Daten bleiben lokal.",
+            "en": "LifeChronicle is a personal timeline application that records your life story and transforms it into literary book chapters using local AI. 100% GDPR-compliant - all data stays local.",
+            "es": "LifeChronicle es una aplicación de línea de tiempo personal que registra tu historia de vida y la transforma en capítulos literarios usando IA local. 100% conforme con RGPD - todos los datos permanecen locales."
+        },
+        "lifechonicle_feature_1": {
+            "de": "Timeline-Editor: Erfasse Lebensereignisse chronologisch",
+            "en": "Timeline Editor: Record life events chronologically",
+            "es": "Editor de Línea de Tiempo: registra eventos de vida cronológicamente"
+        },
+        "lifechonicle_feature_2": {
+            "de": "KI-Transformation: Ollama verwandelt Notizen in literarische Texte",
+            "en": "AI Transformation: Ollama transforms notes into literary text",
+            "es": "Transformación IA: Ollama transforma notas en texto literario"
+        },
+        "lifechonicle_feature_3": {
+            "de": "Text-to-Speech: Höre deine Geschichte mit Browser-TTS",
+            "en": "Text-to-Speech: Listen to your story with browser TTS",
+            "es": "Texto a Voz: escucha tu historia con TTS del navegador"
+        },
+        "lifechonicle_feature_4": {
+            "de": "PDF-Export: Erstelle ein schön formatiertes Buch",
+            "en": "PDF Export: Create a beautifully formatted book",
+            "es": "Exportar PDF: crea un libro bellamente formateado"
+        },
+        "lifechonicle_feature_5": {
+            "de": "Status-Management: Unterscheide zwischen Rohtext und verarbeiteten Kapiteln",
+            "en": "Status Management: Distinguish between raw text and processed chapters",
+            "es": "Gestión de Estado: distingue entre texto sin procesar y capítulos procesados"
+        },
+        "lifechonicle_technical_title": {
+            "de": "Technische Highlights",
+            "en": "Technical Highlights",
+            "es": "Aspectos Técnicos Destacados"
+        },
+        "lifechonicle_tech_1": {
+            "de": "Frontend: React 18 + TypeScript + Vite",
+            "en": "Frontend: React 18 + TypeScript + Vite",
+            "es": "Frontend: React 18 + TypeScript + Vite"
+        },
+        "lifechonicle_tech_2": {
+            "de": "Backend: FastAPI mit Ollama LLM",
+            "en": "Backend: FastAPI with Ollama LLM",
+            "es": "Backend: FastAPI con Ollama LLM"
+        },
+        "lifechonicle_tech_3": {
+            "de": "Lokale KI: Ollama (llama3/mistral) für literarische Transformation",
+            "en": "Local AI: Ollama (llama3/mistral) for literary transformation",
+            "es": "IA Local: Ollama (llama3/mistral) para transformación literaria"
+        },
+        "lifechonicle_tech_4": {
+            "de": "TTS: Browser SpeechSynthesis API (100% lokal)",
+            "en": "TTS: Browser SpeechSynthesis API (100% local)",
+            "es": "TTS: API SpeechSynthesis del navegador (100% local)"
+        },
+        "lifechonicle_tech_5": {
+            "de": "PDF-Generator: ReportLab mit professionellem Layout",
+            "en": "PDF Generator: ReportLab with professional layout",
+            "es": "Generador PDF: ReportLab con diseño profesional"
+        },
+        "lifechonicle_demo_button": {
+            "de": "Demo starten",
+            "en": "Launch Demo",
+            "es": "Iniciar Demo"
         }
 }
