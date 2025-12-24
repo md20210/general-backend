@@ -12,7 +12,10 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from typing import Dict, Literal
 from pydantic import BaseModel, Field
 
-from backend.services.translation_service import translation_service, Language
+from backend.services.translation_service import TranslationService, Language
+
+# Create service instance
+translation_service = TranslationService()
 
 router = APIRouter(
     prefix="/translations",
