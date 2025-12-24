@@ -616,9 +616,9 @@ class TranslationService:
             "es": "Acerca de"
         },
         "nav_showcases": {
-            "de": "Projekte",
+            "de": "Showcases",
             "en": "Showcases",
-            "es": "Proyectos"
+            "es": "Showcases"
         },
         "nav_services": {
             "de": "Services",
