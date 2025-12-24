@@ -115,11 +115,16 @@ class PDFReportService:
 
         # Create side-by-side table
         max_items = max(len(strengths), len(gaps))
-        data = [['<b>Strengths</b>', '<b>Gaps</b>']]
+        data = [[Paragraph('<b>Strengths</b>', self.styles['CustomBody']),
+                 Paragraph('<b>Gaps</b>', self.styles['CustomBody'])]]
 
         for i in range(max_items):
-            strength = f"✓ {strengths[i]}" if i < len(strengths) else ""
-            gap = f"⚠ {gaps[i]}" if i < len(gaps) else ""
+            strength_text = f"✓ {strengths[i]}" if i < len(strengths) else ""
+            gap_text = f"■ {gaps[i]}" if i < len(gaps) else ""
+
+            # Wrap text in Paragraph for proper line wrapping
+            strength = Paragraph(strength_text, self.styles['CustomBody']) if strength_text else ""
+            gap = Paragraph(gap_text, self.styles['CustomBody']) if gap_text else ""
             data.append([strength, gap])
 
         table = Table(data, colWidths=[12*cm, 12*cm])
@@ -144,7 +149,8 @@ class PDFReportService:
         if recommendations:
             elements.append(Paragraph("Recommendations", self.styles['CustomHeading']))
             for rec in recommendations:
-                elements.append(Paragraph(f"→ {rec}", self.styles['CustomBody']))
+                # Wrap recommendation text for proper line breaking
+                elements.append(Paragraph(f"→ {rec.replace('\n', '<br/>')}", self.styles['CustomBody']))
                 elements.append(Spacer(1, 0.2*cm))
             elements.append(Spacer(1, 0.3*cm))
 
@@ -154,7 +160,12 @@ class PDFReportService:
             elements.append(PageBreak())
             elements.append(Paragraph("Detailed Comparison", self.styles['CustomHeading']))
 
-            comp_data = [['Requirement', 'Applicant Match', 'Level', 'Confidence']]
+            comp_data = [[
+                Paragraph('<b>Requirement</b>', self.styles['CustomBody']),
+                Paragraph('<b>Applicant Match</b>', self.styles['CustomBody']),
+                Paragraph('<b>Level</b>', self.styles['CustomBody']),
+                Paragraph('<b>Confidence</b>', self.styles['CustomBody'])
+            ]]
             for comp in comparison:
                 level_text = {
                     'full': 'Vollständig',
@@ -163,10 +174,10 @@ class PDFReportService:
                 }.get(comp.get('match_level', ''), comp.get('match_level', ''))
 
                 comp_data.append([
-                    comp.get('requirement', ''),
-                    comp.get('applicant_match', ''),
-                    level_text,
-                    f"{comp.get('confidence', 0)}%"
+                    Paragraph(comp.get('requirement', '').replace('\n', '<br/>'), self.styles['CustomBody']),
+                    Paragraph(comp.get('applicant_match', '').replace('\n', '<br/>'), self.styles['CustomBody']),
+                    Paragraph(level_text, self.styles['CustomBody']),
+                    Paragraph(f"{comp.get('confidence', 0)}%", self.styles['CustomBody'])
                 ])
 
             comp_table = Table(comp_data, colWidths=[8*cm, 8*cm, 4*cm, 3*cm])
@@ -226,16 +237,15 @@ class PDFReportService:
                 # Message content
                 bg_color = colors.HexColor('#eff6ff') if role == 'user' else colors.HexColor('#f9fafb')
 
-                # Create message box
-                msg_data = [[content.replace('\n', '<br/>')]]
+                # Create message box with Paragraph for proper wrapping
+                msg_paragraph = Paragraph(content.replace('\n', '<br/>'), self.styles['ChatMessage'])
+                msg_data = [[msg_paragraph]]
                 msg_table = Table(msg_data, colWidths=[24*cm])
                 msg_table.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, -1), bg_color),
                     ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                     ('PADDING', (0, 0), (-1, -1), 10),
-                    ('FONTSIZE', (0, 0), (-1, -1), 10),
-                    ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1f2937')),
                 ]))
                 elements.append(msg_table)
                 elements.append(Spacer(1, 0.3*cm))
