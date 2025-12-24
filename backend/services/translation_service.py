@@ -1056,6 +1056,88 @@ class TranslationService:
             "de": "Dokumentation",
             "en": "Documentation",
             "es": "Documentación"
+        },
+
+        # PrivateGxT Showcase (Homepage)
+        "privategxt_title": {
+            "de": "PrivateGxT - RAG Document Chat",
+            "en": "PrivateGxT - RAG Document Chat",
+            "es": "PrivateGxT - Chat RAG de Documentos"
+        },
+        "privategxt_subtitle": {
+            "de": "Intelligente Dokumenten-Unterhaltung mit Retrieval-Augmented Generation",
+            "en": "Intelligent Document Chat with Retrieval-Augmented Generation",
+            "es": "Chat Inteligente de Documentos con Generación Aumentada por Recuperación"
+        },
+        "privategxt_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "privategxt_functional_desc": {
+            "de": "PrivateGxT ist eine RAG-basierte Showcase-Anwendung, die intelligente Konversationen mit hochgeladenen Dokumenten ermöglicht. Nutzer können PDF-, DOCX- oder TXT-Dateien hochladen und Fragen stellen, die durch ChromaDB-gestützte Vektorsuche und Multi-LLM-Integration beantwortet werden.",
+            "en": "PrivateGxT is a RAG-based showcase application that enables intelligent conversations with uploaded documents. Users can upload PDF, DOCX, or TXT files and ask questions answered through ChromaDB-powered vector search and Multi-LLM integration.",
+            "es": "PrivateGxT es una aplicación de demostración basada en RAG que permite conversaciones inteligentes con documentos cargados. Los usuarios pueden cargar archivos PDF, DOCX o TXT y hacer preguntas respondidas mediante búsqueda vectorial con ChromaDB e integración Multi-LLM."
+        },
+        "privategxt_feature_1": {
+            "de": "Multi-Format-Upload: PDF, DOCX, TXT Dokumente",
+            "en": "Multi-Format Upload: PDF, DOCX, TXT documents",
+            "es": "Carga Multi-Formato: documentos PDF, DOCX, TXT"
+        },
+        "privategxt_feature_2": {
+            "de": "RAG-Technologie: ChromaDB Vektordatenbank für intelligente Retrieval",
+            "en": "RAG Technology: ChromaDB vector database for intelligent retrieval",
+            "es": "Tecnología RAG: base de datos vectorial ChromaDB para recuperación inteligente"
+        },
+        "privategxt_feature_3": {
+            "de": "Multi-LLM Gateway: Anthropic Claude, Grok, Ollama (lokal)",
+            "en": "Multi-LLM Gateway: Anthropic Claude, Grok, Ollama (local)",
+            "es": "Gateway Multi-LLM: Anthropic Claude, Grok, Ollama (local)"
+        },
+        "privategxt_feature_4": {
+            "de": "Quellenangaben: Zeigt verwendete Dokument-Chunks",
+            "en": "Source Attribution: Shows used document chunks",
+            "es": "Atribución de Fuentes: muestra fragmentos de documentos utilizados"
+        },
+        "privategxt_feature_5": {
+            "de": "Mehrsprachig: Deutsche, englische und spanische Oberfläche",
+            "en": "Multilingual: German, English, and Spanish interface",
+            "es": "Multilingüe: interfaz en alemán, inglés y español"
+        },
+        "privategxt_technical_title": {
+            "de": "Technische Highlights",
+            "en": "Technical Highlights",
+            "es": "Aspectos Técnicos Destacados"
+        },
+        "privategxt_tech_1": {
+            "de": "Frontend: React 18 + TypeScript + Vite",
+            "en": "Frontend: React 18 + TypeScript + Vite",
+            "es": "Frontend: React 18 + TypeScript + Vite"
+        },
+        "privategxt_tech_2": {
+            "de": "Backend: FastAPI mit ChromaDB Integration",
+            "en": "Backend: FastAPI with ChromaDB integration",
+            "es": "Backend: FastAPI con integración ChromaDB"
+        },
+        "privategxt_tech_3": {
+            "de": "Text-Chunking: 500 Zeichen mit 50 Zeichen Überlappung",
+            "en": "Text Chunking: 500 characters with 50 character overlap",
+            "es": "Fragmentación de Texto: 500 caracteres con 50 de superposición"
+        },
+        "privategxt_tech_4": {
+            "de": "Embeddings: Automatische Vektorisierung via ChromaDB",
+            "en": "Embeddings: Automatic vectorization via ChromaDB",
+            "es": "Embeddings: vectorización automática vía ChromaDB"
+        },
+        "privategxt_tech_5": {
+            "de": "Similarity Search: Top-5 relevante Chunks pro Anfrage",
+            "en": "Similarity Search: Top-5 relevant chunks per query",
+            "es": "Búsqueda por Similitud: Top-5 fragmentos relevantes por consulta"
+        },
+        "privategxt_demo_button": {
+            "de": "Demo starten",
+            "en": "Launch Demo",
+            "es": "Iniciar Demo"
         }
     }
 
@@ -1456,88 +1538,6 @@ Responde la pregunta en español basándote en el contexto del sistema y los doc
             "de": "Powered by",
             "en": "Powered by",
             "es": "Desarrollado con"
-        },
-
-        # PrivateGxT Showcase (Homepage)
-        "privategxt_title": {
-            "de": "PrivateGxT - RAG Document Chat",
-            "en": "PrivateGxT - RAG Document Chat",
-            "es": "PrivateGxT - Chat RAG de Documentos"
-        },
-        "privategxt_subtitle": {
-            "de": "Intelligente Dokumenten-Unterhaltung mit Retrieval-Augmented Generation",
-            "en": "Intelligent Document Chat with Retrieval-Augmented Generation",
-            "es": "Chat Inteligente de Documentos con Generación Aumentada por Recuperación"
-        },
-        "privategxt_functional_title": {
-            "de": "Funktionale Beschreibung",
-            "en": "Functional Description",
-            "es": "Descripción Funcional"
-        },
-        "privategxt_functional_desc": {
-            "de": "PrivateGxT ist eine RAG-basierte Showcase-Anwendung, die intelligente Konversationen mit hochgeladenen Dokumenten ermöglicht. Nutzer können PDF-, DOCX- oder TXT-Dateien hochladen und Fragen stellen, die durch ChromaDB-gestützte Vektorsuche und Multi-LLM-Integration beantwortet werden.",
-            "en": "PrivateGxT is a RAG-based showcase application that enables intelligent conversations with uploaded documents. Users can upload PDF, DOCX, or TXT files and ask questions answered through ChromaDB-powered vector search and Multi-LLM integration.",
-            "es": "PrivateGxT es una aplicación de demostración basada en RAG que permite conversaciones inteligentes con documentos cargados. Los usuarios pueden cargar archivos PDF, DOCX o TXT y hacer preguntas respondidas mediante búsqueda vectorial con ChromaDB e integración Multi-LLM."
-        },
-        "privategxt_feature_1": {
-            "de": "Multi-Format-Upload: PDF, DOCX, TXT Dokumente",
-            "en": "Multi-Format Upload: PDF, DOCX, TXT documents",
-            "es": "Carga Multi-Formato: documentos PDF, DOCX, TXT"
-        },
-        "privategxt_feature_2": {
-            "de": "RAG-Technologie: ChromaDB Vektordatenbank für intelligente Retrieval",
-            "en": "RAG Technology: ChromaDB vector database for intelligent retrieval",
-            "es": "Tecnología RAG: base de datos vectorial ChromaDB para recuperación inteligente"
-        },
-        "privategxt_feature_3": {
-            "de": "Multi-LLM Gateway: Anthropic Claude, Grok, Ollama (lokal)",
-            "en": "Multi-LLM Gateway: Anthropic Claude, Grok, Ollama (local)",
-            "es": "Gateway Multi-LLM: Anthropic Claude, Grok, Ollama (local)"
-        },
-        "privategxt_feature_4": {
-            "de": "Quellenangaben: Zeigt verwendete Dokument-Chunks",
-            "en": "Source Attribution: Shows used document chunks",
-            "es": "Atribución de Fuentes: muestra fragmentos de documentos utilizados"
-        },
-        "privategxt_feature_5": {
-            "de": "Mehrsprachig: Deutsche, englische und spanische Oberfläche",
-            "en": "Multilingual: German, English, and Spanish interface",
-            "es": "Multilingüe: interfaz en alemán, inglés y español"
-        },
-        "privategxt_technical_title": {
-            "de": "Technische Highlights",
-            "en": "Technical Highlights",
-            "es": "Aspectos Técnicos Destacados"
-        },
-        "privategxt_tech_1": {
-            "de": "Frontend: React 18 + TypeScript + Vite",
-            "en": "Frontend: React 18 + TypeScript + Vite",
-            "es": "Frontend: React 18 + TypeScript + Vite"
-        },
-        "privategxt_tech_2": {
-            "de": "Backend: FastAPI mit ChromaDB Integration",
-            "en": "Backend: FastAPI with ChromaDB integration",
-            "es": "Backend: FastAPI con integración ChromaDB"
-        },
-        "privategxt_tech_3": {
-            "de": "Text-Chunking: 500 Zeichen mit 50 Zeichen Überlappung",
-            "en": "Text Chunking: 500 characters with 50 character overlap",
-            "es": "Fragmentación de Texto: 500 caracteres con 50 de superposición"
-        },
-        "privategxt_tech_4": {
-            "de": "Embeddings: Automatische Vektorisierung via ChromaDB",
-            "en": "Embeddings: Automatic vectorization via ChromaDB",
-            "es": "Embeddings: vectorización automática vía ChromaDB"
-        },
-        "privategxt_tech_5": {
-            "de": "Similarity Search: Top-5 relevante Chunks pro Anfrage",
-            "en": "Similarity Search: Top-5 relevant chunks per query",
-            "es": "Búsqueda por Similitud: Top-5 fragmentos relevantes por consulta"
-        },
-        "privategxt_demo_button": {
-            "de": "Demo starten",
-            "en": "Launch Demo",
-            "es": "Iniciar Demo"
         }
     }
 
