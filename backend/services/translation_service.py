@@ -666,9 +666,9 @@ class TranslationService:
             "es": "Actualmente trabajo en gestión de cuentas para Google y utilizo IA de última generación para maximizar la eficiencia, la innovación y el valor para el cliente. Gracias a la IA, ahora puedo implementar todas las ideas que antes solo podía esbozar, y aquí es exactamente donde veo mi futuro: en la intersección de la gestión estratégica y el desarrollo práctico de IA, donde ayudo a las empresas no solo a usar IA, sino a dominarla realmente. ¡Demos forma juntos a la próxima generación de sistemas inteligentes! 🚀"
         },
         "showcases_title": {
-            "de": "Projekte",
+            "de": "Showcases",
             "en": "Showcases",
-            "es": "Proyectos"
+            "es": "Showcases"
         },
         "cv_matcher_tagline": {
             "de": "KI-gestützte Bewerbungsanalyse mit RAG-Chat",
@@ -840,9 +840,9 @@ class TranslationService:
             "es": "Servicio backend central para todos los proyectos con LLM Gateway, servicio de traducción, rastreador de URL y más."
         },
         "general_backend_feature_1": {
-            "de": "Multil LLM Gateway für OpenAI, Anthropic, Grok und lokale Modelle",
-            "en": "Multi-LLM Gateway for OpenAI, Anthropic, Grok, and local models",
-            "es": "Gateway multi-LLM para OpenAI, Anthropic, Grok y modelos locales"
+            "de": "Multi LLM Gateway für OpenAI, Anthropic, Grok und lokale Modelle für den DSGVO konformen Einsatz!",
+            "en": "Multi-LLM Gateway for OpenAI, Anthropic, Grok, and local models for GDPR-compliant use!",
+            "es": "Gateway multi-LLM para OpenAI, Anthropic, Grok y modelos locales para uso conforme con RGPD!"
         },
         "general_backend_feature_2": {
             "de": "Zentraler Translation Service mit 150+ Übersetzungsschlüsseln",
@@ -1049,6 +1049,13 @@ class TranslationService:
             "de": "Architektur ansehen",
             "en": "View Architecture",
             "es": "Ver arquitectura"
+        },
+
+        # Documentation Buttons
+        "view_documentation": {
+            "de": "Dokumentation",
+            "en": "Documentation",
+            "es": "Documentación"
         }
     }
 
