@@ -18,6 +18,8 @@ from backend.api.reports import router as reports_router
 from backend.api.translations import router as translations_router
 from backend.api.crawler import router as crawler_router
 from backend.api.privategxt import router as privategxt_router
+from backend.api.lifechonicle import router as lifechonicle_router
+from backend.api.speech import router as speech_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -39,7 +41,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title="General Backend",
-    description="Central backend for all showcases (CV Matcher, PrivateGPT, TellMeLife)",
+    description="Central backend for all showcases (CV Matcher, PrivateGxT, LifeChronicle)",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -78,6 +80,8 @@ app.include_router(reports_router)
 app.include_router(translations_router)
 app.include_router(crawler_router)
 app.include_router(privategxt_router)
+app.include_router(lifechonicle_router)
+app.include_router(speech_router)
 
 
 @app.get("/")
