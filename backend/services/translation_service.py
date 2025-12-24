@@ -691,9 +691,9 @@ class TranslationService:
             "es": "CV Matcher es una plataforma inteligente que analiza y evalúa currículums y descripciones de puestos utilizando IA. La aplicación utiliza tecnología RAG avanzada para análisis de coincidencias precisos y ofrece un chat interactivo para profundizar en los resultados."
         },
         "cv_matcher_feature_1": {
-            "de": "KI-gestützte Matching-Analyse mit Llama 3.1 70B (lokal) oder Grok 2 (Cloud)",
-            "en": "AI-powered matching analysis with Llama 3.1 70B (local) or Grok 2 (cloud)",
-            "es": "Análisis de coincidencias impulsado por IA con Llama 3.1 70B (local) o Grok 2 (nube)"
+            "de": "KI-gestützte Matching-Analyse mit lokalen LLMs (DSGVO) oder Grok 3 (API Cloud)",
+            "en": "AI-powered matching analysis with local LLMs (GDPR) or Grok 3 (API Cloud)",
+            "es": "Análisis de coincidencias impulsado por IA con LLMs locales (RGPD) o Grok 3 (API Cloud)"
         },
         "cv_matcher_feature_2": {
             "de": "RAG-Chat mit semantischer Suche in hochgeladenen Dokumenten",
