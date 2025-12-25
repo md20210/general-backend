@@ -82,7 +82,7 @@ class LLMGateway:
         timeout: int,
     ) -> Dict[str, Any]:
         """Generate text using Ollama."""
-        model = model or "llama3.2:3b"
+        model = model or "qwen2.5:3b"
 
         response = requests.post(
             f"{self.ollama_base_url}/api/generate",

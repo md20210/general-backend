@@ -161,12 +161,12 @@ Buchkapitel:"""
                 result = await llm_gateway.generate(
                     prompt=prompt,
                     provider="ollama",
-                    model="llama3.2",
+                    model="qwen2.5:3b",  # Ollama model (pulled on startup)
                     temperature=0.7,
                     max_tokens=300
                 )
 
-            processed_text = result.get('content', '').strip()
+            processed_text = result.get('response', '').strip()
 
             # Update entry
             entry['processed_text'] = processed_text
