@@ -13,6 +13,18 @@ LIFECHONICLE_TRANSLATIONS = {
         "es": "Mi Historia de Vida - local y conforme al RGPD"
     },
 
+    # LLM Toggle
+    "lifechonicle_llm_toggle_local": {
+        "de": "🏠 Lokal (DSGVO)",
+        "en": "🏠 Local (GDPR)",
+        "es": "🏠 Local (RGPD)"
+    },
+    "lifechonicle_llm_toggle_anthropic": {
+        "de": "⚡ Claude (nicht DSGVO)",
+        "en": "⚡ Claude (non-GDPR)",
+        "es": "⚡ Claude (no RGPD)"
+    },
+
     # Buttons
     "lifechonicle_btn_new_entry": {
         "de": "Neuer Eintrag",
