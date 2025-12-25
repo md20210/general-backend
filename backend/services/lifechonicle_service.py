@@ -150,7 +150,7 @@ Buchkapitel:"""
         # Process with selected LLM provider
         try:
             if provider == "anthropic":
-                result = await llm_gateway.generate(
+                result = llm_gateway.generate(
                     prompt=prompt,
                     provider="anthropic",
                     model="claude-sonnet-3-5-20241022",
@@ -158,7 +158,7 @@ Buchkapitel:"""
                     max_tokens=300
                 )
             else:  # ollama (default)
-                result = await llm_gateway.generate(
+                result = llm_gateway.generate(
                     prompt=prompt,
                     provider="ollama",
                     model="qwen2.5:3b",  # Ollama model (pulled on startup)
