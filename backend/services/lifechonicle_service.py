@@ -215,12 +215,22 @@ Buchkapitel:"""
         return pdf_buffer
 
     async def _generate_timeline_pdf(self, data: Dict[str, Any]) -> BytesIO:
-        """Generate PDF for timeline data."""
+        """Generate PDF for timeline data with timeline colors."""
         from reportlab.lib.pagesizes import A4
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import cm
         from reportlab.lib import colors
+
+        # Timeline color palette (same as frontend)
+        TIMELINE_COLORS = [
+            {'bg': '#e9d5ff', 'border': '#c084fc', 'text': '#581c87'},  # Purple
+            {'bg': '#ccfbf1', 'border': '#5eead4', 'text': '#134e4a'},  # Teal
+            {'bg': '#d1fae5', 'border': '#6ee7b7', 'text': '#065f46'},  # Green
+            {'bg': '#fef3c7', 'border': '#fcd34d', 'text': '#78350f'},  # Yellow
+            {'bg': '#fed7aa', 'border': '#fdba74', 'text': '#7c2d12'},  # Orange
+            {'bg': '#fce7f3', 'border': '#f9a8d4', 'text': '#831843'},  # Pink
+        ]
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)
@@ -233,7 +243,7 @@ Buchkapitel:"""
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=28,
-            textColor=colors.HexColor('#1f2937'),
+            textColor=colors.HexColor('#14b8a6'),  # Teal
             spaceAfter=10,
             alignment=1  # Center
         )
@@ -241,8 +251,11 @@ Buchkapitel:"""
         elements.append(Paragraph(data['subtitle'], styles['Normal']))
         elements.append(Spacer(1, 2*cm))
 
-        # Entries
-        for entry in data['entries']:
+        # Entries with colors
+        for idx, entry in enumerate(data['entries']):
+            # Get color for this entry (cycle through palette)
+            color_set = TIMELINE_COLORS[idx % len(TIMELINE_COLORS)]
+
             # Date header
             date_str = entry['date']
             try:
@@ -251,12 +264,47 @@ Buchkapitel:"""
             except:
                 pass
 
-            elements.append(Paragraph(f"<b>📅 {date_str}</b>", styles['Heading2']))
-            elements.append(Spacer(1, 0.3*cm))
+            # Entry title with colored background
+            title_style_colored = ParagraphStyle(
+                f'ColoredTitle{idx}',
+                parent=styles['Heading2'],
+                fontSize=16,
+                textColor=colors.HexColor(color_set['text']),
+                spaceAfter=6,
+                leftIndent=10
+            )
+
+            # Create colored box for entry
+            entry_title = Paragraph(f"<b>{entry['title']} ({date_str})</b>", title_style_colored)
 
             # Text (use processed if available)
             text = entry.get('processed_text') or entry['original_text']
-            elements.append(Paragraph(text, styles['Normal']))
+            text_style = ParagraphStyle(
+                f'EntryText{idx}',
+                parent=styles['Normal'],
+                leftIndent=10,
+                rightIndent=10,
+                spaceBefore=6,
+                spaceAfter=12
+            )
+            entry_text = Paragraph(text, text_style)
+
+            # Create table with colored border
+            table_data = [[entry_title], [entry_text]]
+            table = Table(table_data, colWidths=[15*cm])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, 0), colors.HexColor(color_set['bg'])),
+                ('LINEABOVE', (0, 0), (-1, 0), 3, colors.HexColor(color_set['border'])),
+                ('LINEBELOW', (0, -1), (-1, -1), 1, colors.HexColor(color_set['border'])),
+                ('LINEBEFORE', (0, 0), (0, -1), 3, colors.HexColor(color_set['border'])),
+                ('LINEAFTER', (-1, 0), (-1, -1), 1, colors.HexColor(color_set['border'])),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ]))
+
+            elements.append(table)
             elements.append(Spacer(1, 0.8*cm))
 
         # Build PDF
