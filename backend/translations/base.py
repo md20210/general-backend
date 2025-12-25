@@ -10,6 +10,7 @@ Language = Literal["de", "en", "es"]
 from backend.translations.cv_matcher import CV_MATCHER_TRANSLATIONS
 from backend.translations.homepage import HOMEPAGE_TRANSLATIONS
 from backend.translations.privategxt import PRIVATEGXT_TRANSLATIONS
+from backend.translations.lifechonicle import LIFECHONICLE_TRANSLATIONS
 from backend.translations.prompts import LLM_PROMPTS
 
 
@@ -31,6 +32,7 @@ class TranslationService:
         self.UI_TRANSLATIONS.update(CV_MATCHER_TRANSLATIONS)
         self.UI_TRANSLATIONS.update(HOMEPAGE_TRANSLATIONS)
         self.UI_TRANSLATIONS.update(PRIVATEGXT_TRANSLATIONS)
+        self.UI_TRANSLATIONS.update(LIFECHONICLE_TRANSLATIONS)
 
         # LLM Prompts (separate from UI translations)
         self.LLM_PROMPTS: Dict[str, Dict[Language, str]] = LLM_PROMPTS

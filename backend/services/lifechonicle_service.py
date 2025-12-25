@@ -143,12 +143,12 @@ Erinnerung: {entry['original_text']}
 
 Buchkapitel:"""
 
-        # Process with local LLM (Ollama)
+        # Process with LLM (Anthropic Claude as fallback)
         try:
             result = await llm_gateway.generate(
                 prompt=prompt,
-                provider="ollama",
-                model="llama3",
+                provider="anthropic",
+                model="claude-sonnet-3-5-20241022",
                 temperature=0.7,
                 max_tokens=300
             )
