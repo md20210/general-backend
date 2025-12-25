@@ -129,6 +129,11 @@ LIFECHONICLE_TRANSLATIONS = {
         "en": "Process with LLM",
         "es": "Procesar con LLM"
     },
+    "lifechonicle_action_processing": {
+        "de": "Wird verarbeitet...",
+        "en": "Processing...",
+        "es": "Procesando..."
+    },
     "lifechonicle_action_delete": {
         "de": "Löschen",
         "en": "Delete",
