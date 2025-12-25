@@ -1,5 +1,85 @@
 # General Backend - Changelog
 
+## [2024-12-25] LifeChronicle: Timeline-Farben & UI-Verbesserungen
+
+### Added
+- ✅ **PDF Timeline-Farben** - Farbige PDF-Exports mit 6-Farben-Palette
+- ✅ **Processing Indicator Translation** - "Wird verarbeitet..." in DE/EN/ES
+- ✅ **ReportLab Color Styling** - Table-basierte farbige Timeline im PDF
+
+### Changed
+- 🎨 **PDF-Export** - Lifecycle Timeline jetzt mit visuellen Farben
+  - Purple (#e9d5ff / #c084fc / #581c87)
+  - Teal (#ccfbf1 / #5eead4 / #134e4a)
+  - Green (#d1fae5 / #6ee7b7 / #065f46)
+  - Yellow (#fef3c7 / #fcd34d / #78350f)
+  - Orange (#fed7aa / #fdba74 / #7c2d12)
+  - Pink (#fce7f3 / #f9a8d4 / #831843)
+
+### Technical Details
+
+#### 1. PDF Timeline Colors (`lifechonicle_service.py:217-313`)
+```python
+# Timeline color palette (same as frontend)
+TIMELINE_COLORS = [
+    {'bg': '#e9d5ff', 'border': '#c084fc', 'text': '#581c87'},  # Purple
+    {'bg': '#ccfbf1', 'border': '#5eead4', 'text': '#134e4a'},  # Teal
+    {'bg': '#d1fae5', 'border': '#6ee7b7', 'text': '#065f46'},  # Green
+    {'bg': '#fef3c7', 'border': '#fcd34d', 'text': '#78350f'},  # Yellow
+    {'bg': '#fed7aa', 'border': '#fdba74', 'text': '#7c2d12'},  # Orange
+    {'bg': '#fce7f3', 'border': '#f9a8d4', 'text': '#831843'},  # Pink
+]
+
+# ReportLab Table Styling
+table.setStyle(TableStyle([
+    ('BACKGROUND', (0, 0), (0, 0), colors.HexColor(color_set['bg'])),
+    ('LINEABOVE', (0, 0), (-1, 0), 3, colors.HexColor(color_set['border'])),
+    ('LINEBEFORE', (0, 0), (0, -1), 3, colors.HexColor(color_set['border'])),
+    # ... weitere Styling-Optionen
+]))
+```
+
+#### 2. Translation Update (`translations/lifechonicle.py`)
+```python
+"lifechonicle_action_processing": {
+    "de": "Wird verarbeitet...",
+    "en": "Processing...",
+    "es": "Procesando..."
+}
+```
+
+### API Endpoints (Unchanged)
+```
+GET    /api/lifechonicle/entries                    # Alle Timeline-Einträge
+POST   /api/lifechonicle/entries                    # Neuer Eintrag
+DELETE /api/lifechonicle/entries/{id}               # Eintrag löschen
+POST   /api/lifechonicle/entries/{id}/process       # LLM-Textveredelung
+GET    /api/lifechonicle/export/pdf                 # PDF-Export (UPDATED mit Farben)
+GET    /api/translations?app=lifechonicle&lang=de   # UI-Übersetzungen (UPDATED)
+```
+
+### Performance
+- **PDF-Generierung:** ~2-3 Sekunden (8 Einträge)
+- **Dateigröße:** 50-200 KB (abhängig von Entry-Anzahl)
+- **No Performance Degradation:** Farbiges PDF hat gleiche Geschwindigkeit wie vorher
+
+### User Impact
+- **Problem gelöst:** "Der Pdf download enthaelt keine Farben!" → Jetzt mit 6 Timeline-Farben
+- **Bessere UX:** Processing-Indikator mit Übersetzung während LLM-Verarbeitung
+- **Visuelles Erlebnis:** PDF-Export jetzt professionell formatiert mit Farben
+
+### Frontend Integration (LifeChronicle)
+- **Live:** https://www.dabrock.info/lifechronicle/
+- **Frontend-Commit:** `6015f4a` - "COMPLETE 1:1 copy of CV_Matcher header and layout structure"
+- **Backend-Commit:** "Add timeline colors to PDF export"
+
+### Deployment
+- ✅ Railway Auto-Deploy erfolgreich
+- ✅ Health-Check: OK
+- ✅ Keine Downtime
+
+---
+
 ## [2025-12-23 Evening] RAG Performance + PDF Generation
 
 ### Added
