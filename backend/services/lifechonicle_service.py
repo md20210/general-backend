@@ -126,9 +126,9 @@ class LifeChronicleService:
 
         Args:
             entry_id: ID of entry to process
-            provider: LLM provider ("ollama" or "anthropic")
+            provider: LLM provider ("ollama", "grok", or "anthropic")
 
-        Uses Ollama (local, DSGVO-compliant) or Anthropic Claude to transform
+        Uses Ollama (local, DSGVO-compliant), GROK, or Anthropic Claude to transform
         raw text into beautifully written prose.
         """
         entry = self.get_entry(entry_id)
@@ -149,7 +149,15 @@ Buchkapitel:"""
 
         # Process with selected LLM provider
         try:
-            if provider == "anthropic":
+            if provider == "grok":
+                result = llm_gateway.generate(
+                    prompt=prompt,
+                    provider="grok",
+                    model="grok-3",
+                    temperature=0.7,
+                    max_tokens=300
+                )
+            elif provider == "anthropic":
                 result = llm_gateway.generate(
                     prompt=prompt,
                     provider="anthropic",
