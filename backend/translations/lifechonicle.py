@@ -19,10 +19,10 @@ LIFECHONICLE_TRANSLATIONS = {
         "en": "🏠 Local (GDPR)",
         "es": "🏠 Local (RGPD)"
     },
-    "lifechonicle_llm_toggle_anthropic": {
-        "de": "⚡ Claude (nicht DSGVO)",
-        "en": "⚡ Claude (non-GDPR)",
-        "es": "⚡ Claude (no RGPD)"
+    "lifechonicle_llm_toggle_grok": {
+        "de": "⚡ GROK (nicht DSGVO)",
+        "en": "⚡ GROK (non-GDPR)",
+        "es": "⚡ GROK (no RGPD)"
     },
 
     # Buttons
@@ -31,7 +31,7 @@ LIFECHONICLE_TRANSLATIONS = {
         "en": "New Entry",
         "es": "Nueva Entrada"
     },
-    "lifechonicle_btn_pdf_export": {
+    "lifechonicle_btn_export_pdf": {
         "de": "PDF Export",
         "en": "PDF Export",
         "es": "Exportar PDF"
@@ -91,16 +91,16 @@ LIFECHONICLE_TRANSLATIONS = {
 
     # Timeline
     "lifechonicle_timeline_title": {
-        "de": "📅 Línea cronológica",
-        "en": "📅 Timeline",
-        "es": "📅 Línea de Tiempo"
+        "de": "Zeitleiste ({count})",
+        "en": "Timeline ({count})",
+        "es": "Línea de Tiempo ({count})"
     },
-    "lifechonicle_timeline_empty": {
+    "lifechonicle_empty_state": {
         "de": "Noch keine Einträge vorhanden",
         "en": "No entries yet",
         "es": "Aún no hay entradas"
     },
-    "lifechonicle_timeline_empty_hint": {
+    "lifechonicle_empty_hint": {
         "de": "Klicke auf \"Neuer Eintrag\", um deine erste Lebensgeschichte zu erzählen!",
         "en": "Click \"New Entry\" to tell your first life story!",
         "es": "¡Haz clic en \"Nueva Entrada\" para contar tu primera historia de vida!"
