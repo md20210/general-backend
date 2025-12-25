@@ -120,12 +120,16 @@ class LifeChronicleService:
             return True
         return False
 
-    async def process_with_llm(self, entry_id: str) -> Optional[Dict[str, Any]]:
+    async def process_with_llm(self, entry_id: str, provider: str = "ollama") -> Optional[Dict[str, Any]]:
         """
-        Process entry with local LLM to create literary book chapter.
+        Process entry with LLM to create literary book chapter.
 
-        Uses Ollama (llama3 or mistral) to transform raw text
-        into beautifully written prose.
+        Args:
+            entry_id: ID of entry to process
+            provider: LLM provider ("ollama" or "anthropic")
+
+        Uses Ollama (local, DSGVO-compliant) or Anthropic Claude to transform
+        raw text into beautifully written prose.
         """
         entry = self.get_entry(entry_id)
         if not entry:
@@ -143,15 +147,24 @@ Erinnerung: {entry['original_text']}
 
 Buchkapitel:"""
 
-        # Process with LLM (Anthropic Claude as fallback)
+        # Process with selected LLM provider
         try:
-            result = await llm_gateway.generate(
-                prompt=prompt,
-                provider="anthropic",
-                model="claude-sonnet-3-5-20241022",
-                temperature=0.7,
-                max_tokens=300
-            )
+            if provider == "anthropic":
+                result = await llm_gateway.generate(
+                    prompt=prompt,
+                    provider="anthropic",
+                    model="claude-sonnet-3-5-20241022",
+                    temperature=0.7,
+                    max_tokens=300
+                )
+            else:  # ollama (default)
+                result = await llm_gateway.generate(
+                    prompt=prompt,
+                    provider="ollama",
+                    model="llama3.2",
+                    temperature=0.7,
+                    max_tokens=300
+                )
 
             processed_text = result.get('content', '').strip()
 

@@ -94,22 +94,28 @@ async def delete_entry(entry_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/entries/{entry_id}/process", response_model=EntryResponse)
-async def process_entry(entry_id: str):
-    """
-    Process entry with local LLM to create literary book chapter.
+class ProcessEntryRequest(BaseModel):
+    """Process entry request with LLM provider."""
+    provider: Optional[str] = "ollama"  # "ollama" or "anthropic"
 
-    Uses Ollama (llama3 or mistral) to transform raw life story
-    into a beautifully written book chapter.
+
+@router.post("/entries/{entry_id}/process", response_model=EntryResponse)
+async def process_entry(entry_id: str, request: ProcessEntryRequest = ProcessEntryRequest()):
+    """
+    Process entry with LLM to create literary book chapter.
+
+    Uses Ollama (local, DSGVO-compliant) or Anthropic Claude to transform
+    raw life story into a beautifully written book chapter.
 
     Args:
         entry_id: ID of entry to process
+        request: Processing options (provider: "ollama" or "anthropic")
 
     Returns:
         Updated entry with processed_text and status='processed'
     """
     try:
-        entry = await lifechonicle_service.process_with_llm(entry_id)
+        entry = await lifechonicle_service.process_with_llm(entry_id, request.provider)
         if not entry:
             raise HTTPException(status_code=404, detail="Entry not found")
 
