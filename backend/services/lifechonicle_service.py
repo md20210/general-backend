@@ -20,43 +20,51 @@ class LifeChronicleService:
         """Initialize with demo timeline for test user."""
         demo_entries = [
             {
+                "title": "Geburt",
                 "date": "1985-06-15",
                 "original_text": "Ich wurde in München geboren. Ein sonniger Sommertag, wie mir meine Mutter später erzählte.",
                 "status": "processed",
                 "processed_text": "An einem strahlenden Junitag des Jahres 1985 erblickte ich in der bayerischen Hauptstadt München das Licht der Welt. Die Sonne schien warm durch die Fenster des Krankenhauses, während meine Eltern voller Freude ihr erstes Kind in den Armen hielten. Es war der Beginn einer Reise, die mich durch viele Höhen und Tiefen führen sollte."
             },
             {
+                "title": "Erster Schultag",
                 "date": "1990-09-01",
                 "original_text": "Mein erster Schultag. Ich war aufgeregt und hatte eine riesige Schultüte dabei.",
                 "status": "pending"
             },
             {
+                "title": "Abitur",
                 "date": "1998-06-20",
                 "original_text": "Abitur bestanden! Notendurchschnitt 1,8. Wir haben die ganze Nacht gefeiert.",
                 "status": "pending"
             },
             {
+                "title": "Berufseinstieg",
                 "date": "2003-10-01",
                 "original_text": "Erste Stelle bei Siemens als Junior Software Engineer. Endlich im Berufsleben!",
                 "status": "processed",
                 "processed_text": "Mit einem Gefühl der Aufregung und Erwartung betrat ich am 1. Oktober 2003 zum ersten Mal die Büroräume von Siemens. Als frischgebackener Junior Software Engineer begann hier meine professionelle Karriere. Die imposanten Gebäude, die geschäftigen Kollegen und die moderne Technologie – alles fühlte sich gleichzeitig fremd und faszinierend an. Dies war der Moment, in dem aus dem Studenten ein Berufstätiger wurde."
             },
             {
+                "title": "Hochzeit",
                 "date": "2010-07-15",
                 "original_text": "Hochzeit mit meiner Frau Sarah. Der schönste Tag meines Lebens!",
                 "status": "pending"
             },
             {
+                "title": "Beförderung",
                 "date": "2015-03-01",
                 "original_text": "Beförderung zum Senior Projektleiter. Verantwortung für ein Team von 12 Entwicklern.",
                 "status": "pending"
             },
             {
+                "title": "Vater geworden",
                 "date": "2020-05-20",
                 "original_text": "Unser erstes Kind wurde geboren - Emma Sophie. 3.450g, 52cm. Gesund und munter.",
                 "status": "pending"
             },
             {
+                "title": "Neuer Job",
                 "date": "2023-11-01",
                 "original_text": "Neuer Job bei IBM als Principal AI Consultant. Spannende Herausforderungen warten!",
                 "status": "pending"
@@ -67,6 +75,7 @@ class LifeChronicleService:
             entry_id = str(uuid.uuid4())
             self.entries[entry_id] = {
                 "id": entry_id,
+                "title": entry_data["title"],
                 "date": entry_data["date"],
                 "original_text": entry_data["original_text"],
                 "processed_text": entry_data.get("processed_text"),
@@ -85,14 +94,15 @@ class LifeChronicleService:
         """Get single entry by ID."""
         return self.entries.get(entry_id)
 
-    def create_entry(self, date: str, original_text: str) -> Dict[str, Any]:
+    def create_entry(self, title: str, date: str, original_text: str) -> Dict[str, Any]:
         """Create new timeline entry."""
-        if not date or not original_text:
-            raise ValueError("Date and text are required")
+        if not title or not date or not original_text:
+            raise ValueError("Title, date and text are required")
 
         entry_id = str(uuid.uuid4())
         entry = {
             "id": entry_id,
+            "title": title.strip(),
             "date": date,
             "original_text": original_text.strip(),
             "processed_text": None,

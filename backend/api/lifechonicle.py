@@ -14,6 +14,7 @@ router = APIRouter(prefix="/lifechonicle", tags=["LifeChronicle"])
 class TimelineEntry(BaseModel):
     """Timeline entry model."""
     id: str
+    title: str
     date: str
     original_text: str
     processed_text: Optional[str] = None
@@ -23,6 +24,7 @@ class TimelineEntry(BaseModel):
 
 class CreateEntryRequest(BaseModel):
     """Create timeline entry request."""
+    title: str
     date: str
     original_text: str
 
@@ -66,6 +68,7 @@ async def create_entry(request: CreateEntryRequest):
     """
     try:
         entry = lifechonicle_service.create_entry(
+            title=request.title,
             date=request.date,
             original_text=request.original_text
         )
