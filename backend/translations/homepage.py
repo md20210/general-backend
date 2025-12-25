@@ -67,6 +67,26 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
             "en": "Showcases",
             "es": "Showcases"
         },
+        "disclaimer_title": {
+            "de": "Hinweis zu den Showcases",
+            "en": "Note about the Showcases",
+            "es": "Nota sobre los Showcases"
+        },
+        "disclaimer_p1": {
+            "de": "Alle hier präsentierten Showcases basieren derzeit auf einem kleineren, lokal ausgeführten Qwen-Modell, um DSGVO-konform zu sein. Grund dafür ist, dass größere lokale Modelle erhebliche VRAM-Kapazitäten auf GPUs erfordern, um effizient geladen und betrieben zu werden. Plattformen wie Railway bieten derzeit keine dedizierten GPU-Instanzen, weshalb ich bewusst auf lokale Ausführung mit kleineren Modellen setze. Aber um den inhaltlichen Unterschied zu zeigen, gibt es immer die Möglichkeit auf ein großes Modell zu wechseln (nicht DSGVO-konform), um einen Vergleich zu haben.",
+            "en": "All showcases presented here currently run on a smaller, locally-executed Qwen model to ensure GDPR compliance. This is because larger local models require significant VRAM capacity on GPUs to be loaded and operated efficiently. Platforms like Railway currently don't offer dedicated GPU instances, which is why I deliberately use local execution with smaller models. However, to demonstrate the content difference, there's always the option to switch to a large model (non-GDPR compliant) for comparison.",
+            "es": "Todos los showcases presentados aquí se basan actualmente en un modelo Qwen más pequeño ejecutado localmente para cumplir con RGPD. Esto se debe a que los modelos locales más grandes requieren capacidades significativas de VRAM en GPUs para cargarse y operarse eficientemente. Plataformas como Railway actualmente no ofrecen instancias GPU dedicadas, por lo que utilizo deliberadamente ejecución local con modelos más pequeños. Sin embargo, para demostrar la diferencia de contenido, siempre existe la opción de cambiar a un modelo grande (no conforme con RGPD) para comparación."
+        },
+        "disclaimer_p2": {
+            "de": "Bei reinen Demonstrationszwecken steht nicht die maximale Leistung eines großen Modells im Vordergrund, sondern die flexible und modulare Architektur: Sie ermöglicht die schnelle Erstellung neuer Showcases – meist innerhalb eines halben Tages.",
+            "en": "For pure demonstration purposes, the focus is not on the maximum performance of a large model, but on the flexible and modular architecture: It enables the rapid creation of new showcases – usually within half a day.",
+            "es": "Para fines de demostración pura, el enfoque no está en el rendimiento máximo de un modelo grande, sino en la arquitectura flexible y modular: Permite la creación rápida de nuevos showcases, generalmente en medio día."
+        },
+        "disclaimer_p3": {
+            "de": "Diese Hardware-Restriktionen sind jedoch nur vorübergehend. Angesichts der rasanten Entwicklung im Bereich Cloud Services, insbesondere auch in der EU (mit wachsenden sovereign Cloud-Angeboten und GPU-Verfügbarkeit), werden leistungsstarke GPU-Ressourcen bald breiter und kostengünstiger zugänglich sein. Aber auch immer bessere kleine LLMs, die lokal nutzbar sind. Also nur noch eine Frage der Zeit!",
+            "en": "However, these hardware restrictions are only temporary. Given the rapid development in cloud services, especially in the EU (with growing sovereign cloud offerings and GPU availability), powerful GPU resources will soon be more widely and affordably accessible. Also, increasingly better small LLMs that can be used locally. So it's just a matter of time!",
+            "es": "Sin embargo, estas restricciones de hardware son solo temporales. Dado el rápido desarrollo en servicios de nube, especialmente en la UE (con ofertas crecientes de nube soberana y disponibilidad de GPU), los recursos GPU potentes pronto serán más ampliamente y económicamente accesibles. Además, LLMs pequeños cada vez mejores que pueden usarse localmente. ¡Así que es solo cuestión de tiempo!"
+        },
         "cv_matcher_tagline": {
             "de": "KI-gestützte Bewerbungsanalyse mit RAG-Chat",
             "en": "AI-powered application analysis with RAG chat",
