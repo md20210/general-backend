@@ -42,10 +42,9 @@ async def get_demo_token(
         demo_user = await user_manager.create(user_create)
 
     # Generate JWT token
-    from backend.auth.backend import auth_backend
-    from fastapi_users.authentication import Strategy
+    from backend.auth.jwt import auth_backend
 
-    strategy: Strategy = auth_backend.get_strategy()
+    strategy = auth_backend.get_strategy()
     token = await strategy.write_token(demo_user)
 
     return {
