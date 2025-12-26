@@ -73,7 +73,9 @@ class LifeChronicleDBService:
         self,
         db: AsyncSession,
         user_id: UUID,
-        entry_data: LifeChronicleEntryCreate
+        entry_data: LifeChronicleEntryCreate,
+        photo_urls: list[str] | None = None,
+        entry_metadata: dict | None = None
     ) -> LifeChronicleEntry:
         """
         Create a new timeline entry.
@@ -82,6 +84,8 @@ class LifeChronicleDBService:
             db: Database session
             user_id: User ID
             entry_data: Entry creation data
+            photo_urls: Optional list of photo URLs
+            entry_metadata: Optional metadata (e.g., photo EXIF data)
 
         Returns:
             Created LifeChronicleEntry
@@ -91,6 +95,8 @@ class LifeChronicleDBService:
             title=entry_data.title,
             entry_date=entry_data.entry_date,
             original_text=entry_data.original_text,
+            photo_urls=photo_urls or [],
+            entry_metadata=entry_metadata or {},
             is_refined=False
         )
         db.add(entry)
