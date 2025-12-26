@@ -1,4 +1,5 @@
 """LifeChronicle model for timeline entries."""
+from typing import List, Dict, Any, Optional
 from sqlalchemy import String, Text, ForeignKey, DateTime, Boolean, Date
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -20,9 +21,9 @@ class LifeChronicleEntry(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     date: Mapped[date_type] = mapped_column(Date, nullable=False, index=True)
     original_text: Mapped[str] = mapped_column(Text, nullable=False)
-    refined_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    photo_urls: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
-    entry_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    refined_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    photo_urls: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String), nullable=True)
+    entry_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True, default=dict)
     is_refined: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at: Mapped[datetime] = mapped_column(
