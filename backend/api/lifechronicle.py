@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.dependencies import current_active_user
 from backend.models.user import User
+from backend.models.lifechronicle import LifeChronicleEntry
 from backend.database import get_async_session
 from backend.services.lifechronicle_db_service import lifechronicle_db_service
 from backend.services.photo_metadata import extract_photo_metadata
@@ -402,3 +403,81 @@ async def export_pdf(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF export failed: {str(e)}")
+
+
+@router.post("/migrate-photos")
+async def migrate_photos(
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user)
+):
+    """
+    Migrate old file-path photo entries to Base64 data URLs.
+
+    For entries with file paths in photo_urls (/uploads/...):
+    - If Base64 data exists in entry_metadata.photos_base64, use it
+    - Otherwise, clear the photo_urls
+
+    Args:
+        db: Database session
+        user: Current authenticated user
+
+    Returns:
+        Migration summary
+    """
+    try:
+        from sqlalchemy import select
+
+        # Get all user entries
+        result = await db.execute(
+            select(LifeChronicleEntry)
+            .where(LifeChronicleEntry.user_id == user.id)
+        )
+        entries = result.scalars().all()
+
+        updated_count = 0
+        cleared_count = 0
+        skipped_count = 0
+
+        for entry in entries:
+            if not entry.photo_urls:
+                continue
+
+            # Check if any photo_urls are file paths
+            has_file_paths = any(url.startswith("/uploads") for url in entry.photo_urls)
+
+            if has_file_paths:
+                logger.info(f"Migrating entry: {entry.title} ({entry.id})")
+
+                # Check if Base64 data exists in metadata
+                metadata = entry.entry_metadata or {}
+                photos_base64 = metadata.get("photos_base64", [])
+
+                if photos_base64:
+                    # Extract Base64 data URLs
+                    base64_urls = [p["data_url"] for p in photos_base64]
+                    entry.photo_urls = base64_urls
+                    logger.info(f"  → Updated to Base64 ({len(base64_urls)} photos)")
+                    updated_count += 1
+                else:
+                    # No Base64 data available - clear photos
+                    entry.photo_urls = []
+                    logger.info(f"  → No Base64 data - cleared photos")
+                    cleared_count += 1
+            else:
+                skipped_count += 1
+
+        # Commit all changes
+        await db.commit()
+
+        return {
+            "success": True,
+            "message": "Photo migration complete",
+            "updated_to_base64": updated_count,
+            "cleared_no_data": cleared_count,
+            "already_base64": skipped_count,
+            "total_processed": updated_count + cleared_count
+        }
+
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
