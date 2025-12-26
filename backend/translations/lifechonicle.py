@@ -229,5 +229,59 @@ LIFECHONICLE_TRANSLATIONS = {
         "de": "100% lokal & DSGVO-konform",
         "en": "100% local & GDPR-compliant",
         "es": "100% local y conforme al RGPD"
+    },
+
+    # Mobile App Features
+    "lifechonicle_mobile_title": {
+        "de": "Mobile Apps verfügbar",
+        "en": "Mobile Apps Available",
+        "es": "Aplicaciones Móviles Disponibles"
+    },
+    "lifechonicle_mobile_subtitle": {
+        "de": "Deine Lebensgeschichte immer dabei",
+        "en": "Your life story always with you",
+        "es": "Tu historia de vida siempre contigo"
+    },
+    "lifechonicle_mobile_download_android": {
+        "de": "Android APK",
+        "en": "Android APK",
+        "es": "APK Android"
+    },
+    "lifechonicle_mobile_download_ios": {
+        "de": "iOS TestFlight",
+        "en": "iOS TestFlight",
+        "es": "TestFlight iOS"
+    },
+    "lifechonicle_mobile_feature_speech": {
+        "de": "Sprach-Eingabe & TTS-Vorschau",
+        "en": "Voice Input & TTS Preview",
+        "es": "Entrada de Voz y Vista Previa TTS"
+    },
+    "lifechonicle_mobile_feature_camera": {
+        "de": "Kamera-Integration mit EXIF",
+        "en": "Camera Integration with EXIF",
+        "es": "Integración de Cámara con EXIF"
+    },
+    "lifechonicle_mobile_feature_offline": {
+        "de": "Offline-Modus mit Auto-Sync",
+        "en": "Offline Mode with Auto-Sync",
+        "es": "Modo Sin Conexión con Auto-Sincronización"
+    },
+
+    # Export Features
+    "lifechonicle_export_pdf_title": {
+        "de": "PDF als Lebensbuch",
+        "en": "PDF Life Book",
+        "es": "Libro de Vida PDF"
+    },
+    "lifechonicle_export_audiobook_title": {
+        "de": "Hörbuch-Export (MP3)",
+        "en": "Audiobook Export (MP3)",
+        "es": "Exportar Audiolibro (MP3)"
+    },
+    "lifechonicle_export_description": {
+        "de": "Timeline, Fotos und Inhaltsverzeichnis in einem PDF oder als vertonte Hörbuch-Version",
+        "en": "Timeline, photos and table of contents in a PDF or as narrated audiobook version",
+        "es": "Línea de tiempo, fotos e índice en PDF o como versión de audiolibro narrado"
     }
 }
