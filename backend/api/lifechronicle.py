@@ -102,7 +102,7 @@ async def create_entry(
     title: str = Form(...),
     date: str = Form(...),  # Will be parsed as date
     text: str = Form(...),
-    photos: Optional[List[UploadFile]] = File(default=[]),
+    photos: List[UploadFile] = File(None),
     db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user)
 ):
@@ -132,8 +132,12 @@ async def create_entry(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
+        # Normalize photos to empty list if None
+        if photos is None:
+            photos = []
+
         # Validate photo count
-        if photos and len(photos) > 5:
+        if len(photos) > 5:
             raise HTTPException(status_code=400, detail="Maximum 5 photos allowed")
 
         # Save photos to disk and extract metadata
