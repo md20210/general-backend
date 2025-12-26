@@ -143,24 +143,49 @@ async def create_entry(
         # Save photos to disk and extract metadata
         photo_urls = []
         photo_metadata_list = []
+        photos_base64 = []  # Base64 fallback for Railway (no volume)
+
         if photos:
+            import base64
             for photo in photos:
+                # Read photo content ONCE
+                content = await photo.read()
+
                 # Generate unique filename
                 file_ext = os.path.splitext(photo.filename)[1]
                 unique_name = f"{uuid4()}{file_ext}"
                 file_path = UPLOAD_DIR / unique_name
 
-                # Save file
-                with open(file_path, "wb") as f:
-                    content = await photo.read()
-                    f.write(content)
+                # Try to save file to disk (works if volume mounted)
+                try:
+                    with open(file_path, "wb") as f:
+                        f.write(content)
 
-                # Extract EXIF metadata
-                photo_metadata = extract_photo_metadata(file_path)
-                photo_metadata_list.append(photo_metadata)
+                    # Extract EXIF metadata from file
+                    photo_metadata = extract_photo_metadata(file_path)
+                    photo_metadata_list.append(photo_metadata)
 
-                # Store relative URL
-                photo_urls.append(f"/uploads/lifechronicle/{unique_name}")
+                    # Store relative URL (for volume-based storage)
+                    photo_urls.append(f"/uploads/lifechronicle/{unique_name}")
+                except Exception as e:
+                    logger.warning(f"Could not save photo to disk: {e}")
+
+                # ALWAYS save as Base64 (fallback for Railway without volume)
+                # Detect content type
+                content_type = "image/jpeg"
+                if file_ext.lower() in ['.png']:
+                    content_type = "image/png"
+                elif file_ext.lower() in ['.heic', '.heif']:
+                    content_type = "image/heic"
+
+                # Create data URL
+                b64_data = base64.b64encode(content).decode('utf-8')
+                data_url = f"data:{content_type};base64,{b64_data}"
+                photos_base64.append({
+                    "filename": photo.filename,
+                    "data_url": data_url,
+                    "size_bytes": len(content)
+                })
 
         # Create entry using Pydantic schema
         entry_data = LifeChronicleEntryCreate(
@@ -169,10 +194,17 @@ async def create_entry(
             original_text=text
         )
 
-        # Build entry_metadata with photo metadata
+        # Build entry_metadata with photo metadata AND base64 data
         entry_metadata = {}
         if photo_metadata_list:
             entry_metadata["photos"] = photo_metadata_list
+        if photos_base64:
+            entry_metadata["photos_base64"] = photos_base64  # Fallback for Railway
+
+        # Use base64 data URLs if file storage failed
+        if not photo_urls and photos_base64:
+            photo_urls = [p["data_url"] for p in photos_base64]
+            logger.info("Using Base64 data URLs (no volume mounted)")
 
         entry = await lifechronicle_db_service.create_entry(
             db, user.id, entry_data, photo_urls, entry_metadata or None
