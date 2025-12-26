@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from datetime import date
 from pathlib import Path
 import os
+import logging
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +21,7 @@ from backend.schemas.lifechronicle import (
     EntryResponse,
 )
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/lifechronicle", tags=["LifeChronicle"])
 
 # Photo upload configuration
