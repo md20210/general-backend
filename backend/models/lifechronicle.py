@@ -30,7 +30,8 @@ class LifeChronicleEntry(Base):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="lifechronicle_entries")
+    # NOTE: No back_populates to avoid circular repr() recursion with User
+    user: Mapped["User"] = relationship("User")
 
     def __repr__(self):
         return f"<LifeChronicleEntry {self.title} ({self.date})>"
