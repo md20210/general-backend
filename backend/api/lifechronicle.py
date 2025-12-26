@@ -24,7 +24,9 @@ from backend.schemas.lifechronicle import (
 router = APIRouter(prefix="/lifechronicle", tags=["LifeChronicle"])
 
 # Photo upload configuration
-UPLOAD_DIR = Path("/app/uploads/lifechronicle")  # Railway Volume path
+# Use relative path for local dev, /app/uploads for Railway production
+import os
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads/lifechronicle"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
