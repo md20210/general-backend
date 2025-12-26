@@ -157,18 +157,22 @@ async def create_entry(
                 file_path = UPLOAD_DIR / unique_name
 
                 # Try to save file to disk (works if volume mounted)
-                try:
-                    with open(file_path, "wb") as f:
-                        f.write(content)
+                # TEMPORARILY DISABLED until RAILWAY_VOLUME_NAME is set
+                # try:
+                #     with open(file_path, "wb") as f:
+                #         f.write(content)
+                #
+                #     # Extract EXIF metadata from file
+                #     photo_metadata = extract_photo_metadata(file_path)
+                #     photo_metadata_list.append(photo_metadata)
+                #
+                #     # Store relative URL (for volume-based storage)
+                #     photo_urls.append(f"/uploads/lifechronicle/{unique_name}")
+                # except Exception as e:
+                #     logger.warning(f"Could not save photo to disk: {e}")
 
-                    # Extract EXIF metadata from file
-                    photo_metadata = extract_photo_metadata(file_path)
-                    photo_metadata_list.append(photo_metadata)
-
-                    # Store relative URL (for volume-based storage)
-                    photo_urls.append(f"/uploads/lifechronicle/{unique_name}")
-                except Exception as e:
-                    logger.warning(f"Could not save photo to disk: {e}")
+                # For now: Skip file storage, use Base64 only
+                pass
 
                 # ALWAYS save as Base64 (fallback for Railway without volume)
                 # Detect content type
@@ -201,11 +205,11 @@ async def create_entry(
         if photos_base64:
             entry_metadata["photos_base64"] = photos_base64  # Fallback for Railway
 
-        # TEMPORARY: Always use Base64 until Railway Volume is configured
-        # TODO: Remove this when RAILWAY_VOLUME_NAME is set
+        # TEMPORARY: Use Base64 data URLs (file storage disabled)
+        # TODO: Re-enable file storage when RAILWAY_VOLUME_NAME is set
         if photos_base64:
             photo_urls = [p["data_url"] for p in photos_base64]
-            logger.info("Using Base64 data URLs (RAILWAY_VOLUME_NAME not configured)")
+            logger.info(f"Using {len(photo_urls)} Base64 data URLs (file storage disabled)")
 
         entry = await lifechronicle_db_service.create_entry(
             db, user.id, entry_data, photo_urls, entry_metadata or None
