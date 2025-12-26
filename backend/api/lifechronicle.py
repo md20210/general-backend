@@ -308,12 +308,14 @@ async def export_pdf(
         # Generate PDF
         from io import BytesIO
         from reportlab.lib.pagesizes import A4
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import cm
         from reportlab.lib import colors as rl_colors
         from fastapi.responses import Response
         import html
+        import base64
+        from PIL import Image as PILImage
 
         # Timeline color palette (same as frontend)
         TIMELINE_COLORS = [
@@ -388,6 +390,40 @@ async def export_pdf(
             ]))
 
             elements.append(table)
+
+            # Add photos if available (Base64 Data URLs)
+            if entry.photo_urls:
+                photo_elements = []
+                for photo_url in entry.photo_urls[:3]:  # Max 3 photos per entry
+                    try:
+                        if photo_url.startswith('data:image'):
+                            # Extract Base64 data from data URL
+                            # Format: data:image/jpeg;base64,/9j/4AAQ...
+                            header, base64_data = photo_url.split(',', 1)
+
+                            # Decode Base64 to bytes
+                            image_data = base64.b64decode(base64_data)
+
+                            # Create PIL Image from bytes
+                            pil_image = PILImage.open(BytesIO(image_data))
+
+                            # Save to temporary BytesIO for ReportLab
+                            img_buffer = BytesIO()
+                            pil_image.save(img_buffer, format='JPEG')
+                            img_buffer.seek(0)
+
+                            # Create ReportLab Image with max width 5cm
+                            rl_image = RLImage(img_buffer, width=5*cm, height=5*cm)
+                            photo_elements.append(rl_image)
+                    except Exception as e:
+                        logger.warning(f"Failed to process photo for PDF: {e}")
+                        continue
+
+                # Add photos in a row if any were processed
+                if photo_elements:
+                    photo_table = Table([photo_elements], colWidths=[5*cm]*len(photo_elements))
+                    elements.append(photo_table)
+
             elements.append(Spacer(1, 1*cm))
 
         # Build PDF
