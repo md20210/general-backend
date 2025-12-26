@@ -102,7 +102,7 @@ async def create_entry(
     title: str = Form(...),
     date: str = Form(...),  # Will be parsed as date
     text: str = Form(...),
-    photos: Optional[List[UploadFile]] = File(None),
+    photos: Optional[List[UploadFile]] = File(default=[]),
     db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user)
 ):
