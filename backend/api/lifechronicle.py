@@ -274,6 +274,7 @@ async def export_pdf(
         from reportlab.lib.units import cm
         from reportlab.lib import colors as rl_colors
         from fastapi.responses import Response
+        import html
 
         # Timeline color palette (same as frontend)
         TIMELINE_COLORS = [
@@ -317,8 +318,8 @@ async def export_pdf(
         for idx, entry in enumerate(entries):
             color = TIMELINE_COLORS[idx % len(TIMELINE_COLORS)]
 
-            # Title with colored background
-            title_text = f"{entry.entry_date.year} - {entry.title}"
+            # Title with colored background (escape HTML)
+            title_text = html.escape(f"{entry.entry_date.year} - {entry.title}")
             title_para = Paragraph(title_text, ParagraphStyle(
                 'EntryTitle',
                 parent=styles['Heading2'],
@@ -327,9 +328,10 @@ async def export_pdf(
                 spaceAfter=6
             ))
 
-            # Text (refined if available, otherwise original)
+            # Text (refined if available, otherwise original) - ESCAPE HTML
             text_content = entry.refined_text or entry.original_text
-            text_para = Paragraph(text_content, styles['BodyText'])
+            text_content_escaped = html.escape(text_content).replace('\n', '<br/>')
+            text_para = Paragraph(text_content_escaped, styles['BodyText'])
 
             # Create colored table box
             table = Table([[title_para], [text_para]], colWidths=[15*cm])
