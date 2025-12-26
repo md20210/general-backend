@@ -23,9 +23,10 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     documents: Mapped[list["Document"]] = relationship("Document", back_populates="user", cascade="all, delete-orphan")
     chats: Mapped[list["Chat"]] = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
     matches: Mapped[list["Match"]] = relationship("Match", back_populates="user", cascade="all, delete-orphan")
-    lifechronicle_entries: Mapped[list["LifeChronicleEntry"]] = relationship(
-        "LifeChronicleEntry", back_populates="user", cascade="all, delete-orphan"
-    )
+    # TEMPORARILY DISABLED: Circular repr issue with LifeChronicle
+    # lifechronicle_entries: Mapped[list["LifeChronicleEntry"]] = relationship(
+    #     "LifeChronicleEntry", back_populates="user", cascade="all, delete-orphan"
+    # )
 
     def __repr__(self):
         return f"<User {self.email} (admin={self.is_admin})>"

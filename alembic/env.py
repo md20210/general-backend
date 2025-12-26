@@ -10,7 +10,9 @@ from alembic import context
 
 # Import Base and all models to ensure metadata is populated
 from backend.database import Base
-from backend.models import User, Project, Document, Chat, Match, LifeChronicleEntry
+from backend.models import User, Project, Document, Chat, Match
+# TEMPORARILY DISABLED: LifeChronicleEntry (circular relationship issue)
+# from backend.models import LifeChronicleEntry
 from backend.config import settings
 
 # this is the Alembic Config object, which provides
