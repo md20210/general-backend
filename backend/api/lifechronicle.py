@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.auth.dependencies import current_active_user
 from backend.models.user import User
-from backend.database import get_async_db
+from backend.database import get_async_session
 from backend.services.lifechronicle_db_service import lifechronicle_db_service
 from backend.schemas.lifechronicle import (
     LifeChronicleEntryCreate,
@@ -35,7 +35,7 @@ async def health_check():
 async def get_entries(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user)
 ):
     """
@@ -63,7 +63,7 @@ async def get_entries(
 @router.get("/entries/{entry_id}", response_model=EntryResponse)
 async def get_entry(
     entry_id: UUID,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user)
 ):
     """
@@ -90,7 +90,7 @@ async def get_entry(
 @router.post("/entries", response_model=EntryResponse, status_code=201)
 async def create_entry(
     entry_data: LifeChronicleEntryCreate,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user)
 ):
     """
@@ -115,7 +115,7 @@ async def create_entry(
 async def update_entry(
     entry_id: UUID,
     entry_data: LifeChronicleEntryUpdate,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user)
 ):
     """
@@ -143,7 +143,7 @@ async def update_entry(
 @router.delete("/entries/{entry_id}")
 async def delete_entry(
     entry_id: UUID,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user)
 ):
     """
