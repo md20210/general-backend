@@ -201,10 +201,11 @@ async def create_entry(
         if photos_base64:
             entry_metadata["photos_base64"] = photos_base64  # Fallback for Railway
 
-        # Use base64 data URLs if file storage failed
-        if not photo_urls and photos_base64:
+        # TEMPORARY: Always use Base64 until Railway Volume is configured
+        # TODO: Remove this when RAILWAY_VOLUME_NAME is set
+        if photos_base64:
             photo_urls = [p["data_url"] for p in photos_base64]
-            logger.info("Using Base64 data URLs (no volume mounted)")
+            logger.info("Using Base64 data URLs (RAILWAY_VOLUME_NAME not configured)")
 
         entry = await lifechronicle_db_service.create_entry(
             db, user.id, entry_data, photo_urls, entry_metadata or None
