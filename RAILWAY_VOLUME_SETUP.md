@@ -8,6 +8,14 @@ Fotos werden hochgeladen, aber nach einem Railway-Redeploy sind sie weg!
 
 **Lösung**: Railway Persistent Volume konfigurieren
 
+## ✅ WICHTIG: Base64 Storage läuft bereits!
+
+**Aktueller Status**: Fotos werden als Base64 in DB gespeichert (funktioniert ohne Volume).
+
+**Dieses Setup ist OPTIONAL** - nur für Production-Optimierung (schneller, kleinere DB).
+
+Für MVP/Testing: **Base64 ist perfekt!**
+
 ---
 
 ## 📋 Railway Volume Setup (WICHTIG!)
@@ -19,39 +27,30 @@ Fotos werden hochgeladen, aber nach einem Railway-Redeploy sind sie weg!
 3. Öffne Projekt: **GeneralBackend**
 4. Klicke auf Service: **general-backend-production-a734**
 
-### Schritt 2: Volume erstellen
+### Schritt 2: Environment Variables setzen
 
-**Railway UI (2025)**:
+**Tab: "Variables"** → **"+ New Variable"**
 
-1. Im Service-Dashboard → Tab: **"Settings"** (oder **"Storage"**)
-2. Scroll nach unten → Suche nach: **"Volumes"** oder **"Persistent Storage"**
-3. Klicke: **"+ Add Volume"** oder **"+ New Volume"**
-
-**Falls kein Volume-Button sichtbar**:
-- Prüfe ob dein Railway Plan Volumes unterstützt (Free Tier hat Limits)
-- Oder nutze Tab: **"Data"** → **"+ New Volume"**
-
-**Volume Configuration**:
+**Variable 1** (Volume Name):
 ```
-Mount Path: /app/uploads
-Name: lifechonicle-photos (optional)
-Size: 1 GB (free tier limit)
+Key:   RAILWAY_VOLUME_NAME
+Value: lifechonicle-photos
 ```
 
-4. Klicke: **"Add"** oder **"Create"**
-
-### Schritt 3: Environment Variable setzen
-
-1. Noch im Tab "Variables"
-2. Klicke: **"+ New Variable"**
-
-**Variable**:
+**Variable 2** (Upload Directory):
 ```
 Key:   UPLOAD_DIR
 Value: /app/uploads
 ```
 
-3. Klicke: **"Add"**
+**Wichtig**:
+- `RAILWAY_VOLUME_NAME` ist **service-specific**!
+- Jeder Service kann seinen eigenen Wert haben:
+  - Ollama: `ollama-models`
+  - n8n: `n8n-data`
+  - GeneralBackend: `lifechonicle-photos` ← NEU
+
+**Railway erstellt Volume automatisch** basierend auf `RAILWAY_VOLUME_NAME`!
 
 ### Schritt 4: Redeploy
 
