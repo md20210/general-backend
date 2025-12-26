@@ -1,6 +1,6 @@
 """LifeChronicle Pydantic schemas."""
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from uuid import UUID
 
@@ -23,8 +23,8 @@ class LifeChronicleEntryUpdate(BaseModel):
     date: Optional[date] = None
     original_text: Optional[str] = Field(None, min_length=1)
     refined_text: Optional[str] = None
-    photo_urls: Optional[list[str]] = None
-    entry_metadata: Optional[dict] = None
+    photo_urls: Optional[List[str]] = None
+    entry_metadata: Optional[Dict[str, Any]] = None
 
 
 class LifeChronicleEntryResponse(LifeChronicleEntryBase):
@@ -32,14 +32,13 @@ class LifeChronicleEntryResponse(LifeChronicleEntryBase):
     id: UUID
     user_id: UUID
     refined_text: Optional[str] = None
-    photo_urls: Optional[list[str]] = None
-    entry_metadata: Optional[dict] = None
+    photo_urls: Optional[List[str]] = None
+    entry_metadata: Optional[Dict[str, Any]] = None
     is_refined: bool
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProcessEntryRequest(BaseModel):
@@ -50,7 +49,7 @@ class ProcessEntryRequest(BaseModel):
 class EntryListResponse(BaseModel):
     """Response schema for list of entries."""
     success: bool = True
-    entries: list[LifeChronicleEntryResponse]
+    entries: List[LifeChronicleEntryResponse]
     total: int
 
 
