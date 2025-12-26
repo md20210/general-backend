@@ -125,9 +125,10 @@ async def create_entry(
         Created entry with photo URLs if photos uploaded
     """
     try:
-        # Validate date format
+        # Parse date string to date object for Pydantic validation
+        from datetime import datetime
         try:
-            entry_date = date  # Keep as string for now, backend will parse
+            entry_date = datetime.strptime(date, "%Y-%m-%d").date()
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
