@@ -238,3 +238,127 @@ async def delete_entry(
         raise HTTPException(status_code=404, detail="Entry not found")
 
     return {"success": True, "message": "Entry deleted"}
+
+
+@router.get("/export/pdf")
+async def export_pdf(
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user)
+):
+    """
+    Export user's entire timeline as PDF book.
+
+    Creates beautifully formatted PDF with:
+    - Title page
+    - Chronological chapters (oldest to newest)
+    - Uses refined text where available
+    - Colored chapter boxes (timeline colors)
+
+    Args:
+        db: Database session
+        user: Current authenticated user
+
+    Returns:
+        PDF file as binary stream
+    """
+    try:
+        # Get all user entries sorted chronologically (oldest first for book)
+        entries = await lifechronicle_db_service.get_all_entries(db, user.id, skip=0, limit=1000)
+        entries.sort(key=lambda x: x.entry_date)
+
+        # Generate PDF
+        from io import BytesIO
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors as rl_colors
+        from fastapi.responses import Response
+
+        # Timeline color palette (same as frontend)
+        TIMELINE_COLORS = [
+            {'bg': rl_colors.HexColor('#e9d5ff'), 'border': rl_colors.HexColor('#c084fc'), 'text': rl_colors.HexColor('#581c87')},  # Purple
+            {'bg': rl_colors.HexColor('#ccfbf1'), 'border': rl_colors.HexColor('#5eead4'), 'text': rl_colors.HexColor('#134e4a')},  # Teal
+            {'bg': rl_colors.HexColor('#d1fae5'), 'border': rl_colors.HexColor('#6ee7b7'), 'text': rl_colors.HexColor('#065f46')},  # Green
+            {'bg': rl_colors.HexColor('#fef3c7'), 'border': rl_colors.HexColor('#fcd34d'), 'text': rl_colors.HexColor('#78350f')},  # Yellow
+            {'bg': rl_colors.HexColor('#fed7aa'), 'border': rl_colors.HexColor('#fdba74'), 'text': rl_colors.HexColor('#7c2d12')},  # Orange
+            {'bg': rl_colors.HexColor('#fce7f3'), 'border': rl_colors.HexColor('#f9a8d4'), 'text': rl_colors.HexColor('#831843')},  # Pink
+        ]
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # Title Page
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=28,
+            textColor=rl_colors.HexColor('#14b8a6'),  # Teal
+            spaceAfter=12,
+            alignment=1  # Center
+        )
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=14,
+            textColor=rl_colors.gray,
+            spaceAfter=30,
+            alignment=1  # Center
+        )
+
+        elements.append(Spacer(1, 5*cm))
+        elements.append(Paragraph("Meine Lebensgeschichte", title_style))
+        elements.append(Paragraph("Eine persönliche Chronik", subtitle_style))
+        elements.append(Spacer(1, 10*cm))
+
+        # Entry chapters
+        for idx, entry in enumerate(entries):
+            color = TIMELINE_COLORS[idx % len(TIMELINE_COLORS)]
+
+            # Title with colored background
+            title_text = f"{entry.entry_date.year} - {entry.title}"
+            title_para = Paragraph(title_text, ParagraphStyle(
+                'EntryTitle',
+                parent=styles['Heading2'],
+                fontSize=16,
+                textColor=color['text'],
+                spaceAfter=6
+            ))
+
+            # Text (refined if available, otherwise original)
+            text_content = entry.refined_text or entry.original_text
+            text_para = Paragraph(text_content, styles['BodyText'])
+
+            # Create colored table box
+            table = Table([[title_para], [text_para]], colWidths=[15*cm])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, 0), color['bg']),
+                ('TEXTCOLOR', (0, 0), (0, 0), color['text']),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('BOX', (0, 0), (-1, -1), 3, color['border']),
+                ('LINEABOVE', (0, 1), (-1, 1), 1, color['border']),
+            ]))
+
+            elements.append(table)
+            elements.append(Spacer(1, 1*cm))
+
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": "attachment; filename=my-life-chronicle.pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF export failed: {str(e)}")
