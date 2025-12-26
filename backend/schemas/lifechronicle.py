@@ -8,7 +8,7 @@ from uuid import UUID
 class LifeChronicleEntryBase(BaseModel):
     """Base schema for LifeChronicle entry."""
     title: str = Field(..., min_length=1, max_length=255, description="Entry title")
-    date: date = Field(..., description="Date of the event (YYYY-MM-DD)")
+    entry_date: date  # Renamed from 'date' to avoid Pydantic recursion bug
     original_text: str = Field(..., min_length=1, description="Original user-written text")
 
 
@@ -20,7 +20,7 @@ class LifeChronicleEntryCreate(LifeChronicleEntryBase):
 class LifeChronicleEntryUpdate(BaseModel):
     """Schema for updating an entry."""
     title: Optional[str] = Field(None, min_length=1, max_length=255)
-    date: Optional[date] = None
+    entry_date: Optional[date] = None  # Renamed from 'date'
     original_text: Optional[str] = Field(None, min_length=1)
     refined_text: Optional[str] = None
     photo_urls: Optional[List[str]] = None

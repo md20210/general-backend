@@ -4,7 +4,6 @@ from backend.models.project import Project, ProjectType
 from backend.models.document import Document, DocumentType
 from backend.models.chat import Chat, ChatRole
 from backend.models.match import Match
-# DISABLED: LifeChronicle causes Pydantic recursion crash - needs deeper investigation
-# from backend.models.lifechronicle import LifeChronicleEntry
+from backend.models.lifechronicle import LifeChronicleEntry
 
-__all__ = ["User", "Project", "ProjectType", "Document", "DocumentType", "Chat", "ChatRole", "Match"]
+__all__ = ["User", "Project", "ProjectType", "Document", "DocumentType", "Chat", "ChatRole", "Match", "LifeChronicleEntry"]

@@ -10,9 +10,7 @@ from alembic import context
 
 # Import Base and all models to ensure metadata is populated
 from backend.database import Base
-from backend.models import User, Project, Document, Chat, Match
-# DISABLED: LifeChronicleEntry (Pydantic recursion crash)
-# from backend.models import LifeChronicleEntry
+from backend.models import User, Project, Document, Chat, Match, LifeChronicleEntry
 from backend.config import settings
 
 # this is the Alembic Config object, which provides

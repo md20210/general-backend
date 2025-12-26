@@ -37,7 +37,7 @@ class LifeChronicleDBService:
         result = await db.execute(
             select(LifeChronicleEntry)
             .where(LifeChronicleEntry.user_id == user_id)
-            .order_by(LifeChronicleEntry.date.desc())
+            .order_by(LifeChronicleEntry.entry_date.desc())
             .offset(skip)
             .limit(limit)
         )
@@ -89,7 +89,7 @@ class LifeChronicleDBService:
         entry = LifeChronicleEntry(
             user_id=user_id,
             title=entry_data.title,
-            date=entry_data.date,
+            entry_date=entry_data.entry_date,
             original_text=entry_data.original_text,
             is_refined=False
         )
