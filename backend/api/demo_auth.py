@@ -5,8 +5,7 @@ from sqlalchemy import select
 
 from backend.database import get_async_session
 from backend.models.user import User
-from backend.auth.manager import get_user_manager
-from backend.auth.dependencies import UserManager
+from backend.auth.users import get_user_manager, UserManager
 
 router = APIRouter(prefix="/demo", tags=["Demo"])
 
