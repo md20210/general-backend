@@ -22,7 +22,7 @@ class LifeChronicleEntry(Base):
     original_text: Mapped[str] = mapped_column(Text, nullable=False)
     refined_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     photo_urls: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
+    entry_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=dict)
     is_refined: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at: Mapped[datetime] = mapped_column(

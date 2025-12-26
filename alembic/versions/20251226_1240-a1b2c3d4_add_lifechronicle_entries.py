@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column('original_text', sa.Text(), nullable=False),
         sa.Column('refined_text', sa.Text(), nullable=True),
         sa.Column('photo_urls', postgresql.ARRAY(sa.String()), nullable=True),
-        sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('entry_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column('is_refined', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),

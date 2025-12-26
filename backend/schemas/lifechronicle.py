@@ -24,7 +24,7 @@ class LifeChronicleEntryUpdate(BaseModel):
     original_text: Optional[str] = Field(None, min_length=1)
     refined_text: Optional[str] = None
     photo_urls: Optional[list[str]] = None
-    metadata: Optional[dict] = None
+    entry_metadata: Optional[dict] = None
 
 
 class LifeChronicleEntryResponse(LifeChronicleEntryBase):
@@ -33,7 +33,7 @@ class LifeChronicleEntryResponse(LifeChronicleEntryBase):
     user_id: UUID
     refined_text: Optional[str] = None
     photo_urls: Optional[list[str]] = None
-    metadata: Optional[dict] = None
+    entry_metadata: Optional[dict] = None
     is_refined: bool
     created_at: datetime
     updated_at: datetime
