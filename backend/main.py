@@ -5,7 +5,10 @@ import backend.patch_passlib  # noqa: F401
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import logging
+import os
+from pathlib import Path
 from backend.config import settings
 from backend.database import create_db_and_tables
 from backend.api.auth import auth_router, users_router
@@ -84,6 +87,12 @@ app.include_router(privategxt_router)
 app.include_router(lifechronicle_router)
 app.include_router(speech_router)
 app.include_router(demo_auth_router)
+
+# Mount static files for uploads (LifeChronicle photos, etc.)
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads"))
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+logger.info(f"Static files mounted: /uploads -> {UPLOAD_DIR}")
 
 
 @app.get("/")
