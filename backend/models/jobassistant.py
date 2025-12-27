@@ -1,8 +1,9 @@
 """Job Assistant Database Models."""
 from datetime import datetime
 from typing import Optional
-from sqlmodel import Field, SQLModel, Column, JSON
-from sqlalchemy import Text
+from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, Text
+from sqlalchemy.dialects.postgresql import JSON
 
 
 class JobApplication(SQLModel, table=True):
