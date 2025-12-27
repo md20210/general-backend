@@ -279,6 +279,93 @@ async def delete_entry(
     return {"success": True, "message": "Entry deleted"}
 
 
+@router.post("/entries/{entry_id}/process", response_model=EntryResponse)
+async def process_entry(
+    entry_id: UUID,
+    provider: str = "ollama",
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user)
+):
+    """
+    Process entry with LLM to create literary book chapter.
+
+    Args:
+        entry_id: Entry UUID
+        provider: LLM provider ("ollama", "grok", or "anthropic")
+        db: Database session
+        user: Current authenticated user
+
+    Returns:
+        Updated entry with refined_text
+
+    Raises:
+        404: Entry not found or unauthorized
+    """
+    try:
+        # Get entry
+        entry = await lifechronicle_db_service.get_entry(db, entry_id, user.id)
+        if not entry:
+            raise HTTPException(status_code=404, detail="Entry not found")
+
+        # Create prompt for LLM
+        prompt = f"""Du bist ein professioneller Autobiografie-Autor.
+
+Verwandle die folgende persönliche Erinnerung in ein literarisches Buchkapitel.
+Schreibe in der Ich-Form, emotional und lebendig. Füge sensorische Details hinzu.
+Länge: 3-5 Sätze.
+
+Datum: {entry.entry_date}
+Erinnerung: {entry.original_text}
+
+Buchkapitel:"""
+
+        # Process with LLM
+        from backend.services.llm_gateway import llm_gateway
+
+        if provider == "grok":
+            result = llm_gateway.generate(
+                prompt=prompt,
+                provider="grok",
+                model="grok-beta",
+                temperature=0.7,
+                max_tokens=300
+            )
+        elif provider == "anthropic":
+            result = llm_gateway.generate(
+                prompt=prompt,
+                provider="anthropic",
+                model="claude-sonnet-3-5-20241022",
+                temperature=0.7,
+                max_tokens=300
+            )
+        else:  # ollama (default)
+            result = llm_gateway.generate(
+                prompt=prompt,
+                provider="ollama",
+                model="qwen2.5:3b",
+                temperature=0.7,
+                max_tokens=300
+            )
+
+        refined_text = result.get('response', '').strip()
+
+        # Update entry with refined text
+        updated_entry = await lifechronicle_db_service.mark_as_refined(
+            db, entry_id, user.id, refined_text
+        )
+
+        if not updated_entry:
+            raise HTTPException(status_code=404, detail="Entry not found")
+
+        return EntryResponse(success=True, entry=updated_entry)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"LLM processing failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process entry: {str(e)}")
+
+
 @router.get("/export/pdf")
 async def export_pdf(
     db: AsyncSession = Depends(get_async_session),
