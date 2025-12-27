@@ -2,9 +2,10 @@
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import Session, select, func, desc
-from backend.database import get_session
-from backend.auth.dependencies import get_current_user
+from sqlalchemy import select, func, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from backend.database import get_async_session
+from backend.auth.dependencies import current_active_user
 from backend.models.user import User
 from backend.models.jobassistant import JobApplication, UserProfile
 from backend.schemas.jobassistant import (
@@ -39,13 +40,14 @@ service = JobAssistantService()
 @router.post("/profile", response_model=UserProfileResponse)
 async def create_or_update_profile(
     profile_data: UserProfileCreate,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """Create or update user profile."""
     # Check if profile exists
-    statement = select(UserProfile).where(UserProfile.user_id == str(current_user.id))
-    existing_profile = session.exec(statement).first()
+    statement = select(UserProfile).where(UserProfile.user_id == str(user.id))
+    result = await db.execute(statement)
+    existing_profile = result.scalars().first()
 
     if existing_profile:
         # Update existing
@@ -58,14 +60,14 @@ async def create_or_update_profile(
         existing_profile.preferences = profile_data.preferences.model_dump()
         existing_profile.unique_angles = profile_data.unique_angles.model_dump()
         existing_profile.updated_at = datetime.utcnow()
-        session.add(existing_profile)
-        session.commit()
-        session.refresh(existing_profile)
+        db.add(existing_profile)
+        await db.commit()
+        await db.refresh(existing_profile)
         return existing_profile
     else:
         # Create new
         new_profile = UserProfile(
-            user_id=str(current_user.id),
+            user_id=str(user.id),
             personal=profile_data.personal.model_dump(),
             summary=profile_data.summary.model_dump(),
             experience=[exp.model_dump() for exp in profile_data.experience],
@@ -75,20 +77,21 @@ async def create_or_update_profile(
             preferences=profile_data.preferences.model_dump(),
             unique_angles=profile_data.unique_angles.model_dump(),
         )
-        session.add(new_profile)
-        session.commit()
-        session.refresh(new_profile)
+        db.add(new_profile)
+        await db.commit()
+        await db.refresh(new_profile)
         return new_profile
 
 
 @router.get("/profile", response_model=UserProfileResponse)
 async def get_profile(
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """Get user profile."""
-    statement = select(UserProfile).where(UserProfile.user_id == str(current_user.id))
-    profile = session.exec(statement).first()
+    statement = select(UserProfile).where(UserProfile.user_id == str(user.id))
+    result = await db.execute(statement)
+    profile = result.scalars().first()
 
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found. Please create one first.")
@@ -106,8 +109,8 @@ async def analyze_job(
     request: JobAnalysisRequest,
     provider: str = Query("anthropic", description="LLM provider: anthropic, grok, ollama"),
     model: Optional[str] = Query(None, description="Specific model to use"),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """
     Analyze a job posting and calculate fit score.
@@ -116,8 +119,9 @@ async def analyze_job(
     Optionally generates cover letter and CV customization if requested.
     """
     # Get user profile
-    statement = select(UserProfile).where(UserProfile.user_id == str(current_user.id))
-    profile = session.exec(statement).first()
+    statement = select(UserProfile).where(UserProfile.user_id == str(user.id))
+    result = await db.execute(statement)
+    profile = result.scalars().first()
 
     if not profile:
         raise HTTPException(
@@ -142,7 +146,7 @@ async def analyze_job(
 
     try:
         # 1. Analyze job
-        logger.info(f"Analyzing job for user {current_user.email}")
+        logger.info(f"Analyzing job for user {user.email}")
         job_analysis = await service.analyze_job(
             job_description=job_description,
             provider=provider,
@@ -244,7 +248,7 @@ async def analyze_job(
         # 5. Save to database
         logger.info("Saving application to database")
         application = JobApplication(
-            user_id=str(current_user.id),
+            user_id=str(user.id),
             company=job_analysis.company,
             role=job_analysis.role,
             location=job_analysis.location,
@@ -275,9 +279,9 @@ async def analyze_job(
             },
         )
 
-        session.add(application)
-        session.commit()
-        session.refresh(application)
+        db.add(application)
+        await db.commit()
+        await db.refresh(application)
 
         logger.info(f"Application {application.id} created successfully")
 
@@ -303,23 +307,25 @@ async def generate_documents(
     application_id: int,
     provider: str = Query("anthropic", description="LLM provider: anthropic, grok, ollama"),
     model: Optional[str] = Query(None, description="Specific model to use"),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """Generate cover letter and CV customization for an existing application."""
     # Get application
     statement = select(JobApplication).where(
         JobApplication.id == application_id,
-        JobApplication.user_id == str(current_user.id),
+        JobApplication.user_id == str(user.id),
     )
-    application = session.exec(statement).first()
+    result = await db.execute(statement)
+    application = result.scalars().first()
 
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
     # Get profile
-    statement = select(UserProfile).where(UserProfile.user_id == str(current_user.id))
-    profile = session.exec(statement).first()
+    statement = select(UserProfile).where(UserProfile.user_id == str(user.id))
+    result = await db.execute(statement)
+    profile = result.scalars().first()
 
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -384,8 +390,8 @@ async def generate_documents(
         application.cv_customization = cv_customization
         application.status = "documents_generated"
         application.updated_at = datetime.utcnow()
-        session.add(application)
-        session.commit()
+        db.add(application)
+        await db.commit()
 
         return GenerateDocumentsResponse(
             application_id=application.id,
@@ -409,18 +415,19 @@ async def list_applications(
     status: Optional[str] = Query(None, description="Filter by status"),
     limit: int = Query(50, le=100),
     offset: int = Query(0),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """List user's job applications."""
-    statement = select(JobApplication).where(JobApplication.user_id == str(current_user.id))
+    statement = select(JobApplication).where(JobApplication.user_id == str(user.id))
 
     if status:
         statement = statement.where(JobApplication.status == status)
 
     statement = statement.order_by(desc(JobApplication.created_at)).offset(offset).limit(limit)
 
-    applications = session.exec(statement).all()
+    result = await db.execute(statement)
+    applications = result.scalars().all()
 
     return [
         ApplicationListResponse(
@@ -440,15 +447,16 @@ async def list_applications(
 @router.get("/applications/{application_id}", response_model=JobAnalysisResponse)
 async def get_application(
     application_id: int,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """Get detailed application information."""
     statement = select(JobApplication).where(
         JobApplication.id == application_id,
-        JobApplication.user_id == str(current_user.id),
+        JobApplication.user_id == str(user.id),
     )
-    application = session.exec(statement).first()
+    result = await db.execute(statement)
+    application = result.scalars().first()
 
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -487,15 +495,16 @@ async def get_application(
 async def update_application(
     application_id: int,
     update_data: ApplicationUpdateRequest,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """Update application status and metadata."""
     statement = select(JobApplication).where(
         JobApplication.id == application_id,
-        JobApplication.user_id == str(current_user.id),
+        JobApplication.user_id == str(user.id),
     )
-    application = session.exec(statement).first()
+    result = await db.execute(statement)
+    application = result.scalars().first()
 
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -511,9 +520,9 @@ async def update_application(
         application.notes = update_data.notes
 
     application.updated_at = datetime.utcnow()
-    session.add(application)
-    session.commit()
-    session.refresh(application)
+    db.add(application)
+    await db.commit()
+    await db.refresh(application)
 
     return ApplicationListResponse(
         id=application.id,
@@ -530,34 +539,36 @@ async def update_application(
 @router.delete("/applications/{application_id}")
 async def delete_application(
     application_id: int,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """Delete an application."""
     statement = select(JobApplication).where(
         JobApplication.id == application_id,
-        JobApplication.user_id == str(current_user.id),
+        JobApplication.user_id == str(user.id),
     )
-    application = session.exec(statement).first()
+    result = await db.execute(statement)
+    application = result.scalars().first()
 
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    session.delete(application)
-    session.commit()
+    await db.delete(application)
+    await db.commit()
 
     return {"message": "Application deleted successfully"}
 
 
 @router.get("/stats", response_model=ApplicationStatsResponse)
 async def get_stats(
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
 ):
     """Get application statistics."""
     # Get all applications for user
-    statement = select(JobApplication).where(JobApplication.user_id == str(current_user.id))
-    applications = session.exec(statement).all()
+    statement = select(JobApplication).where(JobApplication.user_id == str(user.id))
+    result = await db.execute(statement)
+    applications = result.scalars().all()
 
     if not applications:
         return ApplicationStatsResponse(
