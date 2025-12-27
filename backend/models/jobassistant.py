@@ -1,87 +1,87 @@
 """Job Assistant Database Models."""
 from datetime import datetime
-from typing import Optional
-from sqlmodel import Field, SQLModel
-from sqlalchemy import Column, Text
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import String, Text, Integer, DateTime
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
+from backend.database import Base
 
 
-class JobApplication(SQLModel, table=True):
-    """Job Application record with analysis and documents."""
-
-    __tablename__ = "job_applications"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: str = Field(index=True)  # Links to user
-
-    # Job Information
-    company: str = Field(index=True)
-    role: str
-    location: Optional[str] = None
-    remote_policy: Optional[str] = None  # Remote/Hybrid/Office
-    seniority: Optional[str] = None
-    job_url: Optional[str] = None
-    job_description: str = Field(sa_column=Column(Text))
-
-    # Analysis Results (JSON)
-    job_analysis: dict = Field(default={}, sa_column=Column(JSON))
-    fit_score: Optional[int] = None  # 0-100
-    fit_breakdown: dict = Field(default={}, sa_column=Column(JSON))
-    matched_skills: list = Field(default=[], sa_column=Column(JSON))
-    missing_skills: list = Field(default=[], sa_column=Column(JSON))
-
-    # Probability Calculation
-    success_probability: Optional[int] = None  # 0-100
-    probability_factors: list = Field(default=[], sa_column=Column(JSON))
-    recommendation: Optional[str] = None
-
-    # Salary
-    salary_min: Optional[int] = None
-    salary_max: Optional[int] = None
-    salary_currency: Optional[str] = "EUR"
-
-    # Flags
-    green_flags: list = Field(default=[], sa_column=Column(JSON))
-    red_flags: list = Field(default=[], sa_column=Column(JSON))
-
-    # Generated Documents (paths or base64)
-    cover_letter_text: Optional[str] = Field(default=None, sa_column=Column(Text))
-    cv_customization: dict = Field(default={}, sa_column=Column(JSON))
-    cover_letter_path: Optional[str] = None
-    cv_path: Optional[str] = None
-
-    # Application Status
-    status: str = Field(default="analyzed")  # analyzed, documents_generated, applied, interview, offer, rejected
-    applied_date: Optional[datetime] = None
-    response_date: Optional[datetime] = None
-    notes: Optional[str] = Field(default=None, sa_column=Column(Text))
-
-    # Metadata
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    # Profile used for this application
-    profile_snapshot: dict = Field(default={}, sa_column=Column(JSON))
-
-
-class UserProfile(SQLModel, table=True):
+class UserProfile(Base):
     """User profile for job applications."""
 
     __tablename__ = "job_assistant_profiles"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: str = Field(unique=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
 
-    # Profile Data (JSON structure from profile.json)
-    personal: dict = Field(default={}, sa_column=Column(JSON))
-    summary: dict = Field(default={}, sa_column=Column(JSON))
-    experience: list = Field(default=[], sa_column=Column(JSON))
-    education: dict = Field(default={}, sa_column=Column(JSON))
-    certifications: list = Field(default=[], sa_column=Column(JSON))
-    skills: dict = Field(default={}, sa_column=Column(JSON))
-    preferences: dict = Field(default={}, sa_column=Column(JSON))
-    unique_angles: dict = Field(default={}, sa_column=Column(JSON))
+    # Profile Data (JSONB)
+    personal: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    summary: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    experience: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    education: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    certifications: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    skills: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    preferences: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    unique_angles: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     # Metadata
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class JobApplication(Base):
+    """Job Application record with analysis and documents."""
+
+    __tablename__ = "job_applications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+
+    # Job Information
+    company: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    role: Mapped[str] = mapped_column(String, nullable=False)
+    location: Mapped[str | None] = mapped_column(String, nullable=True)
+    remote_policy: Mapped[str | None] = mapped_column(String, nullable=True)
+    seniority: Mapped[str | None] = mapped_column(String, nullable=True)
+    job_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    job_description: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Analysis Results (JSONB)
+    job_analysis: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    fit_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fit_breakdown: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    matched_skills: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    missing_skills: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+
+    # Probability Calculation
+    success_probability: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    probability_factors: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    recommendation: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Salary
+    salary_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salary_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salary_currency: Mapped[str | None] = mapped_column(String, default="EUR", nullable=True)
+
+    # Flags
+    green_flags: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    red_flags: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+
+    # Generated Documents
+    cover_letter_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cv_customization: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    cover_letter_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    cv_path: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Application Status
+    status: Mapped[str] = mapped_column(String, default="analyzed", nullable=False)
+    applied_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    response_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Profile snapshot
+    profile_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
