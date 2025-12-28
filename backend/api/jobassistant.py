@@ -182,6 +182,10 @@ async def analyze_job(
 
         # 1. Analyze job
         logger.info(f"Analyzing job for user {user.email}")
+        logger.info(f"Provider selected: {provider}, Model: {model}")
+        logger.info(f"GROK API key configured: {bool(settings.GROK_API_KEY)}, length: {len(settings.GROK_API_KEY)}")
+        logger.info(f"Anthropic API key configured: {bool(settings.ANTHROPIC_API_KEY)}, length: {len(settings.ANTHROPIC_API_KEY)}")
+
         job_analysis = await service.analyze_job(
             job_description=job_description,
             additional_context=full_context,
