@@ -754,7 +754,7 @@ Return ONLY valid JSON, nothing else."""
 
         probability = min(max(probability * 100, 5), 95)
 
-        recommendation = self._get_recommendation(probability / 100)
+        recommendation = self._get_probability_recommendation(probability / 100)
 
         return SuccessProbability(
             probability=int(probability),
