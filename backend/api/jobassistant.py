@@ -1,7 +1,7 @@
 """Job Assistant API Router."""
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_async_session
@@ -20,6 +20,7 @@ from backend.schemas.jobassistant import (
     ApplicationStatsResponse,
 )
 from backend.services.jobassistant_service import JobAssistantService
+from backend.services.document_processor import document_processor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -540,3 +541,81 @@ async def get_stats(
         by_month=by_month,
         top_companies=top_companies,
     )
+
+
+@router.post("/parse-document")
+async def parse_document(
+    file: UploadFile = File(...),
+    user: User = Depends(current_active_user),
+):
+    """
+    Parse uploaded document (PDF, DOCX, TXT) and extract text.
+
+    Returns:
+        JSON with extracted text
+    """
+    try:
+        # Read file content
+        content = await file.read()
+
+        # Determine file type and extract text
+        filename = file.filename.lower() if file.filename else ""
+
+        if filename.endswith('.pdf'):
+            import io
+            text = document_processor.extract_from_pdf(io.BytesIO(content))
+        elif filename.endswith('.docx') or filename.endswith('.doc'):
+            import io
+            text = document_processor.extract_from_docx(io.BytesIO(content))
+        elif filename.endswith('.txt'):
+            text = content.decode('utf-8')
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type. Supported: PDF, DOCX, TXT"
+            )
+
+        return {
+            "text": text,
+            "filename": file.filename,
+            "length": len(text)
+        }
+
+    except Exception as e:
+        logger.error(f"Error parsing document: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to parse document: {str(e)}"
+        )
+
+
+@router.post("/parse-url")
+async def parse_url(
+    url: str = Query(..., description="URL to scrape"),
+    user: User = Depends(current_active_user),
+):
+    """
+    Scrape URL and extract job description text.
+
+    Returns:
+        JSON with extracted text
+    """
+    try:
+        result = document_processor.scrape_website(url, max_length=20000)
+
+        # Combine title, description, and content
+        text = f"{result['title']}\n\n{result['description']}\n\n{result['content']}"
+
+        return {
+            "text": text.strip(),
+            "url": url,
+            "title": result['title'],
+            "length": len(text)
+        }
+
+    except Exception as e:
+        logger.error(f"Error scraping URL: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to scrape URL: {str(e)}"
+        )
