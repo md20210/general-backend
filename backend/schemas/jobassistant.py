@@ -126,12 +126,16 @@ class JobAnalysisRequest(BaseModel):
     """Request to analyze a job."""
     job_description: Optional[str] = None
     job_url: Optional[HttpUrl] = None
+    cv_text: Optional[str] = Field(None, description="User's CV/Resume text for analysis")
+    cover_letter_text: Optional[str] = Field(None, description="User's existing cover letter text for analysis")
+    additional_context: Optional[str] = Field(None, description="Additional context or notes for the analysis")
     generate_documents: bool = False
 
     class Config:
         json_schema_extra = {
             "example": {
                 "job_description": "We are looking for a Senior Program Manager...",
+                "cv_text": "John Doe - Senior Program Manager with 10 years experience...",
                 "generate_documents": True
             }
         }

@@ -149,6 +149,7 @@ async def analyze_job(
         logger.info(f"Analyzing job for user {user.email}")
         job_analysis = await service.analyze_job(
             job_description=job_description,
+            additional_context=request.additional_context,
             provider=provider,
             model=model,
         )
@@ -158,6 +159,7 @@ async def analyze_job(
         fit_score = service.calculate_fit_score(
             job_analysis=job_analysis,
             profile=profile,  # Pass the ORM object directly (fields are already dicts)
+            cv_text=request.cv_text,  # Optional CV text override
         )
 
         # 3. Calculate probability
@@ -179,6 +181,7 @@ async def analyze_job(
                 job_analysis=job_analysis,
                 profile=profile,  # Pass the ORM object directly
                 fit_score=fit_score,
+                existing_cover_letter=request.cover_letter_text,  # Optional reference
                 provider=provider,
                 model=model,
             )
@@ -188,6 +191,7 @@ async def analyze_job(
                 job_analysis=job_analysis,
                 profile=profile,  # Pass the ORM object directly
                 fit_score=fit_score,
+                cv_text=request.cv_text,  # Optional CV text override
                 provider=provider,
                 model=model,
             )

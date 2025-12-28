@@ -26,6 +26,7 @@ class JobAssistantService:
     async def analyze_job(
         self,
         job_description: str,
+        additional_context: Optional[str] = None,
         provider: str = "anthropic",
         model: Optional[str] = None,
     ) -> JobAnalysisResult:
@@ -34,16 +35,19 @@ class JobAssistantService:
 
         Args:
             job_description: The job posting text
+            additional_context: Optional additional context or notes for analysis
             provider: LLM provider (anthropic, grok, ollama)
             model: Specific model to use
 
         Returns:
             Structured job analysis
         """
+        context_section = f"\n\nAdditional Context:\n{additional_context}\n" if additional_context else ""
+
         prompt = f"""Analyze this job description and extract structured data.
 
 Job Description:
-{job_description}
+{job_description}{context_section}
 
 Extract the following as valid JSON only (no markdown, no explanations):
 {{
@@ -128,7 +132,10 @@ Return ONLY valid JSON, nothing else."""
         )
 
     def calculate_fit_score(
-        self, job_analysis: JobAnalysisResult, profile: UserProfileResponse
+        self,
+        job_analysis: JobAnalysisResult,
+        profile: UserProfileResponse,
+        cv_text: Optional[str] = None
     ) -> FitScore:
         """
         Calculate how well the candidate fits the job.
@@ -136,9 +143,14 @@ Return ONLY valid JSON, nothing else."""
         Args:
             job_analysis: Analyzed job data
             profile: Candidate profile
+            cv_text: Optional CV text to use instead of profile data
 
         Returns:
             Fit score with breakdown
+
+        Note:
+            If cv_text is provided, it's available for future enhanced matching.
+            Currently uses profile data for scoring.
         """
         scores = {
             "experience_match": 0,
@@ -424,6 +436,7 @@ Return ONLY valid JSON, nothing else."""
         job_analysis: JobAnalysisResult,
         profile: UserProfileResponse,
         fit_score: FitScore,
+        existing_cover_letter: Optional[str] = None,
         provider: str = "anthropic",
         model: Optional[str] = None,
     ) -> str:
@@ -434,6 +447,7 @@ Return ONLY valid JSON, nothing else."""
             job_analysis: Job analysis
             profile: Candidate profile
             fit_score: Fit score
+            existing_cover_letter: Optional existing cover letter to use as reference/template
             provider: LLM provider
             model: Specific model
 
@@ -457,6 +471,15 @@ Unique Value: {profile.summary.get('unique_value')}
                 f"- {exp.get('title')} at {exp.get('company')} ({exp.get('period')}): {', '.join(exp.get('highlights', [])[:2])}"
             )
 
+        # Add existing cover letter section if provided
+        existing_cl_section = ""
+        if existing_cover_letter:
+            existing_cl_section = f"""
+
+EXISTING COVER LETTER (for reference - adapt style/tone):
+{existing_cover_letter[:1000]}
+"""
+
         prompt = f"""Write a professional, concise cover letter in English.
 
 CANDIDATE:
@@ -473,7 +496,7 @@ Key Requirements: {', '.join(job_analysis.requirements.must_have[:5])}
 
 FIT ANALYSIS:
 - Matched Skills: {', '.join(fit_score.matched_skills[:8])}
-- Missing Skills: {', '.join(fit_score.missing_skills[:3])}
+- Missing Skills: {', '.join(fit_score.missing_skills[:3])}{existing_cl_section}
 
 RULES:
 1. Maximum 4-5 short paragraphs
@@ -509,6 +532,7 @@ Return ONLY the cover letter text, no explanations or metadata."""
         job_analysis: JobAnalysisResult,
         profile: UserProfileResponse,
         fit_score: FitScore,
+        cv_text: Optional[str] = None,
         provider: str = "anthropic",
         model: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -519,6 +543,7 @@ Return ONLY the cover letter text, no explanations or metadata."""
             job_analysis: Job analysis
             profile: Candidate profile
             fit_score: Fit score
+            cv_text: Optional CV text to use as base instead of profile
             provider: LLM provider
             model: Specific model
 
