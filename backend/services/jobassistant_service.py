@@ -610,3 +610,230 @@ Return ONLY valid JSON, nothing else."""
 
         response_text = response_text.strip()
         return json.loads(response_text)
+
+    # ========================================================================
+    # CV-ONLY METHODS (without stored profile)
+    # ========================================================================
+
+    def calculate_fit_score_from_cv(
+        self,
+        job_analysis: JobAnalysisResult,
+        cv_text: str,
+    ) -> FitScore:
+        """
+        Calculate fit score using ONLY the uploaded CV text (no stored profile).
+
+        Args:
+            job_analysis: Analyzed job data
+            cv_text: Candidate's CV text
+
+        Returns:
+            Fit score with breakdown
+        """
+        if not cv_text or not cv_text.strip():
+            # Return minimal score if no CV provided
+            return FitScore(
+                total=30,
+                breakdown=FitScoreBreakdown(
+                    experience_match=30,
+                    skills_match=30,
+                    education_match=30,
+                    location_match=50,
+                    salary_match=50,
+                    culture_match=50,
+                    role_type_match=30,
+                ),
+                matched_skills=[],
+                missing_skills=job_analysis.requirements.must_have[:5],
+            )
+
+        # Simple text-based matching from CV
+        cv_lower = cv_text.lower()
+
+        # Skills Match - check if required skills appear in CV
+        required_skills = (
+            job_analysis.requirements.must_have
+            + job_analysis.keywords
+            + job_analysis.requirements.nice_to_have
+        )
+
+        matched_skills = []
+        for skill in required_skills:
+            if skill.lower() in cv_lower:
+                matched_skills.append(skill)
+
+        skills_match = int((len(matched_skills) / max(len(required_skills), 1)) * 100) if required_skills else 70
+        missing_skills = [s for s in job_analysis.requirements.must_have if s.lower() not in cv_lower]
+
+        # Experience Match - rough estimate based on years mentioned
+        years_matches = re.findall(r'(\d+)\+?\s*(?:years?|jahre)', cv_lower)
+        candidate_years = max([int(y) for y in years_matches], default=3)
+        required_years = job_analysis.requirements.years_experience.get("min", 0)
+
+        if candidate_years >= required_years:
+            experience_match = 100
+        elif required_years > 0:
+            experience_match = int((candidate_years / required_years) * 100)
+        else:
+            experience_match = 70
+
+        # Education Match - basic keyword matching
+        education_keywords = ['bachelor', 'master', 'phd', 'diploma', 'degree', 'university']
+        has_education = any(keyword in cv_lower for keyword in education_keywords)
+        education_match = 80 if has_education else 60
+
+        # Default values for others
+        location_match = 70
+        salary_match = 70
+        culture_match = 70
+        role_type_match = 70
+
+        # Calculate total
+        total = int(
+            (experience_match * 0.25) +
+            (skills_match * 0.30) +
+            (education_match * 0.15) +
+            (location_match * 0.10) +
+            (salary_match * 0.10) +
+            (culture_match * 0.05) +
+            (role_type_match * 0.05)
+        )
+
+        return FitScore(
+            total=total,
+            breakdown=FitScoreBreakdown(
+                experience_match=experience_match,
+                skills_match=skills_match,
+                education_match=education_match,
+                location_match=location_match,
+                salary_match=salary_match,
+                culture_match=culture_match,
+                role_type_match=role_type_match,
+            ),
+            matched_skills=matched_skills[:20],
+            missing_skills=missing_skills[:10],
+        )
+
+    def calculate_probability_simple(
+        self,
+        fit_score: FitScore,
+        job_analysis: JobAnalysisResult,
+    ) -> SuccessProbability:
+        """
+        Calculate success probability based on fit score only (no profile).
+
+        Args:
+            fit_score: Calculated fit score
+            job_analysis: Job analysis data
+
+        Returns:
+            Success probability with factors
+        """
+        base_prob = fit_score.total / 100.0
+
+        factors = []
+
+        # Factor: Overall Fit
+        if fit_score.total >= 80:
+            factors.append(ProbabilityFactor(factor="Excellent overall fit", impact=1.3))
+        elif fit_score.total >= 60:
+            factors.append(ProbabilityFactor(factor="Good overall fit", impact=1.1))
+        else:
+            factors.append(ProbabilityFactor(factor="Below average fit", impact=0.8))
+
+        # Factor: Skills Match
+        if fit_score.breakdown.skills_match >= 80:
+            factors.append(ProbabilityFactor(factor="Strong skills match", impact=1.2))
+        elif fit_score.breakdown.skills_match < 50:
+            factors.append(ProbabilityFactor(factor="Weak skills match", impact=0.7))
+
+        # Calculate final probability
+        probability = base_prob
+        for factor in factors:
+            probability *= factor.impact
+
+        probability = min(max(probability * 100, 5), 95)
+
+        recommendation = self._get_recommendation(probability / 100)
+
+        return SuccessProbability(
+            probability=int(probability),
+            factors=factors,
+            recommendation=recommendation,
+        )
+
+    async def generate_cover_letter_from_cv(
+        self,
+        job_analysis: JobAnalysisResult,
+        cv_text: str,
+        fit_score: FitScore,
+        existing_cover_letter: Optional[str] = None,
+        provider: str = "anthropic",
+        model: Optional[str] = None,
+    ) -> str:
+        """
+        Generate cover letter using ONLY uploaded CV text (no stored profile).
+
+        Args:
+            job_analysis: Job analysis
+            cv_text: Candidate's CV text
+            fit_score: Fit score
+            existing_cover_letter: Optional existing cover letter for reference
+            provider: LLM provider
+            model: Specific model
+
+        Returns:
+            Cover letter text
+        """
+        if not cv_text or not cv_text.strip():
+            return "Please provide your CV text to generate a cover letter."
+
+        # Add existing cover letter section if provided
+        existing_cl_section = ""
+        if existing_cover_letter:
+            existing_cl_section = f"""
+
+EXISTING COVER LETTER (for reference - adapt style/tone):
+{existing_cover_letter[:1000]}
+"""
+
+        prompt = f"""Write a professional, concise cover letter in English.
+
+CANDIDATE CV:
+{cv_text[:3000]}
+
+JOB:
+Company: {job_analysis.company}
+Role: {job_analysis.role}
+Location: {job_analysis.location}
+Key Requirements: {', '.join(job_analysis.requirements.must_have[:5])}
+
+FIT ANALYSIS:
+- Matched Skills: {', '.join(fit_score.matched_skills[:8])}
+- Missing Skills: {', '.join(fit_score.missing_skills[:3])}{existing_cl_section}
+
+RULES:
+1. Maximum 4-5 short paragraphs
+2. No exaggerated claims
+3. Concrete examples from CV
+4. Include keywords from job description
+5. Professional and authentic tone
+
+STRUCTURE:
+- Greeting (personalized if recruiter known, otherwise "Dear Hiring Manager")
+- Opening Hook (why this role/company)
+- Main Experience Match (2-3 relevant points from CV)
+- Unique Value Proposition
+- Closing + Call to Action
+
+Return ONLY the cover letter text, no explanations or metadata."""
+
+        result = self.llm.generate(
+            prompt=prompt,
+            provider=provider,
+            model=model,
+            temperature=0.7,
+            max_tokens=1500,
+        )
+
+        return result.get("response", "").strip()

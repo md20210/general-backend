@@ -118,18 +118,9 @@ async def analyze_job(
 
     Returns complete analysis including fit score and success probability.
     Optionally generates cover letter and CV customization if requested.
+
+    NOTE: Uses ONLY uploaded data (CV, URLs, context) - NOT the stored profile.
     """
-    # Get user profile
-    statement = select(UserProfile).where(UserProfile.user_id == str(user.id))
-    result = await db.execute(statement)
-    profile = result.scalars().first()
-
-    if not profile:
-        raise HTTPException(
-            status_code=404,
-            detail="Profile not found. Please create a profile first at POST /jobassistant/profile",
-        )
-
     # Get job description
     if not request.job_description and not request.job_url:
         raise HTTPException(
@@ -146,29 +137,52 @@ async def analyze_job(
         )
 
     try:
+        # Build additional context from URLs
+        context_parts = []
+        if request.additional_context:
+            context_parts.append(request.additional_context)
+
+        # Scrape homepage if provided
+        if request.homepage_url:
+            try:
+                logger.info(f"Scraping homepage: {request.homepage_url}")
+                homepage_data = document_processor.scrape_website(request.homepage_url, max_length=5000)
+                context_parts.append(f"\n\n=== Personal Homepage ===\n{homepage_data['content'][:5000]}")
+            except Exception as e:
+                logger.warning(f"Failed to scrape homepage: {str(e)}")
+
+        # Scrape LinkedIn if provided
+        if request.linkedin_url:
+            try:
+                logger.info(f"Scraping LinkedIn: {request.linkedin_url}")
+                linkedin_data = document_processor.scrape_website(request.linkedin_url, max_length=5000)
+                context_parts.append(f"\n\n=== LinkedIn Profile ===\n{linkedin_data['content'][:5000]}")
+            except Exception as e:
+                logger.warning(f"Failed to scrape LinkedIn: {str(e)}")
+
+        full_context = "\n".join(context_parts) if context_parts else None
+
         # 1. Analyze job
         logger.info(f"Analyzing job for user {user.email}")
         job_analysis = await service.analyze_job(
             job_description=job_description,
-            additional_context=request.additional_context,
+            additional_context=full_context,
             provider=provider,
             model=model,
         )
 
-        # 2. Calculate fit score
-        logger.info("Calculating fit score")
-        fit_score = service.calculate_fit_score(
+        # 2. Calculate fit score (using only CV text, no profile)
+        logger.info("Calculating fit score from uploaded data")
+        fit_score = service.calculate_fit_score_from_cv(
             job_analysis=job_analysis,
-            profile=profile,  # Pass the ORM object directly (fields are already dicts)
-            cv_text=request.cv_text,  # Optional CV text override
+            cv_text=request.cv_text or "",
         )
 
         # 3. Calculate probability
         logger.info("Calculating success probability")
-        probability = service.calculate_probability(
+        probability = service.calculate_probability_simple(
             fit_score=fit_score,
             job_analysis=job_analysis,
-            profile=profile,  # Pass the ORM object directly (fields are already dicts)
         )
 
         # 4. Generate documents if requested
@@ -177,12 +191,12 @@ async def analyze_job(
         status = "analyzed"
 
         if request.generate_documents:
-            logger.info("Generating cover letter")
-            cover_letter_text = await service.generate_cover_letter(
+            logger.info("Generating cover letter from uploaded data")
+            cover_letter_text = await service.generate_cover_letter_from_cv(
                 job_analysis=job_analysis,
-                profile=profile,  # Pass the ORM object directly
+                cv_text=request.cv_text or "",
                 fit_score=fit_score,
-                existing_cover_letter=request.cover_letter_text,  # Optional reference
+                existing_cover_letter=request.cover_letter_text,
                 provider=provider,
                 model=model,
             )
@@ -190,9 +204,9 @@ async def analyze_job(
             logger.info("Customizing CV")
             cv_customization = await service.customize_cv(
                 job_analysis=job_analysis,
-                profile=profile,  # Pass the ORM object directly
+                profile=None,  # No profile
                 fit_score=fit_score,
-                cv_text=request.cv_text,  # Optional CV text override
+                cv_text=request.cv_text,
                 provider=provider,
                 model=model,
             )

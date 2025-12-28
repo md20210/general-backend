@@ -129,6 +129,8 @@ class JobAnalysisRequest(BaseModel):
     cv_text: Optional[str] = Field(None, description="User's CV/Resume text for analysis")
     cover_letter_text: Optional[str] = Field(None, description="User's existing cover letter text for analysis")
     additional_context: Optional[str] = Field(None, description="Additional context or notes for the analysis")
+    homepage_url: Optional[str] = Field(None, description="User's personal homepage URL for additional context")
+    linkedin_url: Optional[str] = Field(None, description="User's LinkedIn profile URL for additional context")
     generate_documents: bool = False
 
     class Config:
@@ -136,6 +138,8 @@ class JobAnalysisRequest(BaseModel):
             "example": {
                 "job_description": "We are looking for a Senior Program Manager...",
                 "cv_text": "John Doe - Senior Program Manager with 10 years experience...",
+                "homepage_url": "https://www.johndoe.com",
+                "linkedin_url": "https://www.linkedin.com/in/johndoe",
                 "generate_documents": True
             }
         }
