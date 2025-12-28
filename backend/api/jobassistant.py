@@ -21,6 +21,7 @@ from backend.schemas.jobassistant import (
 )
 from backend.services.jobassistant_service import JobAssistantService
 from backend.services.document_processor import document_processor
+from backend.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,23 @@ router = APIRouter(
 )
 
 service = JobAssistantService()
+
+
+# ============================================================================
+# Debug Endpoint
+# ============================================================================
+
+
+@router.get("/debug/config")
+async def debug_config(user: User = Depends(current_active_user)):
+    """Debug endpoint to check LLM API configuration."""
+    return {
+        "grok_api_key_configured": bool(settings.GROK_API_KEY),
+        "grok_api_key_length": len(settings.GROK_API_KEY) if settings.GROK_API_KEY else 0,
+        "anthropic_api_key_configured": bool(settings.ANTHROPIC_API_KEY),
+        "anthropic_api_key_length": len(settings.ANTHROPIC_API_KEY) if settings.ANTHROPIC_API_KEY else 0,
+        "ollama_base_url": settings.OLLAMA_BASE_URL,
+    }
 
 
 # ============================================================================
