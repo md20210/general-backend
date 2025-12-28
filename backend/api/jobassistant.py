@@ -651,3 +651,153 @@ async def parse_url(
             status_code=500,
             detail=f"Failed to scrape URL: {str(e)}"
         )
+
+
+# ============================================================================
+# Document Management Endpoints
+# ============================================================================
+
+
+@router.post("/applications/{application_id}/documents/upload")
+async def upload_document(
+    application_id: int,
+    file: UploadFile = File(...),
+    document_type: str = Query(..., description="Type: cover_letter_pdf, cv_pdf, or additional"),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """Upload a PDF document (Base64 encoded in database)."""
+    import base64
+    
+    # Get application
+    statement = select(JobApplication).where(
+        JobApplication.id == application_id,
+        JobApplication.user_id == str(user.id)
+    )
+    result = await db.execute(statement)
+    application = result.scalars().first()
+    
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Read file and convert to base64
+    content = await file.read()
+    base64_content = base64.b64encode(content).decode('utf-8')
+    
+    # Update documents field
+    documents = application.documents or {}
+    
+    if document_type in ["cover_letter_pdf", "cv_pdf"]:
+        documents[document_type] = {
+            "filename": file.filename,
+            "content_type": file.content_type,
+            "data": base64_content,
+            "size": len(content)
+        }
+    else:  # additional documents
+        if "additional" not in documents:
+            documents["additional"] = []
+        documents["additional"].append({
+            "filename": file.filename,
+            "content_type": file.content_type,
+            "data": base64_content,
+            "size": len(content),
+            "uploaded_at": datetime.utcnow().isoformat()
+        })
+    
+    application.documents = documents
+    await db.commit()
+    
+    return {"message": "Document uploaded successfully", "filename": file.filename}
+
+
+@router.get("/applications/{application_id}/documents/{document_type}")
+async def download_document(
+    application_id: int,
+    document_type: str,
+    document_index: Optional[int] = Query(None, description="Index for additional documents"),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """Download a document as Base64."""
+    from fastapi.responses import Response
+    import base64
+    
+    # Get application
+    statement = select(JobApplication).where(
+        JobApplication.id == application_id,
+        JobApplication.user_id == str(user.id)
+    )
+    result = await db.execute(statement)
+    application = result.scalars().first()
+    
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    documents = application.documents or {}
+    
+    # Get document
+    if document_type in ["cover_letter_pdf", "cv_pdf"]:
+        doc = documents.get(document_type)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+    elif document_type == "additional":
+        if document_index is None:
+            raise HTTPException(status_code=400, detail="document_index required for additional documents")
+        additional_docs = documents.get("additional", [])
+        if document_index >= len(additional_docs):
+            raise HTTPException(status_code=404, detail="Document not found")
+        doc = additional_docs[document_index]
+    else:
+        raise HTTPException(status_code=400, detail="Invalid document_type")
+    
+    # Decode base64 and return
+    content = base64.b64decode(doc["data"])
+    return Response(
+        content=content,
+        media_type=doc.get("content_type", "application/pdf"),
+        headers={"Content-Disposition": f'attachment; filename="{doc["filename"]}"'}
+    )
+
+
+@router.delete("/applications/{application_id}/documents/{document_type}")
+async def delete_document(
+    application_id: int,
+    document_type: str,
+    document_index: Optional[int] = Query(None, description="Index for additional documents"),
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """Delete a document."""
+    # Get application
+    statement = select(JobApplication).where(
+        JobApplication.id == application_id,
+        JobApplication.user_id == str(user.id)
+    )
+    result = await db.execute(statement)
+    application = result.scalars().first()
+    
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    documents = application.documents or {}
+    
+    # Delete document
+    if document_type in ["cover_letter_pdf", "cv_pdf"]:
+        if document_type in documents:
+            del documents[document_type]
+    elif document_type == "additional":
+        if document_index is None:
+            raise HTTPException(status_code=400, detail="document_index required for additional documents")
+        additional_docs = documents.get("additional", [])
+        if document_index >= len(additional_docs):
+            raise HTTPException(status_code=404, detail="Document not found")
+        additional_docs.pop(document_index)
+        documents["additional"] = additional_docs
+    else:
+        raise HTTPException(status_code=400, detail="Invalid document_type")
+    
+    application.documents = documents
+    await db.commit()
+    
+    return {"message": "Document deleted successfully"}

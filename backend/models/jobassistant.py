@@ -73,6 +73,10 @@ class JobApplication(Base):
     cover_letter_path: Mapped[str | None] = mapped_column(String, nullable=True)
     cv_path: Mapped[str | None] = mapped_column(String, nullable=True)
 
+    # Documents storage (PDFs and other files as Base64 in JSONB)
+    # Format: {"cover_letter_pdf": "base64...", "cv_pdf": "base64...", "additional": [{"name": "...", "data": "base64..."}]}
+    documents: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+
     # Application Status
     status: Mapped[str] = mapped_column(String, default="analyzed", nullable=False)
     applied_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
