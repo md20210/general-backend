@@ -124,10 +124,13 @@ class LLMGateway:
         timeout: int,
     ) -> Dict[str, Any]:
         """Generate text using GROK."""
-        if not self.grok_client:
-            raise ValueError("GROK API key not configured")
+        if not self.grok_api_key:
+            raise ValueError(f"GROK API key not configured. Key value: '{self.grok_api_key}', length: {len(self.grok_api_key) if self.grok_api_key else 0}")
 
-        model = model or "grok-3"
+        if not self.grok_client:
+            raise ValueError(f"GROK client failed to initialize. API key length: {len(self.grok_api_key)}")
+
+        model = model or "grok-2-latest"
 
         completion = self.grok_client.chat.completions.create(
             model=model,
