@@ -157,20 +157,7 @@ async def analyze_job(
         logger.info("Calculating fit score")
         fit_score = service.calculate_fit_score(
             job_analysis=job_analysis,
-            profile=UserProfileResponse(
-                id=profile.id,
-                user_id=profile.user_id,
-                personal=profile.personal,
-                summary=profile.summary,
-                experience=profile.experience,
-                education=profile.education,
-                certifications=profile.certifications,
-                skills=profile.skills,
-                preferences=profile.preferences,
-                unique_angles=profile.unique_angles,
-                created_at=profile.created_at,
-                updated_at=profile.updated_at,
-            ),
+            profile=profile,  # Pass the ORM object directly (fields are already dicts)
         )
 
         # 3. Calculate probability
@@ -178,20 +165,7 @@ async def analyze_job(
         probability = service.calculate_probability(
             fit_score=fit_score,
             job_analysis=job_analysis,
-            profile=UserProfileResponse(
-                id=profile.id,
-                user_id=profile.user_id,
-                personal=profile.personal,
-                summary=profile.summary,
-                experience=profile.experience,
-                education=profile.education,
-                certifications=profile.certifications,
-                skills=profile.skills,
-                preferences=profile.preferences,
-                unique_angles=profile.unique_angles,
-                created_at=profile.created_at,
-                updated_at=profile.updated_at,
-            ),
+            profile=profile,  # Pass the ORM object directly (fields are already dicts)
         )
 
         # 4. Generate documents if requested
@@ -203,20 +177,7 @@ async def analyze_job(
             logger.info("Generating cover letter")
             cover_letter_text = await service.generate_cover_letter(
                 job_analysis=job_analysis,
-                profile=UserProfileResponse(
-                    id=profile.id,
-                    user_id=profile.user_id,
-                    personal=profile.personal,
-                    summary=profile.summary,
-                    experience=profile.experience,
-                    education=profile.education,
-                    certifications=profile.certifications,
-                    skills=profile.skills,
-                    preferences=profile.preferences,
-                    unique_angles=profile.unique_angles,
-                    created_at=profile.created_at,
-                    updated_at=profile.updated_at,
-                ),
+                profile=profile,  # Pass the ORM object directly
                 fit_score=fit_score,
                 provider=provider,
                 model=model,
@@ -225,20 +186,7 @@ async def analyze_job(
             logger.info("Customizing CV")
             cv_customization = await service.customize_cv(
                 job_analysis=job_analysis,
-                profile=UserProfileResponse(
-                    id=profile.id,
-                    user_id=profile.user_id,
-                    personal=profile.personal,
-                    summary=profile.summary,
-                    experience=profile.experience,
-                    education=profile.education,
-                    certifications=profile.certifications,
-                    skills=profile.skills,
-                    preferences=profile.preferences,
-                    unique_angles=profile.unique_angles,
-                    created_at=profile.created_at,
-                    updated_at=profile.updated_at,
-                ),
+                profile=profile,  # Pass the ORM object directly
                 fit_score=fit_score,
                 provider=provider,
                 model=model,
@@ -345,20 +293,7 @@ async def generate_documents(
         # Generate documents
         cover_letter_text = await service.generate_cover_letter(
             job_analysis=job_analysis,
-            profile=UserProfileResponse(
-                id=profile.id,
-                user_id=profile.user_id,
-                personal=profile.personal,
-                summary=profile.summary,
-                experience=profile.experience,
-                education=profile.education,
-                certifications=profile.certifications,
-                skills=profile.skills,
-                preferences=profile.preferences,
-                unique_angles=profile.unique_angles,
-                created_at=profile.created_at,
-                updated_at=profile.updated_at,
-            ),
+            profile=profile,  # Pass the ORM object directly
             fit_score=fit_score,
             provider=provider,
             model=model,
@@ -366,20 +301,7 @@ async def generate_documents(
 
         cv_customization = await service.customize_cv(
             job_analysis=job_analysis,
-            profile=UserProfileResponse(
-                id=profile.id,
-                user_id=profile.user_id,
-                personal=profile.personal,
-                summary=profile.summary,
-                experience=profile.experience,
-                education=profile.education,
-                certifications=profile.certifications,
-                skills=profile.skills,
-                preferences=profile.preferences,
-                unique_angles=profile.unique_angles,
-                created_at=profile.created_at,
-                updated_at=profile.updated_at,
-            ),
+            profile=profile,  # Pass the ORM object directly
             fit_score=fit_score,
             provider=provider,
             model=model,
