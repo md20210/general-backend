@@ -261,11 +261,7 @@ async def analyze_job(
             cover_letter_text=cover_letter_text,
             cv_customization=cv_customization or {},
             status=status,
-            profile_snapshot={
-                "personal": profile.personal,
-                "summary": profile.summary,
-                "experience": profile.experience[:3],  # Save top 3 experiences
-            },
+            profile_snapshot={},  # No profile - using CV-only analysis
         )
 
         db.add(application)

@@ -530,7 +530,7 @@ Return ONLY the cover letter text, no explanations or metadata."""
     async def customize_cv(
         self,
         job_analysis: JobAnalysisResult,
-        profile: UserProfileResponse,
+        profile: Optional[UserProfileResponse],
         fit_score: FitScore,
         cv_text: Optional[str] = None,
         provider: str = "anthropic",
@@ -541,7 +541,7 @@ Return ONLY the cover letter text, no explanations or metadata."""
 
         Args:
             job_analysis: Job analysis
-            profile: Candidate profile
+            profile: Candidate profile (optional - if None, returns basic recommendations)
             fit_score: Fit score
             cv_text: Optional CV text to use as base instead of profile
             provider: LLM provider
@@ -550,6 +550,17 @@ Return ONLY the cover letter text, no explanations or metadata."""
         Returns:
             CV customization instructions
         """
+        # If no profile provided, return basic customization recommendations
+        if profile is None:
+            return {
+                "headline": f"{job_analysis.role}",
+                "summary": "Emphasize relevant experience and skills matching the job requirements",
+                "skills_to_emphasize": fit_score.matched_skills[:5],
+                "keywords_to_include": job_analysis.keywords[:8],
+                "sections_to_include": ["experience", "education", "skills"],
+                "note": "No profile available - using CV-only analysis"
+            }
+
         prompt = f"""Customize the CV for this specific job.
 
 CANDIDATE PROFILE:
