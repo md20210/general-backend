@@ -99,10 +99,18 @@ class UserProfileCreate(BaseModel):
     unique_angles: UniqueAngles
 
 
-class UserProfileResponse(UserProfileCreate):
-    """User profile response."""
+class UserProfileResponse(BaseModel):
+    """User profile response - uses dict/list for JSONB fields."""
     id: int
     user_id: str
+    personal: dict  # JSONB field - keep as dict
+    summary: dict  # JSONB field - keep as dict
+    experience: list  # JSONB field - keep as list
+    education: dict  # JSONB field - keep as dict
+    certifications: list  # JSONB field - keep as list
+    skills: dict  # JSONB field - keep as dict
+    preferences: dict  # JSONB field - keep as dict
+    unique_angles: dict  # JSONB field - keep as dict
     created_at: datetime
     updated_at: datetime
 
