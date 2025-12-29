@@ -929,6 +929,11 @@ Return ONLY valid JSON, nothing else."""
         # Use LLM intelligence instead of simple algorithms!
         from backend.schemas.jobassistant import FitScoreDetail
 
+        # Safe value extraction with None handling
+        min_salary = job_analysis.salary_range.get('min') or 0
+        max_salary = job_analysis.salary_range.get('max') or 0
+        min_exp = job_analysis.requirements.years_experience.get('min') or 0
+
         prompt = f"""Analyze the fit between this CV and job requirements. Use your intelligence - don't just match strings!
 
 CV TEXT:
@@ -938,11 +943,11 @@ JOB REQUIREMENTS:
 Company: {job_analysis.company}
 Role: {job_analysis.role}
 Location: {job_analysis.location} ({job_analysis.remote_policy})
-Required Experience: {job_analysis.requirements.years_experience.get('min', 0)}+ years
+Required Experience: {min_exp}+ years
 Education: {job_analysis.requirements.education}
 Must-Have Skills: {', '.join(job_analysis.requirements.must_have[:15])}
 Nice-to-Have: {', '.join(job_analysis.requirements.nice_to_have[:10])}
-Salary Range: €{job_analysis.salary_range.get('min', 0):,} - €{job_analysis.salary_range.get('max', 0):,}
+Salary Range: €{min_salary:,} - €{max_salary:,}
 
 BE SMART:
 - If CV shows "Program Management", that covers "Project Management"
