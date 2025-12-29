@@ -202,23 +202,27 @@ Analyze the fit between this candidate and job. Be intelligent and contextual:
 - Consider location flexibility and remote policy
 - Match skills semantically, not just by exact string match
 
+IMPORTANT: "comparison" must be ONE CONCISE GERMAN SENTENCE (max 15 words) explaining WHY!
+
+Examples of GOOD comparisons:
+- "20+ Jahre Erfahrung übertrifft geforderte 5+ Jahre deutlich"
+- "15 von 20 Kernkompetenzen vorhanden, wichtigste Skills passen"
+- "Master-Abschluss erfüllt Bachelor-Anforderung vollständig"
+- "Barcelona-Madrid Distanz durch Remote-Option überbrückbar"
+- "Gehaltsvorstellung passt zum Angebot perfekt"
+
 Return JSON with this structure:
 {{
-  "experience_match": {{"score": 0-100, "candidate": "20+ years", "required": "10+ years", "comparison": "20+ years vs. 10+ years required - Exceeds requirement"}},
-  "skills_match": {{"score": 0-100, "candidate": "15 matched", "required": "20 total", "comparison": "15/20 skills matched including [list key matches]"}},
-  "education_match": {{"score": 0-100, "candidate": "Master", "required": "Bachelor", "comparison": "Master vs. Bachelor - Exceeds requirement"}},
-  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid (Hybrid)", "comparison": "Barcelona vs. Madrid - Consider relocation or remote"}},
-  "salary_match": {{"score": 0-100, "candidate": "€100,000", "required": "€80,000-120,000", "comparison": "Expected €100K vs. Offered €80-120K - Within range"}},
-  "culture_match": {{"score": 0-100, "candidate": "Flexible", "required": "Fast-paced startup", "comparison": "Company culture insights"}},
-  "role_type_match": {{"score": 0-100, "candidate": "Program Management", "required": "Technical + Management", "comparison": "Good fit for hybrid role"}},
-  "matched_skills": ["List of intelligently matched skills - avoid duplicates like 'Project Management' and '5+ years project management'"],
-  "missing_skills": ["Only truly missing skills that aren't covered by candidate's experience"]
+  "experience_match": {{"score": 0-100, "candidate": "20+ Jahre", "required": "10+ Jahre", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "skills_match": {{"score": 0-100, "candidate": "15 matched", "required": "20 total", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "education_match": {{"score": 0-100, "candidate": "Master", "required": "Bachelor", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "salary_match": {{"score": 0-100, "candidate": "€100k", "required": "€80-120k", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "culture_match": {{"score": 0-100, "candidate": "Flexible", "required": "Startup", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "role_type_match": {{"score": 0-100, "candidate": "Program Mgmt", "required": "Tech+Mgmt", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "matched_skills": ["Skills - no duplicates"],
+  "missing_skills": ["Only truly missing skills"]
 }}
-
-Be smart about skills matching:
-- If candidate has "Project Management", don't list "5+ years of project management" as missing
-- If candidate has "Program Director", that covers "Project Manager"
-- If candidate has "React", that likely covers "Frontend Development"
 
 Return ONLY the JSON, no other text."""
 
@@ -963,24 +967,32 @@ BE SMART:
 - Match skills semantically (React developer = Frontend development)
 - Don't list redundant missing skills (if "Project Management" matched, don't list "5+ years project management" as missing)
 
-IMPORTANT - The "comparison" field must EXPLAIN WHY the score is what it is!
+IMPORTANT - The "comparison" field must be ONE CONCISE SENTENCE explaining WHY!
 
-Examples:
-- experience_match comparison: "Candidate has 20+ years exceeding the 5+ years required"
-- skills_match comparison: "Matches 7 out of 10 required skills: Python, React, Node.js, Docker, AWS, Kubernetes, PostgreSQL. Missing: TypeScript, GraphQL, Redis"
-- education_match comparison: "Has Master's degree meeting the Bachelor's requirement"
-- location_match comparison: "Located in Barcelona, position is in Madrid but remote-friendly"
-- salary_match comparison: "Expects €100,000-120,000 which aligns with offered €110,000-130,000"
+Rules for comparison sentences:
+- Maximum 15 words per sentence
+- Be specific and direct
+- Explain the reason for the score
+- No lists, just a clear statement
+
+Examples of GOOD comparisons (short and clear):
+- experience_match: "20+ Jahre Erfahrung übertrifft die geforderten 5+ Jahre deutlich"
+- skills_match: "7 von 10 Kernkompetenzen vorhanden, wichtigste Skills passen"
+- education_match: "Master-Abschluss erfüllt Bachelor-Anforderung vollständig"
+- location_match: "Barcelona-Madrid Distanz durch Remote-Option überbrückbar"
+- salary_match: "Gehaltsvorstellung €100-120k passt zum Angebot €110-130k"
+- culture_match: "Enterprise-Hintergrund passt zur professionellen Unternehmenskultur"
+- role_type_match: "Technische und Management-Erfahrung deckt hybride Rolle ab"
 
 Return JSON:
 {{
-  "experience_match": {{"score": 0-100, "candidate": "20+ years", "required": "5+ years", "comparison": "Candidate has X years which [exceeds/meets/falls short of] the Y years required"}},
-  "skills_match": {{"score": 0-100, "candidate": "7 matched", "required": "10 total", "comparison": "Matches X out of Y required skills: [list matched skills]. Missing: [list missing skills]"}},
-  "education_match": {{"score": 0-100, "candidate": "Master's", "required": "Bachelor's", "comparison": "Has [degree] which [exceeds/meets/doesn't meet] [requirement]"}},
-  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid", "comparison": "Located in [X], position in [Y], [remote policy impact]"}},
-  "salary_match": {{"score": 0-100, "candidate": "€100-120k", "required": "€110-130k", "comparison": "Expects [X] which [aligns with/exceeds/below] offered [Y]"}},
-  "culture_match": {{"score": 0-100, "candidate": "Enterprise", "required": "Startup", "comparison": "Background is [X], company culture is [Y], [fit analysis]"}},
-  "role_type_match": {{"score": 0-100, "candidate": "Technical", "required": "Management", "comparison": "Experience is [X], role requires [Y], [fit analysis]"}},
+  "experience_match": {{"score": 0-100, "candidate": "20+ Jahre", "required": "5+ Jahre", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "skills_match": {{"score": 0-100, "candidate": "7 matched", "required": "10 total", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "education_match": {{"score": 0-100, "candidate": "Master", "required": "Bachelor", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "salary_match": {{"score": 0-100, "candidate": "€100-120k", "required": "€110-130k", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "culture_match": {{"score": 0-100, "candidate": "Enterprise", "required": "Startup", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "role_type_match": {{"score": 0-100, "candidate": "Technical", "required": "Management", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
   "matched_skills": ["Python", "React", "Project Management", "etc"],
   "missing_skills": ["TypeScript", "GraphQL", "etc"]
 }}
