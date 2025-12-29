@@ -511,7 +511,7 @@ Return ONLY the JSON, no other text."""
 
         # Salary Detail
         job_salary_max = job_analysis.salary_range.get("max") or 0
-        candidate_min_salary = profile.preferences.get("min_salary_eur", 0)
+        candidate_min_salary = profile.preferences.get("min_salary_eur") or 0
         salary_detail = FitScoreDetail(
             score=scores["salary_match"],
             candidate_value=f"€{candidate_min_salary:,}" if candidate_min_salary else "Not specified",
