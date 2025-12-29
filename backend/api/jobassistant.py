@@ -193,11 +193,12 @@ async def analyze_job(
             model=model,
         )
 
-        # 2. Calculate fit score (using only CV text, no profile)
-        logger.info("Calculating fit score from uploaded data")
-        fit_score = service.calculate_fit_score_from_cv(
+        # 2. Calculate fit score (using LLM intelligence, not just algorithms!)
+        logger.info("Calculating fit score using LLM intelligence")
+        fit_score = await service.calculate_fit_score_from_cv(
             job_analysis=job_analysis,
             cv_text=request.cv_text or "",
+            provider=provider
         )
 
         # 3. Calculate probability

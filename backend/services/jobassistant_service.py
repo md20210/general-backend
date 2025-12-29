@@ -131,6 +131,169 @@ Return ONLY valid JSON, nothing else."""
             green_flags=analysis_data.get("green_flags", []),
         )
 
+    async def calculate_fit_score_with_llm(
+        self,
+        job_analysis: JobAnalysisResult,
+        profile: UserProfileResponse,
+        cv_text: Optional[str] = None,
+        provider: str = "grok"
+    ) -> FitScore:
+        """
+        Calculate fit score using LLM intelligence for nuanced analysis.
+
+        This method leverages LLM reasoning to:
+        - Intelligently match skills (understanding synonyms and related experience)
+        - Provide contextual comparisons
+        - Avoid redundant missing skills
+        - Generate human-readable explanations
+
+        Args:
+            job_analysis: Analyzed job data
+            profile: Candidate profile
+            cv_text: Optional CV text for richer analysis
+            provider: LLM provider for analysis
+
+        Returns:
+            Fit score with LLM-generated insights
+        """
+        from backend.schemas.jobassistant import FitScoreDetail
+
+        # Prepare candidate summary
+        candidate_summary = f"""
+CANDIDATE PROFILE:
+Experience: {profile.summary.get('years_experience', 0)} years
+Education: {profile.education.get('degree', 'Not specified')}
+Location: {profile.personal.get('location', 'Not specified')}
+Expected Salary: €{profile.preferences.get('min_salary_eur', 0):,}
+Key Skills: {', '.join(self._flatten_skills(profile.skills)[:15])}
+Ideal Roles: {', '.join(profile.preferences.get('ideal_roles', []))}
+"""
+
+        # Prepare job requirements
+        job_requirements = f"""
+JOB REQUIREMENTS:
+Company: {job_analysis.company}
+Role: {job_analysis.role}
+Location: {job_analysis.location} ({job_analysis.remote_policy})
+Seniority: {job_analysis.seniority}
+Salary Range: €{job_analysis.salary_range.get('min', 0):,} - €{job_analysis.salary_range.get('max', 0):,}
+Required Experience: {job_analysis.requirements.years_experience.get('min', 0)}+ years
+Education: {job_analysis.requirements.education}
+Must-Have Skills: {', '.join(job_analysis.requirements.must_have[:10])}
+Nice-to-Have: {', '.join(job_analysis.requirements.nice_to_have[:5])}
+Role Type: {'Technical' if job_analysis.role_type.is_technical else ''} {'Management' if job_analysis.role_type.is_management else ''} {'Sales' if job_analysis.role_type.is_sales else ''}
+"""
+
+        prompt = f"""{candidate_summary}
+
+{job_requirements}
+
+Analyze the fit between this candidate and job. Be intelligent and contextual:
+- Recognize that "Program Management" covers "Project Management"
+- Understand that 20 years experience exceeds 5+ years requirement
+- Consider location flexibility and remote policy
+- Match skills semantically, not just by exact string match
+
+Return JSON with this structure:
+{{
+  "experience_match": {{"score": 0-100, "candidate": "20+ years", "required": "10+ years", "comparison": "20+ years vs. 10+ years required - Exceeds requirement"}},
+  "skills_match": {{"score": 0-100, "candidate": "15 matched", "required": "20 total", "comparison": "15/20 skills matched including [list key matches]"}},
+  "education_match": {{"score": 0-100, "candidate": "Master", "required": "Bachelor", "comparison": "Master vs. Bachelor - Exceeds requirement"}},
+  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid (Hybrid)", "comparison": "Barcelona vs. Madrid - Consider relocation or remote"}},
+  "salary_match": {{"score": 0-100, "candidate": "€100,000", "required": "€80,000-120,000", "comparison": "Expected €100K vs. Offered €80-120K - Within range"}},
+  "culture_match": {{"score": 0-100, "candidate": "Flexible", "required": "Fast-paced startup", "comparison": "Company culture insights"}},
+  "role_type_match": {{"score": 0-100, "candidate": "Program Management", "required": "Technical + Management", "comparison": "Good fit for hybrid role"}},
+  "matched_skills": ["List of intelligently matched skills - avoid duplicates like 'Project Management' and '5+ years project management'"],
+  "missing_skills": ["Only truly missing skills that aren't covered by candidate's experience"]
+}}
+
+Be smart about skills matching:
+- If candidate has "Project Management", don't list "5+ years of project management" as missing
+- If candidate has "Program Director", that covers "Project Manager"
+- If candidate has "React", that likely covers "Frontend Development"
+
+Return ONLY the JSON, no other text."""
+
+        try:
+            response = await self.llm.generate(
+                prompt=prompt,
+                provider=provider,
+                temperature=0.3,
+                max_tokens=2000
+            )
+
+            # Parse LLM response
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if not json_match:
+                raise ValueError("No JSON found in LLM response")
+
+            llm_analysis = json.loads(json_match.group())
+
+            # Build FitScoreDetail objects
+            experience_detail = FitScoreDetail(**llm_analysis['experience_match'])
+            skills_detail = FitScoreDetail(**llm_analysis['skills_match'])
+            education_detail = FitScoreDetail(**llm_analysis['education_match'])
+            location_detail = FitScoreDetail(**llm_analysis['location_match'])
+            salary_detail = FitScoreDetail(**llm_analysis['salary_match'])
+            culture_detail = FitScoreDetail(**llm_analysis['culture_match'])
+            role_type_detail = FitScoreDetail(**llm_analysis['role_type_match'])
+
+            # Calculate weighted total
+            scores = {
+                'experience_match': experience_detail.score,
+                'skills_match': skills_detail.score,
+                'education_match': education_detail.score,
+                'location_match': location_detail.score,
+                'salary_match': salary_detail.score,
+                'culture_match': culture_detail.score,
+                'role_type_match': role_type_detail.score,
+            }
+
+            weights = {
+                "experience_match": 0.20,
+                "skills_match": 0.25,
+                "education_match": 0.10,
+                "location_match": 0.15,
+                "salary_match": 0.10,
+                "culture_match": 0.05,
+                "role_type_match": 0.15,
+            }
+
+            total_score = sum(scores[key] * weights[key] for key in scores)
+
+            breakdown = FitScoreBreakdown(
+                **scores,
+                experience_detail=experience_detail,
+                skills_detail=skills_detail,
+                education_detail=education_detail,
+                location_detail=location_detail,
+                salary_detail=salary_detail,
+                culture_detail=culture_detail,
+                role_type_detail=role_type_detail,
+            )
+
+            return FitScore(
+                total=int(total_score),
+                breakdown=breakdown,
+                matched_skills=llm_analysis.get('matched_skills', [])[:20],
+                missing_skills=llm_analysis.get('missing_skills', [])[:10],
+            )
+
+        except Exception as e:
+            # Fallback to algorithmic method if LLM fails
+            print(f"LLM fit score calculation failed: {e}, falling back to algorithmic method")
+            return self.calculate_fit_score(job_analysis, profile, cv_text)
+
+    def _flatten_skills(self, skills_dict: Dict[str, Any]) -> List[str]:
+        """Helper to flatten skills dictionary."""
+        flat_skills = []
+        for category in skills_dict.values():
+            if isinstance(category, list):
+                flat_skills.extend(category)
+            elif isinstance(category, dict):
+                flat_skills.extend(category.keys())
+        return flat_skills
+
     def calculate_fit_score(
         self,
         job_analysis: JobAnalysisResult,
@@ -727,20 +890,24 @@ Return ONLY valid JSON, nothing else."""
     # CV-ONLY METHODS (without stored profile)
     # ========================================================================
 
-    def calculate_fit_score_from_cv(
+    async def calculate_fit_score_from_cv(
         self,
         job_analysis: JobAnalysisResult,
         cv_text: str,
+        provider: str = "grok"
     ) -> FitScore:
         """
-        Calculate fit score using ONLY the uploaded CV text (no stored profile).
+        Calculate fit score using LLM intelligence with uploaded CV text.
+
+        Uses LLM to intelligently analyze fit, avoiding algorithmic limitations.
 
         Args:
             job_analysis: Analyzed job data
             cv_text: Candidate's CV text
+            provider: LLM provider for analysis
 
         Returns:
-            Fit score with breakdown
+            Fit score with LLM-generated insights
         """
         if not cv_text or not cv_text.strip():
             # Return minimal score if no CV provided
@@ -759,72 +926,110 @@ Return ONLY valid JSON, nothing else."""
                 missing_skills=job_analysis.requirements.must_have[:5],
             )
 
-        # Simple text-based matching from CV
-        cv_lower = cv_text.lower()
+        # Use LLM intelligence instead of simple algorithms!
+        from backend.schemas.jobassistant import FitScoreDetail
 
-        # Skills Match - check if required skills appear in CV
-        required_skills = (
-            job_analysis.requirements.must_have
-            + job_analysis.keywords
-            + job_analysis.requirements.nice_to_have
-        )
+        prompt = f"""Analyze the fit between this CV and job requirements. Use your intelligence - don't just match strings!
 
-        matched_skills = []
-        for skill in required_skills:
-            if skill.lower() in cv_lower:
-                matched_skills.append(skill)
+CV TEXT:
+{cv_text[:4000]}
 
-        skills_match = int((len(matched_skills) / max(len(required_skills), 1)) * 100) if required_skills else 70
-        missing_skills = [s for s in job_analysis.requirements.must_have if s.lower() not in cv_lower]
+JOB REQUIREMENTS:
+Company: {job_analysis.company}
+Role: {job_analysis.role}
+Location: {job_analysis.location} ({job_analysis.remote_policy})
+Required Experience: {job_analysis.requirements.years_experience.get('min', 0)}+ years
+Education: {job_analysis.requirements.education}
+Must-Have Skills: {', '.join(job_analysis.requirements.must_have[:15])}
+Nice-to-Have: {', '.join(job_analysis.requirements.nice_to_have[:10])}
+Salary Range: €{job_analysis.salary_range.get('min', 0):,} - €{job_analysis.salary_range.get('max', 0):,}
 
-        # Experience Match - rough estimate based on years mentioned
-        years_matches = re.findall(r'(\d+)\+?\s*(?:years?|jahre)', cv_lower)
-        candidate_years = max([int(y) for y in years_matches], default=3)
-        required_years = job_analysis.requirements.years_experience.get("min", 0)
+BE SMART:
+- If CV shows "Program Management", that covers "Project Management"
+- If CV has "20 years", that exceeds "5+ years required"
+- Match skills semantically (React developer = Frontend development)
+- Don't list redundant missing skills (if "Project Management" matched, don't list "5+ years project management" as missing)
 
-        if candidate_years >= required_years:
-            experience_match = 100
-        elif required_years > 0:
-            experience_match = int((candidate_years / required_years) * 100)
-        else:
-            experience_match = 70
+Return JSON:
+{{
+  "experience_match": {{"score": 0-100, "candidate": "X years", "required": "Y years", "comparison": "detailed comparison"}},
+  "skills_match": {{"score": 0-100, "candidate": "X matched", "required": "Y total", "comparison": "X/Y skills including [key matches]"}},
+  "education_match": {{"score": 0-100, "candidate": "degree", "required": "requirement", "comparison": "comparison"}},
+  "location_match": {{"score": 0-100, "candidate": "location", "required": "required location", "comparison": "comparison"}},
+  "salary_match": {{"score": 0-100, "candidate": "expected", "required": "offered", "comparison": "comparison"}},
+  "culture_match": {{"score": 0-100, "candidate": "fit", "required": "culture", "comparison": "insights"}},
+  "role_type_match": {{"score": 0-100, "candidate": "experience type", "required": "role type", "comparison": "fit analysis"}},
+  "matched_skills": ["intelligently matched skills - no duplicates"],
+  "missing_skills": ["only truly missing skills not covered by experience"]
+}}
 
-        # Education Match - basic keyword matching
-        education_keywords = ['bachelor', 'master', 'phd', 'diploma', 'degree', 'university']
-        has_education = any(keyword in cv_lower for keyword in education_keywords)
-        education_match = 80 if has_education else 60
+Return ONLY JSON."""
 
-        # Default values for others
-        location_match = 70
-        salary_match = 70
-        culture_match = 70
-        role_type_match = 70
+        try:
+            response = await self.llm.generate(
+                prompt=prompt,
+                provider=provider,
+                temperature=0.3,
+                max_tokens=2000
+            )
 
-        # Calculate total
-        total = int(
-            (experience_match * 0.25) +
-            (skills_match * 0.30) +
-            (education_match * 0.15) +
-            (location_match * 0.10) +
-            (salary_match * 0.10) +
-            (culture_match * 0.05) +
-            (role_type_match * 0.05)
-        )
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if not json_match:
+                raise ValueError("No JSON in LLM response")
 
-        return FitScore(
-            total=total,
-            breakdown=FitScoreBreakdown(
-                experience_match=experience_match,
-                skills_match=skills_match,
-                education_match=education_match,
-                location_match=location_match,
-                salary_match=salary_match,
-                culture_match=culture_match,
-                role_type_match=role_type_match,
-            ),
-            matched_skills=matched_skills[:20],
-            missing_skills=missing_skills[:10],
-        )
+            llm_data = json.loads(json_match.group())
+
+            # Build detailed fit score from LLM analysis
+            breakdown = FitScoreBreakdown(
+                experience_match=llm_data['experience_match']['score'],
+                skills_match=llm_data['skills_match']['score'],
+                education_match=llm_data['education_match']['score'],
+                location_match=llm_data['location_match']['score'],
+                salary_match=llm_data['salary_match']['score'],
+                culture_match=llm_data['culture_match']['score'],
+                role_type_match=llm_data['role_type_match']['score'],
+                experience_detail=FitScoreDetail(**llm_data['experience_match']),
+                skills_detail=FitScoreDetail(**llm_data['skills_match']),
+                education_detail=FitScoreDetail(**llm_data['education_match']),
+                location_detail=FitScoreDetail(**llm_data['location_match']),
+                salary_detail=FitScoreDetail(**llm_data['salary_match']),
+                culture_detail=FitScoreDetail(**llm_data['culture_match']),
+                role_type_detail=FitScoreDetail(**llm_data['role_type_match']),
+            )
+
+            weights = {
+                "experience_match": 0.20,
+                "skills_match": 0.25,
+                "education_match": 0.10,
+                "location_match": 0.15,
+                "salary_match": 0.10,
+                "culture_match": 0.05,
+                "role_type_match": 0.15,
+            }
+
+            total = sum(llm_data[key]['score'] * weights[key] for key in weights)
+
+            return FitScore(
+                total=int(total),
+                breakdown=breakdown,
+                matched_skills=llm_data.get('matched_skills', [])[:20],
+                missing_skills=llm_data.get('missing_skills', [])[:10],
+            )
+
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"LLM fit score failed: {e}, using fallback")
+            # Fallback to basic scoring if LLM fails
+            return FitScore(
+                total=60,
+                breakdown=FitScoreBreakdown(
+                    experience_match=60, skills_match=60, education_match=60,
+                    location_match=70, salary_match=70, culture_match=70,
+                    role_type_match=60,
+                ),
+                matched_skills=[],
+                missing_skills=job_analysis.requirements.must_have[:5],
+            )
 
     def calculate_probability_simple(
         self,
