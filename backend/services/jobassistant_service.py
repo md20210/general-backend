@@ -158,13 +158,20 @@ Return ONLY valid JSON, nothing else."""
         """
         from backend.schemas.jobassistant import FitScoreDetail
 
+        # Safe value extraction with None handling
+        candidate_min_salary = profile.preferences.get('min_salary_eur') or 0
+        candidate_years_exp = profile.summary.get('years_experience') or 0
+        job_min_salary = job_analysis.salary_range.get('min') or 0
+        job_max_salary = job_analysis.salary_range.get('max') or 0
+        job_min_exp = job_analysis.requirements.years_experience.get('min') or 0
+
         # Prepare candidate summary
         candidate_summary = f"""
 CANDIDATE PROFILE:
-Experience: {profile.summary.get('years_experience', 0)} years
+Experience: {candidate_years_exp} years
 Education: {profile.education.get('degree', 'Not specified')}
 Location: {profile.personal.get('location', 'Not specified')}
-Expected Salary: €{profile.preferences.get('min_salary_eur', 0):,}
+Expected Salary: €{candidate_min_salary:,}
 Key Skills: {', '.join(self._flatten_skills(profile.skills)[:15])}
 Ideal Roles: {', '.join(profile.preferences.get('ideal_roles', []))}
 """
@@ -176,8 +183,8 @@ Company: {job_analysis.company}
 Role: {job_analysis.role}
 Location: {job_analysis.location} ({job_analysis.remote_policy})
 Seniority: {job_analysis.seniority}
-Salary Range: €{job_analysis.salary_range.get('min', 0):,} - €{job_analysis.salary_range.get('max', 0):,}
-Required Experience: {job_analysis.requirements.years_experience.get('min', 0)}+ years
+Salary Range: €{job_min_salary:,} - €{job_max_salary:,}
+Required Experience: {job_min_exp}+ years
 Education: {job_analysis.requirements.education}
 Must-Have Skills: {', '.join(job_analysis.requirements.must_have[:10])}
 Nice-to-Have: {', '.join(job_analysis.requirements.nice_to_have[:5])}
