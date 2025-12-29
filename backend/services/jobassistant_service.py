@@ -1,5 +1,6 @@
 """Job Assistant Service - Job Analysis, Fit Calculation, and Document Generation."""
 import json
+import logging
 import re
 from typing import Dict, Any, List, Optional
 from backend.services.llm_gateway import LLMGateway
