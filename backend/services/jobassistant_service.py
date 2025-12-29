@@ -284,9 +284,90 @@ Return ONLY valid JSON, nothing else."""
             skill for skill in required_skills if skill not in matched_skills
         ]
 
+        # Create detailed comparisons
+        from backend.schemas.jobassistant import FitScoreDetail
+
+        # Experience Detail
+        experience_detail = FitScoreDetail(
+            score=scores["experience_match"],
+            candidate_value=f"{candidate_years}+ years",
+            required_value=f"{required_years}+ years",
+            comparison=f"{candidate_years}+ years vs. {required_years}+ years required"
+        )
+
+        # Skills Detail
+        skills_detail = FitScoreDetail(
+            score=scores["skills_match"],
+            candidate_value=f"{len(matched_skills)} matched",
+            required_value=f"{len(required_skills)} required",
+            comparison=f"{len(matched_skills)}/{len(required_skills)} skills matched"
+        )
+
+        # Education Detail
+        education_detail = FitScoreDetail(
+            score=scores["education_match"],
+            candidate_value=profile.education.get("degree", "Not specified"),
+            required_value=job_analysis.requirements.education,
+            comparison=f"{profile.education.get('degree', 'Not specified')} vs. {job_analysis.requirements.education}"
+        )
+
+        # Location Detail
+        location_detail = FitScoreDetail(
+            score=scores["location_match"],
+            candidate_value=profile.personal.get("location", "Not specified"),
+            required_value=f"{job_analysis.location} ({job_analysis.remote_policy})",
+            comparison=f"{profile.personal.get('location', 'Not specified')} vs. {job_analysis.location}"
+        )
+
+        # Salary Detail
+        job_salary_max = job_analysis.salary_range.get("max") or 0
+        candidate_min_salary = profile.preferences.get("min_salary_eur", 0)
+        salary_detail = FitScoreDetail(
+            score=scores["salary_match"],
+            candidate_value=f"€{candidate_min_salary:,}" if candidate_min_salary else "Not specified",
+            required_value=f"€{job_salary_max:,}" if job_salary_max else "Not specified",
+            comparison=f"Expected €{candidate_min_salary:,} vs. Offered €{job_salary_max:,}" if job_salary_max and candidate_min_salary else "Salary not disclosed"
+        )
+
+        # Culture Detail
+        culture_hints = ", ".join(job_analysis.company_info.culture_hints[:3]) if job_analysis.company_info.culture_hints else "Not specified"
+        culture_detail = FitScoreDetail(
+            score=scores["culture_match"],
+            candidate_value="Open to various cultures",
+            required_value=culture_hints,
+            comparison=f"Company culture: {culture_hints}"
+        )
+
+        # Role Type Detail
+        role_types = []
+        if role_type.is_technical: role_types.append("Technical")
+        if role_type.is_management: role_types.append("Management")
+        if role_type.is_sales: role_types.append("Sales")
+        if role_type.is_consulting: role_types.append("Consulting")
+        if role_type.is_delivery: role_types.append("Delivery")
+
+        role_type_detail = FitScoreDetail(
+            score=scores["role_type_match"],
+            candidate_value=", ".join(ideal_roles) if ideal_roles else "Flexible",
+            required_value=", ".join(role_types) if role_types else "General",
+            comparison=f"Preference: {', '.join(ideal_roles) if ideal_roles else 'Flexible'} | Role: {', '.join(role_types) if role_types else 'General'}"
+        )
+
+        # Update breakdown with details
+        breakdown_dict = {
+            **scores,
+            "experience_detail": experience_detail,
+            "skills_detail": skills_detail,
+            "education_detail": education_detail,
+            "location_detail": location_detail,
+            "salary_detail": salary_detail,
+            "culture_detail": culture_detail,
+            "role_type_detail": role_type_detail,
+        }
+
         return FitScore(
             total=int(total_score),
-            breakdown=FitScoreBreakdown(**scores),
+            breakdown=FitScoreBreakdown(**breakdown_dict),
             matched_skills=matched_skills[:20],  # Limit to first 20
             missing_skills=missing_skills[:10],  # Limit to first 10
         )

@@ -191,6 +191,14 @@ class JobAnalysisResult(BaseModel):
     green_flags: List[str]
 
 
+class FitScoreDetail(BaseModel):
+    """Detailed comparison for a fit score category."""
+    score: int  # 0-100
+    candidate_value: str
+    required_value: str
+    comparison: str  # e.g., "20+ years vs. 10+ years required"
+
+
 class FitScoreBreakdown(BaseModel):
     """Detailed fit score breakdown."""
     experience_match: int
@@ -200,6 +208,15 @@ class FitScoreBreakdown(BaseModel):
     salary_match: int
     culture_match: int
     role_type_match: int
+
+    # Detailed comparisons
+    experience_detail: Optional[FitScoreDetail] = None
+    skills_detail: Optional[FitScoreDetail] = None
+    education_detail: Optional[FitScoreDetail] = None
+    location_detail: Optional[FitScoreDetail] = None
+    salary_detail: Optional[FitScoreDetail] = None
+    culture_detail: Optional[FitScoreDetail] = None
+    role_type_detail: Optional[FitScoreDetail] = None
 
 
 class FitScore(BaseModel):
