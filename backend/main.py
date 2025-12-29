@@ -25,6 +25,7 @@ from backend.api.lifechronicle import router as lifechronicle_router
 from backend.api.speech import router as speech_router
 from backend.api.demo_auth import router as demo_auth_router
 from backend.api.jobassistant import router as jobassistant_router
+from backend.api.migration_helper import router as migration_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -89,6 +90,7 @@ app.include_router(lifechronicle_router)
 app.include_router(speech_router)
 app.include_router(demo_auth_router)
 app.include_router(jobassistant_router)
+app.include_router(migration_router)
 
 # Mount static files for uploads (LifeChronicle photos, etc.)
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads"))
