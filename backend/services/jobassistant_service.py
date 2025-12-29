@@ -279,10 +279,30 @@ Return ONLY valid JSON, nothing else."""
 
         total_score = sum(scores[key] * weights[key] for key in scores)
 
-        # Find missing skills
-        missing_skills = [
-            skill for skill in required_skills if skill not in matched_skills
-        ]
+        # Find missing skills with better matching
+        # Extract core skill terms from matched skills for better comparison
+        matched_core_terms = set()
+        for matched in matched_skills:
+            # Extract key terms (words longer than 3 chars, excluding common words)
+            words = matched.lower().split()
+            for word in words:
+                if len(word) > 3 and word not in ['years', 'experience', 'with', 'from', 'more', 'than', 'least']:
+                    matched_core_terms.add(word)
+
+        missing_skills = []
+        for skill in required_skills:
+            if skill in matched_skills:
+                continue  # Already matched exactly
+
+            # Check if core terms of this skill are already in matched skills
+            skill_words = skill.lower().split()
+            skill_core_terms = [w for w in skill_words if len(w) > 3 and w not in ['years', 'experience', 'with', 'from', 'more', 'than', 'least']]
+
+            # If any core term is already matched, skip this requirement
+            if any(term in matched_core_terms for term in skill_core_terms):
+                continue
+
+            missing_skills.append(skill)
 
         # Create detailed comparisons
         from backend.schemas.jobassistant import FitScoreDetail
