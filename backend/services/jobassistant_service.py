@@ -950,17 +950,26 @@ BE SMART:
 - Match skills semantically (React developer = Frontend development)
 - Don't list redundant missing skills (if "Project Management" matched, don't list "5+ years project management" as missing)
 
+IMPORTANT - The "comparison" field must EXPLAIN WHY the score is what it is!
+
+Examples:
+- experience_match comparison: "Candidate has 20+ years exceeding the 5+ years required"
+- skills_match comparison: "Matches 7 out of 10 required skills: Python, React, Node.js, Docker, AWS, Kubernetes, PostgreSQL. Missing: TypeScript, GraphQL, Redis"
+- education_match comparison: "Has Master's degree meeting the Bachelor's requirement"
+- location_match comparison: "Located in Barcelona, position is in Madrid but remote-friendly"
+- salary_match comparison: "Expects €100,000-120,000 which aligns with offered €110,000-130,000"
+
 Return JSON:
 {{
-  "experience_match": {{"score": 0-100, "candidate": "X years", "required": "Y years", "comparison": "detailed comparison"}},
-  "skills_match": {{"score": 0-100, "candidate": "X matched", "required": "Y total", "comparison": "X/Y skills including [key matches]"}},
-  "education_match": {{"score": 0-100, "candidate": "degree", "required": "requirement", "comparison": "comparison"}},
-  "location_match": {{"score": 0-100, "candidate": "location", "required": "required location", "comparison": "comparison"}},
-  "salary_match": {{"score": 0-100, "candidate": "expected", "required": "offered", "comparison": "comparison"}},
-  "culture_match": {{"score": 0-100, "candidate": "fit", "required": "culture", "comparison": "insights"}},
-  "role_type_match": {{"score": 0-100, "candidate": "experience type", "required": "role type", "comparison": "fit analysis"}},
-  "matched_skills": ["intelligently matched skills - no duplicates"],
-  "missing_skills": ["only truly missing skills not covered by experience"]
+  "experience_match": {{"score": 0-100, "candidate": "20+ years", "required": "5+ years", "comparison": "Candidate has X years which [exceeds/meets/falls short of] the Y years required"}},
+  "skills_match": {{"score": 0-100, "candidate": "7 matched", "required": "10 total", "comparison": "Matches X out of Y required skills: [list matched skills]. Missing: [list missing skills]"}},
+  "education_match": {{"score": 0-100, "candidate": "Master's", "required": "Bachelor's", "comparison": "Has [degree] which [exceeds/meets/doesn't meet] [requirement]"}},
+  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid", "comparison": "Located in [X], position in [Y], [remote policy impact]"}},
+  "salary_match": {{"score": 0-100, "candidate": "€100-120k", "required": "€110-130k", "comparison": "Expects [X] which [aligns with/exceeds/below] offered [Y]"}},
+  "culture_match": {{"score": 0-100, "candidate": "Enterprise", "required": "Startup", "comparison": "Background is [X], company culture is [Y], [fit analysis]"}},
+  "role_type_match": {{"score": 0-100, "candidate": "Technical", "required": "Management", "comparison": "Experience is [X], role requires [Y], [fit analysis]"}},
+  "matched_skills": ["Python", "React", "Project Management", "etc"],
+  "missing_skills": ["TypeScript", "GraphQL", "etc"]
 }}
 
 Return ONLY JSON."""
