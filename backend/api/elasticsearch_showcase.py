@@ -590,6 +590,44 @@ async def get_advanced_features(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete("/debug/cleanup-old-analyses")
+async def cleanup_old_analyses(
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """Delete old analyses with wrong format (IDs 23, 24)."""
+    try:
+        from sqlalchemy import delete
+
+        # Delete specific old analyses
+        stmt = delete(ElasticJobAnalysis).where(
+            ElasticJobAnalysis.user_id == str(user.id),
+            ElasticJobAnalysis.id.in_([23, 24])
+        )
+        result = await db.execute(stmt)
+        await db.commit()
+
+        # Count remaining
+        count_stmt = select(ElasticJobAnalysis).where(
+            ElasticJobAnalysis.user_id == str(user.id)
+        )
+        count_result = await db.execute(count_stmt)
+        remaining = len(count_result.scalars().all())
+
+        return {
+            "status": "success",
+            "deleted": result.rowcount,
+            "remaining_analyses": remaining
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 @router.post("/debug/simple-save")
 async def simple_save_test(
     db: AsyncSession = Depends(get_async_session),
