@@ -464,8 +464,8 @@ async def analyze_job(
         except Exception as e:
             logger.warning(f"Comparison service failed, using empty results: {e}")
             comparison_results = {
-                "chromadb": {"results": [], "search_time_ms": 0, "total_matches": 0, "relevance_scores": []},
-                "elasticsearch": {"results": [], "search_time_ms": 0, "total_matches": 0, "max_score": 0},
+                "chromadb": {"results": {}, "search_time_ms": 0, "total_matches": 0, "relevance_scores": []},
+                "elasticsearch": {"results": {}, "search_time_ms": 0, "total_matches": 0, "max_score": 0},
                 "performance_comparison": {},
                 "feature_comparison": {}
             }

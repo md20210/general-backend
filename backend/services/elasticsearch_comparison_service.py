@@ -74,7 +74,7 @@ class ElasticsearchComparisonService:
                 "error": str(e),
                 "search_time_ms": 0,
                 "total_matches": 0,
-                "results": [],
+                "results": {},
                 "relevance_scores": []
             }
 
@@ -102,7 +102,7 @@ class ElasticsearchComparisonService:
                 "error": str(e),
                 "search_time_ms": 0,
                 "total_matches": 0,
-                "results": [],
+                "results": {},
                 "relevance_scores": []
             }
 
