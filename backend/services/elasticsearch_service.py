@@ -14,35 +14,48 @@ class ElasticsearchService:
 
     def __init__(self):
         """Initialize Elasticsearch client."""
-        # Get Elasticsearch connection details from environment
-        self.es_host = os.getenv("ELASTICSEARCH_HOST", "localhost")
-        self.es_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
-        self.es_user = os.getenv("ELASTICSEARCH_USER", "elastic")
-        self.es_password = os.getenv("ELASTICSEARCH_PASSWORD", "")
-        self.es_use_ssl = os.getenv("ELASTICSEARCH_USE_SSL", "false").lower() == "true"
-
-        # Build Elasticsearch URL with proper scheme
-        scheme = "https" if self.es_use_ssl else "http"
-        es_url = f"{scheme}://{self.es_host}:{self.es_port}"
-
-        # Initialize Elasticsearch client
-        self.client = Elasticsearch(
-            hosts=[es_url],
-            basic_auth=(self.es_user, self.es_password) if self.es_password else None,
-            verify_certs=self.es_use_ssl,
-            ssl_show_warn=False,
-        )
-
-        # Index names
+        self.client = None
         self.cv_index = "elastic_showcase_cv"
         self.job_index = "elastic_showcase_jobs"
 
-        # Initialize indices
-        self._ensure_indices()
-        logger.info("ElasticsearchService initialized successfully")
+        try:
+            # Get Elasticsearch connection details from environment
+            self.es_host = os.getenv("ELASTICSEARCH_HOST", "localhost")
+            self.es_port = int(os.getenv("ELASTICSEARCH_PORT", "9200"))
+            self.es_user = os.getenv("ELASTICSEARCH_USER", "elastic")
+            self.es_password = os.getenv("ELASTICSEARCH_PASSWORD", "")
+            self.es_use_ssl = os.getenv("ELASTICSEARCH_USE_SSL", "false").lower() == "true"
+
+            # Build Elasticsearch URL with proper scheme
+            scheme = "https" if self.es_use_ssl else "http"
+            es_url = f"{scheme}://{self.es_host}:{self.es_port}"
+
+            logger.info(f"Connecting to Elasticsearch at: {es_url}")
+
+            # Initialize Elasticsearch client
+            self.client = Elasticsearch(
+                hosts=[es_url],
+                basic_auth=(self.es_user, self.es_password) if self.es_password else None,
+                verify_certs=self.es_use_ssl,
+                ssl_show_warn=False,
+            )
+
+            # Initialize indices
+            self._ensure_indices()
+            logger.info("✅ ElasticsearchService initialized successfully")
+        except Exception as e:
+            logger.warning(f"⚠️  Elasticsearch not available: {e}")
+            logger.warning("Elasticsearch features will be disabled")
+            self.client = None
+
+    def is_available(self) -> bool:
+        """Check if Elasticsearch is available."""
+        return self.client is not None
 
     def _ensure_indices(self):
         """Create indices if they don't exist with optimized mappings."""
+        if not self.is_available():
+            return
         # CV Index - optimized for skills, experience, education
         cv_mapping = {
             "mappings": {
