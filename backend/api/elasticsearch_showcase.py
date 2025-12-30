@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 import fastapi
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_async_session
 from backend.auth.dependencies import current_active_user
