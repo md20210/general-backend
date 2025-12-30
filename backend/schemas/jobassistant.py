@@ -149,7 +149,7 @@ class Requirements(BaseModel):
     """Job requirements."""
     must_have: List[str]
     nice_to_have: List[str]
-    years_experience: Dict[str, int]  # {"min": 5, "max": 10}
+    years_experience: Dict[str, Optional[int]]  # {"min": 5, "max": 10} or {"min": 5, "max": None}
     education: str
     languages: List[str]
     certifications: List[str]
