@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     # ChromaDB
     CHROMA_PERSIST_DIRECTORY: str = "./data/chroma_db"
 
+    # Elasticsearch
+    ELASTICSEARCH_HOST: str = "localhost"
+    ELASTICSEARCH_PORT: int = 9200
+    ELASTICSEARCH_USER: str = "elastic"
+    ELASTICSEARCH_PASSWORD: str = ""
+    ELASTICSEARCH_USE_SSL: str = "false"
+
     # Railway
     PORT: int = 8000
 
