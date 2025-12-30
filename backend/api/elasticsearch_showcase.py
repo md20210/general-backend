@@ -1,7 +1,8 @@
 """Elasticsearch Showcase API Router."""
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+import fastapi
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_async_session
@@ -417,3 +418,52 @@ async def health_check():
             "status": "unhealthy",
             "error": str(e)
         }
+
+
+@router.post("/parse-doc")
+async def parse_doc_file(file: UploadFile = File(...)):
+    """
+    Parse .doc file and extract text.
+
+    This endpoint accepts old .doc format files and attempts to extract text.
+    Note: .doc is a legacy binary format - .docx is preferred.
+    """
+    try:
+        import olefile
+        import io
+
+        # Read file contents
+        file_content = await file.read()
+
+        # Try to parse .doc file using olefile
+        ole = olefile.OleFileIO(io.BytesIO(file_content))
+
+        # Try to find WordDocument stream
+        if ole.exists('WordDocument'):
+            word_stream = ole.openstream('WordDocument')
+            data = word_stream.read()
+
+            # Extract text (very basic extraction - .doc format is complex)
+            # This will get some text but may not be perfect
+            text = data.decode('latin-1', errors='ignore')
+
+            # Clean up non-printable characters
+            import string
+            printable = set(string.printable)
+            text = ''.join(filter(lambda x: x in printable, text))
+
+            ole.close()
+
+            if text and len(text) > 10:
+                return {"text": text, "success": True}
+            else:
+                raise ValueError("Could not extract meaningful text from .doc file")
+        else:
+            raise ValueError(".doc file structure not recognized")
+
+    except Exception as e:
+        logger.error(f"Error parsing .doc file: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f".doc file parsing failed: {str(e)}. Please save as .docx or copy/paste the text instead."
+        )
