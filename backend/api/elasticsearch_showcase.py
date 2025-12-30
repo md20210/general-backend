@@ -136,7 +136,8 @@ Return format: ["skill1", "skill2", "skill3", ...]
 """
 
     try:
-        response = llm_gateway.generate(prompt=prompt, provider=provider)
+        response_dict = llm_gateway.generate(prompt=prompt, provider=provider)
+        response = response_dict.get("response", "")
 
         # Extract JSON from response
         json_match = re.search(r'\[.*\]', response, re.DOTALL)
@@ -210,7 +211,8 @@ Return ONLY valid JSON in this exact format:
 """
 
     try:
-        response = llm_gateway.generate(prompt=prompt, provider=provider)
+        response_dict = llm_gateway.generate(prompt=prompt, provider=provider)
+        response = response_dict.get("response", "")
 
         # Extract JSON from response
         json_match = re.search(r'\{.*\}', response, re.DOTALL)
