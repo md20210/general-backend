@@ -545,6 +545,29 @@ async def get_advanced_features(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/debug/columns")
+async def check_columns(db: AsyncSession = Depends(get_async_session)):
+    """Debug endpoint to check if LLM analysis columns exist."""
+    try:
+        result = await db.execute(text("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'elastic_job_analyses'
+            AND column_name IN ('job_analysis', 'fit_score', 'success_probability')
+            ORDER BY column_name;
+        """))
+        columns = [row[0] for row in result]
+
+        return {
+            "table": "elastic_job_analyses",
+            "columns_found": columns,
+            "all_present": len(columns) == 3,
+            "expected": ["fit_score", "job_analysis", "success_probability"]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.get("/health")
 async def health_check():
     """Check Elasticsearch connection health."""
