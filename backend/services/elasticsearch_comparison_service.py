@@ -64,7 +64,7 @@ class ElasticsearchComparisonService:
 
             comparison_results["chromadb"] = {
                 "search_time_ms": chromadb_time_ms,
-                "results": chromadb_results,
+                "results": {"items": chromadb_results} if chromadb_results else {},
                 "total_matches": len(chromadb_results),
                 "relevance_scores": [r.get("distance", 0) for r in chromadb_results[:5]] if chromadb_results else []
             }
@@ -91,7 +91,7 @@ class ElasticsearchComparisonService:
 
             comparison_results["elasticsearch"] = {
                 "search_time_ms": es_results["search_time_ms"],
-                "results": es_results["matches"],
+                "results": {"items": es_results["matches"]} if es_results["matches"] else {},
                 "total_matches": es_results["total_matches"],
                 "max_score": es_results.get("max_score", 0),
                 "relevance_scores": [m["score"] for m in es_results["matches"][:5]] if es_results["matches"] else []
