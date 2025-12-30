@@ -400,14 +400,59 @@ async def analyze_job(
                 detail="Profile not found. Please create a profile first by uploading your CV."
             )
 
-        # Perform LLM-based job analysis
+        # Perform LLM-based job analysis (with fallback to default values)
         logger.info(f"Starting LLM job analysis for user {user.id}")
-        llm_analysis = await analyze_job_with_llm(
-            job_description=analysis_request.job_description,
-            cv_text=profile.cv_text,
-            provider=analysis_request.provider or "grok"
-        )
-        logger.info(f"LLM job analysis completed for user {user.id}")
+        try:
+            llm_analysis = await analyze_job_with_llm(
+                job_description=analysis_request.job_description,
+                cv_text=profile.cv_text,
+                provider=analysis_request.provider or "grok"
+            )
+            logger.info(f"LLM job analysis completed for user {user.id}")
+        except Exception as e:
+            logger.error(f"LLM analysis failed, using default values: {e}")
+            # Use default empty analysis if LLM fails
+            llm_analysis = {
+                "job_analysis": {
+                    "company": "Unknown",
+                    "role": "Position",
+                    "location": "Unknown",
+                    "remote_policy": "Unknown",
+                    "seniority": "Unknown",
+                    "salary_range": {"min": None, "max": None, "currency": "EUR"},
+                    "requirements": {
+                        "must_have": [],
+                        "nice_to_have": [],
+                        "years_experience": {"min": 0, "max": None},
+                        "education": "Not specified",
+                        "languages": [],
+                        "certifications": []
+                    },
+                    "responsibilities": [],
+                    "keywords": [],
+                    "red_flags": [],
+                    "green_flags": []
+                },
+                "fit_score": {
+                    "total": 0,
+                    "breakdown": {
+                        "experience_match": 0,
+                        "skills_match": 0,
+                        "education_match": 0,
+                        "location_match": 0,
+                        "salary_match": 0,
+                        "culture_match": 0,
+                        "role_type_match": 0
+                    },
+                    "matched_skills": [],
+                    "missing_skills": []
+                },
+                "success_probability": {
+                    "probability": 0,
+                    "factors": [],
+                    "recommendation": "Unable to analyze - LLM service unavailable"
+                }
+            }
 
         # Run comparison (with fallback to empty results)
         try:
