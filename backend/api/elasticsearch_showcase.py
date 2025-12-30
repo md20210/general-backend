@@ -930,3 +930,351 @@ async def get_elastic_stack_status():
     except Exception as e:
         logger.error(f"Error getting Elastic Stack status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== Advanced Elasticsearch Features Endpoints =====
+
+@router.post("/advanced/phrase-search")
+async def elasticsearch_phrase_search(
+    phrase: str,
+    slop: int = 2,
+    user: User = Depends(current_active_user),
+):
+    """
+    Demonstrate phrase matching with configurable slop.
+
+    Example: "Senior Python Developer" with slop=2 matches "Senior Software Python Developer"
+    """
+    if not es_service.is_available():
+        raise HTTPException(status_code=503, detail="Elasticsearch not available")
+
+    try:
+        results = await es_service.phrase_search(
+            phrase=phrase,
+            user_id=str(user.id),
+            slop=slop
+        )
+
+        return {
+            "status": "success",
+            "feature": "phrase_matching",
+            "description": f"Exact phrase search with slop={slop} (allows {slop} words in between)",
+            "example": "Finds 'Senior Python Developer' even if other words appear between terms",
+            "benefit": "More flexible than exact match, stricter than full-text search",
+            "data": results
+        }
+    except Exception as e:
+        logger.error(f"Phrase search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/advanced/wildcard-search")
+async def elasticsearch_wildcard_search(
+    pattern: str,
+    field: str = "skills",
+    user: User = Depends(current_active_user),
+):
+    """
+    Demonstrate wildcard pattern matching.
+
+    Examples:
+    - "Java*" matches Java, JavaScript, JavaFX
+    - "Pyth?n" matches Python, Pythyn
+    - "*Script" matches JavaScript, TypeScript
+    """
+    if not es_service.is_available():
+        raise HTTPException(status_code=503, detail="Elasticsearch not available")
+
+    try:
+        results = await es_service.wildcard_search(
+            pattern=pattern,
+            field=field,
+            user_id=str(user.id)
+        )
+
+        return {
+            "status": "success",
+            "feature": "wildcard_search",
+            "description": "Pattern matching with * (any characters) and ? (single character)",
+            "examples": [
+                "Java* → Java, JavaScript, JavaFX",
+                "Pyth?n → Python, Pythyn",
+                "*Script → JavaScript, TypeScript"
+            ],
+            "benefit": "Find variations of technologies without knowing exact names",
+            "data": results
+        }
+    except Exception as e:
+        logger.error(f"Wildcard search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/advanced/aggregations")
+async def elasticsearch_advanced_aggregations(
+    user: User = Depends(current_active_user),
+):
+    """
+    Demonstrate advanced aggregations: experience buckets, skill distribution, statistics.
+    """
+    if not es_service.is_available():
+        raise HTTPException(status_code=503, detail="Elasticsearch not available")
+
+    try:
+        results = await es_service.get_advanced_aggregations(user_id=str(user.id))
+
+        return {
+            "status": "success",
+            "feature": "advanced_aggregations",
+            "description": "Real-time analytics on CV data",
+            "capabilities": [
+                "Experience level bucketing (Junior, Mid, Senior, Expert)",
+                "Education distribution analysis",
+                "Top skills ranking",
+                "Experience statistics (min, max, avg, median)",
+                "Skill co-occurrence by experience level"
+            ],
+            "benefit": "Instant insights without separate analytics database",
+            "data": results
+        }
+    except Exception as e:
+        logger.error(f"Advanced aggregations error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/advanced/explain-match")
+async def elasticsearch_explain_match(
+    job_description: str,
+    required_skills: Optional[List[str]] = None,
+    user: User = Depends(current_active_user),
+):
+    """
+    Explain why a CV matched a job (or didn't) with score breakdown.
+
+    Uses Elasticsearch Explain API to show scoring details.
+    """
+    if not es_service.is_available():
+        raise HTTPException(status_code=503, detail="Elasticsearch not available")
+
+    try:
+        explanation = await es_service.explain_match(
+            user_id=str(user.id),
+            job_description=job_description,
+            required_skills=required_skills or []
+        )
+
+        return {
+            "status": "success",
+            "feature": "explain_api",
+            "description": "Detailed scoring explanation showing why CV matched job",
+            "use_cases": [
+                "Debug why matches appear in certain order",
+                "Understand which skills contributed most to score",
+                "Optimize CV based on scoring factors",
+                "Transparency for candidates"
+            ],
+            "benefit": "Complete transparency in search relevance",
+            "data": explanation
+        }
+    except Exception as e:
+        logger.error(f"Explain match error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/advanced/search-suggestions")
+async def elasticsearch_search_suggestions(
+    prefix: str,
+    field: str = "skills",
+    size: int = 10
+):
+    """
+    Get autocomplete suggestions for search terms.
+
+    Example: prefix="Py" → ["Python", "PyTorch", "Pydantic"]
+    """
+    if not es_service.is_available():
+        raise HTTPException(status_code=503, detail="Elasticsearch not available")
+
+    try:
+        suggestions = await es_service.get_search_suggestions(
+            prefix=prefix,
+            field=field,
+            size=size
+        )
+
+        return {
+            "status": "success",
+            "feature": "autocomplete",
+            "description": "Real-time search suggestions as user types",
+            "example": f"'{prefix}' → {suggestions[:3]}",
+            "benefit": "Better UX, helps users discover available skills",
+            "data": suggestions
+        }
+    except Exception as e:
+        logger.error(f"Search suggestions error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/advanced/multi-index-search")
+async def elasticsearch_multi_index_search(
+    query_text: str,
+):
+    """
+    Search across CV and Job indices simultaneously.
+
+    Demonstrates Elasticsearch ability to search multiple indices in single request.
+    """
+    if not es_service.is_available():
+        raise HTTPException(status_code=503, detail="Elasticsearch not available")
+
+    try:
+        results = await es_service.multi_index_search(query_text=query_text)
+
+        return {
+            "status": "success",
+            "feature": "multi_index_search",
+            "description": "Search multiple data types simultaneously",
+            "example": "Search 'Python Django' across CVs and Job postings in one query",
+            "benefit": "Faster than separate queries, unified relevance scoring",
+            "data": results
+        }
+    except Exception as e:
+        logger.error(f"Multi-index search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/advanced/features-overview")
+async def get_elasticsearch_features_overview():
+    """
+    Get comprehensive overview of all Elasticsearch advanced features.
+
+    Use this to showcase Elasticsearch capabilities vs ChromaDB.
+    """
+    return {
+        "status": "success",
+        "elastic_stack_advantages": {
+            "elasticsearch": {
+                "features": [
+                    {
+                        "name": "Fuzzy Matching",
+                        "description": "Handles typos and misspellings (e.g., 'Pythn' → 'Python')",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/fuzzy-matches"
+                    },
+                    {
+                        "name": "Synonym Search",
+                        "description": "Matches related terms (e.g., 'ML' → 'Machine Learning')",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/synonym-matches"
+                    },
+                    {
+                        "name": "Phrase Matching",
+                        "description": "Find exact phrases with flexible word order",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/phrase-search"
+                    },
+                    {
+                        "name": "Wildcard Search",
+                        "description": "Pattern matching (Java* → Java, JavaScript)",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/wildcard-search"
+                    },
+                    {
+                        "name": "Real-time Aggregations",
+                        "description": "Analytics on skills, experience, education",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/aggregations"
+                    },
+                    {
+                        "name": "Explain API",
+                        "description": "Shows why a match scored the way it did",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/explain-match"
+                    },
+                    {
+                        "name": "Autocomplete",
+                        "description": "Search suggestions as user types",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/search-suggestions"
+                    },
+                    {
+                        "name": "Multi-Index Search",
+                        "description": "Search CVs and Jobs in single request",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/advanced/multi-index-search"
+                    },
+                    {
+                        "name": "Weighted Multi-Field Search",
+                        "description": "Skills weighted 3x, CV text 2x, job titles 1.5x",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/analyze"
+                    },
+                    {
+                        "name": "Highlighting",
+                        "description": "Shows which parts of CV matched the query",
+                        "chromadb_has": False,
+                        "endpoint": "/elasticsearch/analyze"
+                    }
+                ],
+                "performance": {
+                    "scalability": "Horizontal scaling to petabytes",
+                    "speed": "Sub-millisecond search on millions of documents",
+                    "concurrency": "Handles thousands of concurrent queries"
+                }
+            },
+            "logstash": {
+                "features": [
+                    {
+                        "name": "CV Parsing Pipeline",
+                        "description": "Extract skills, experience, education from CV",
+                        "endpoint": "/elasticsearch/logstash/parse-cv"
+                    },
+                    {
+                        "name": "Job Parsing Pipeline",
+                        "description": "Extract requirements, salary, location from job",
+                        "endpoint": "/elasticsearch/logstash/parse-job"
+                    },
+                    {
+                        "name": "Data Enrichment",
+                        "description": "Add synonyms, categorization, metadata",
+                        "endpoint": "/elasticsearch/logstash/parse-cv"
+                    },
+                    {
+                        "name": "Pipeline Monitoring",
+                        "description": "Health checks and throughput metrics",
+                        "endpoint": "/elasticsearch/logstash/pipeline-status"
+                    }
+                ],
+                "benefits": [
+                    "Process 1000s of CVs per minute",
+                    "Standardize unstructured data",
+                    "Real-time data transformation",
+                    "100+ built-in filters and processors"
+                ]
+            },
+            "kibana": {
+                "features": [
+                    "Interactive dashboards",
+                    "Real-time analytics",
+                    "Custom visualizations",
+                    "Index management",
+                    "Query builder UI"
+                ],
+                "note": "Custom visualizations implemented with Chart.js/D3.js"
+            },
+            "chromadb_limitations": [
+                "No fuzzy matching - exact or semantic only",
+                "No synonym support",
+                "Limited query types (embedding similarity)",
+                "No aggregations or analytics",
+                "No explain/debugging capabilities",
+                "No autocomplete support",
+                "Single collection per query",
+                "No phrase or wildcard search"
+            ]
+        },
+        "integration_status": {
+            "elasticsearch": es_service.is_available(),
+            "logstash": logstash_service.is_logstash_available,
+            "kibana": "Not deployed yet (see ELASTIC_STACK_DEPLOYMENT.md)"
+        }
+    }

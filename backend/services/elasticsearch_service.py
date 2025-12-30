@@ -471,6 +471,390 @@ class ElasticsearchService:
             logger.error(f"Error getting skill aggregations: {e}")
             return {}
 
+    async def phrase_search(
+        self,
+        phrase: str,
+        user_id: Optional[str] = None,
+        slop: int = 2
+    ) -> Dict[str, Any]:
+        """
+        Phrase matching - find exact phrases with configurable slop.
+
+        Args:
+            phrase: Exact phrase to search for
+            user_id: Optional user ID filter
+            slop: Number of positions tokens can be apart (default: 2)
+
+        Returns:
+            Phrase match results
+        """
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "match_phrase": {
+                                "cv_text": {
+                                    "query": phrase,
+                                    "slop": slop
+                                }
+                            }
+                        }
+                    ],
+                    "filter": [{"term": {"user_id": user_id}}] if user_id else []
+                }
+            },
+            "highlight": {
+                "fields": {"cv_text": {"fragment_size": 150}}
+            }
+        }
+
+        try:
+            result = self.client.search(index=self.cv_index, body=query)
+            return {
+                "total_matches": result["hits"]["total"]["value"],
+                "matches": [
+                    {
+                        "score": hit["_score"],
+                        "highlights": hit.get("highlight", {}).get("cv_text", [])
+                    }
+                    for hit in result["hits"]["hits"]
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Phrase search error: {e}")
+            return {"total_matches": 0, "matches": []}
+
+    async def wildcard_search(
+        self,
+        pattern: str,
+        field: str = "skills",
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Wildcard search - pattern matching with * and ?.
+
+        Args:
+            pattern: Wildcard pattern (e.g., "Java*", "Pyth?n")
+            field: Field to search in
+            user_id: Optional user ID filter
+
+        Returns:
+            Wildcard match results
+        """
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "wildcard": {
+                                field: {
+                                    "value": pattern.lower(),
+                                    "case_insensitive": True
+                                }
+                            }
+                        }
+                    ],
+                    "filter": [{"term": {"user_id": user_id}}] if user_id else []
+                }
+            }
+        }
+
+        try:
+            result = self.client.search(index=self.cv_index, body=query)
+            return {
+                "total_matches": result["hits"]["total"]["value"],
+                "matches": [
+                    {
+                        "user_id": hit["_source"]["user_id"],
+                        "matched_field": hit["_source"].get(field, "")
+                    }
+                    for hit in result["hits"]["hits"]
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Wildcard search error: {e}")
+            return {"total_matches": 0, "matches": []}
+
+    async def get_advanced_aggregations(
+        self,
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Advanced aggregations with experience buckets and skill co-occurrence.
+
+        Args:
+            user_id: Optional user ID filter
+
+        Returns:
+            Advanced aggregation results
+        """
+        query = {
+            "query": {
+                "term": {"user_id": user_id}
+            } if user_id else {"match_all": {}},
+            "aggs": {
+                # Experience level buckets
+                "experience_levels": {
+                    "range": {
+                        "field": "experience_years",
+                        "ranges": [
+                            {"key": "Junior", "to": 2},
+                            {"key": "Mid-Level", "from": 2, "to": 5},
+                            {"key": "Senior", "from": 5, "to": 10},
+                            {"key": "Expert", "from": 10}
+                        ]
+                    }
+                },
+                # Education breakdown
+                "education_distribution": {
+                    "terms": {
+                        "field": "education_level",
+                        "size": 10
+                    }
+                },
+                # Top skills
+                "top_skills": {
+                    "terms": {
+                        "field": "skills.keyword",
+                        "size": 50
+                    }
+                },
+                # Average experience
+                "stats_experience": {
+                    "stats": {
+                        "field": "experience_years"
+                    }
+                },
+                # Skills per experience level
+                "skills_by_experience": {
+                    "range": {
+                        "field": "experience_years",
+                        "ranges": [
+                            {"key": "0-2 years", "to": 2},
+                            {"key": "2-5 years", "from": 2, "to": 5},
+                            {"key": "5+ years", "from": 5}
+                        ]
+                    },
+                    "aggs": {
+                        "skills": {
+                            "terms": {
+                                "field": "skills.keyword",
+                                "size": 20
+                            }
+                        }
+                    }
+                }
+            },
+            "size": 0
+        }
+
+        try:
+            result = self.client.search(index=self.cv_index, body=query)
+            aggs = result["aggregations"]
+
+            return {
+                "experience_levels": aggs["experience_levels"]["buckets"],
+                "education_distribution": aggs["education_distribution"]["buckets"],
+                "top_skills": aggs["top_skills"]["buckets"],
+                "experience_stats": aggs["stats_experience"],
+                "skills_by_experience": [
+                    {
+                        "experience_range": bucket["key"],
+                        "candidate_count": bucket["doc_count"],
+                        "top_skills": bucket["skills"]["buckets"]
+                    }
+                    for bucket in aggs["skills_by_experience"]["buckets"]
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Advanced aggregations error: {e}")
+            return {}
+
+    async def explain_match(
+        self,
+        user_id: str,
+        job_description: str,
+        required_skills: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Use Explain API to show why a match scored the way it did.
+
+        Args:
+            user_id: User ID to explain
+            job_description: Job description text
+            required_skills: Required skills
+
+        Returns:
+            Explanation of match scoring
+        """
+        # Build the same query as search_cv_match
+        should_clauses = [
+            {
+                "multi_match": {
+                    "query": job_description,
+                    "fields": ["cv_text^2", "skills^3", "job_titles^1.5"],
+                    "type": "best_fields",
+                    "fuzziness": "AUTO"
+                }
+            }
+        ]
+
+        if required_skills:
+            for skill in required_skills:
+                should_clauses.append({
+                    "match": {
+                        "skills": {
+                            "query": skill,
+                            "fuzziness": "AUTO",
+                            "boost": 2.0
+                        }
+                    }
+                })
+
+        query = {
+            "query": {
+                "bool": {
+                    "must": [{"term": {"user_id": user_id}}],
+                    "should": should_clauses,
+                    "minimum_should_match": 1
+                }
+            }
+        }
+
+        try:
+            # Use explain API
+            explanation = self.client.explain(
+                index=self.cv_index,
+                id=user_id,
+                body=query
+            )
+
+            return {
+                "matched": explanation.get("matched", False),
+                "score": explanation.get("explanation", {}).get("value", 0),
+                "explanation": self._format_explanation(explanation.get("explanation", {}))
+            }
+        except Exception as e:
+            logger.error(f"Explain match error: {e}")
+            return {"matched": False, "error": str(e)}
+
+    def _format_explanation(self, explanation: Dict[str, Any]) -> Dict[str, Any]:
+        """Format explanation tree into readable structure."""
+        if not explanation:
+            return {}
+
+        formatted = {
+            "value": explanation.get("value", 0),
+            "description": explanation.get("description", ""),
+        }
+
+        # Recursively format details
+        if "details" in explanation and explanation["details"]:
+            formatted["breakdown"] = [
+                self._format_explanation(detail)
+                for detail in explanation["details"]
+            ]
+
+        return formatted
+
+    async def get_search_suggestions(
+        self,
+        prefix: str,
+        field: str = "skills",
+        size: int = 10
+    ) -> List[str]:
+        """
+        Get autocomplete suggestions for search.
+
+        Args:
+            prefix: Text prefix for suggestions
+            field: Field to get suggestions from
+            size: Maximum number of suggestions
+
+        Returns:
+            List of suggested terms
+        """
+        query = {
+            "suggest": {
+                "skill_suggest": {
+                    "prefix": prefix,
+                    "completion": {
+                        "field": f"{field}.keyword",
+                        "size": size,
+                        "skip_duplicates": True
+                    }
+                }
+            }
+        }
+
+        try:
+            result = self.client.search(index=self.cv_index, body=query)
+            suggestions = result.get("suggest", {}).get("skill_suggest", [])
+
+            if suggestions:
+                options = suggestions[0].get("options", [])
+                return [opt["text"] for opt in options]
+            return []
+        except Exception as e:
+            logger.error(f"Search suggestions error: {e}")
+            return []
+
+    async def multi_index_search(
+        self,
+        query_text: str,
+        indices: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Search across multiple indices simultaneously.
+
+        Args:
+            query_text: Search query
+            indices: List of indices to search (default: cv and job indices)
+
+        Returns:
+            Combined search results from all indices
+        """
+        if indices is None:
+            indices = [self.cv_index, self.job_index]
+
+        query = {
+            "query": {
+                "multi_match": {
+                    "query": query_text,
+                    "fields": ["*"],
+                    "type": "best_fields"
+                }
+            },
+            "size": 5
+        }
+
+        try:
+            result = self.client.search(index=indices, body=query)
+
+            return {
+                "total_matches": result["hits"]["total"]["value"],
+                "matches_by_index": self._group_by_index(result["hits"]["hits"]),
+                "search_time_ms": result.get("took", 0)
+            }
+        except Exception as e:
+            logger.error(f"Multi-index search error: {e}")
+            return {"total_matches": 0, "matches_by_index": {}}
+
+    def _group_by_index(self, hits: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        """Group search hits by index."""
+        grouped = {}
+        for hit in hits:
+            index = hit["_index"]
+            if index not in grouped:
+                grouped[index] = []
+            grouped[index].append({
+                "id": hit["_id"],
+                "score": hit["_score"],
+                "source": hit["_source"]
+            })
+        return grouped
+
     def close(self):
         """Close Elasticsearch connection."""
         try:
