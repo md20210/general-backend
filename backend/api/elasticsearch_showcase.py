@@ -590,6 +590,54 @@ async def get_advanced_features(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/debug/simple-save")
+async def simple_save_test(
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """Test endpoint - just save minimal data without LLM."""
+    try:
+        analysis = ElasticJobAnalysis(
+            user_id=str(user.id),
+            job_description="Test job",
+            job_url=None,
+            chromadb_results={},
+            chromadb_search_time_ms=0,
+            chromadb_matches_count=0,
+            chromadb_relevance_score=None,
+            elasticsearch_results={},
+            elasticsearch_search_time_ms=0,
+            elasticsearch_matches_count=0,
+            elasticsearch_relevance_score=None,
+            fuzzy_matches=[],
+            synonym_matches=[],
+            skill_clusters={},
+            performance_comparison={},
+            feature_comparison={},
+            job_analysis={"test": "data"},
+            fit_score={"total": 0},
+            success_probability={"probability": 0},
+            provider="test"
+        )
+
+        db.add(analysis)
+        await db.commit()
+        await db.refresh(analysis)
+
+        return {
+            "status": "success",
+            "id": analysis.id,
+            "message": "Data saved successfully"
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 @router.get("/debug/columns")
 async def check_columns(db: AsyncSession = Depends(get_async_session)):
     """Debug endpoint to check if LLM analysis columns exist."""
