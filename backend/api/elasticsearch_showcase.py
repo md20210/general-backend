@@ -151,6 +151,121 @@ Return format: ["skill1", "skill2", "skill3", ...]
         return extract_skills_from_cv(cv_text)
 
 
+async def analyze_job_with_llm(job_description: str, cv_text: str, provider: str = "grok") -> dict:
+    """Analyze job description and compare with CV using LLM."""
+    prompt = f"""Analyze this job description and compare it with the candidate's CV.
+Provide a detailed analysis in JSON format.
+
+JOB DESCRIPTION:
+{job_description}
+
+CANDIDATE CV:
+{cv_text}
+
+Return ONLY valid JSON in this exact format:
+{{
+  "job_analysis": {{
+    "company": "Company name or Unknown",
+    "role": "Job title",
+    "location": "Location or Remote",
+    "remote_policy": "Remote/Hybrid/On-site",
+    "seniority": "Junior/Mid/Senior/Lead",
+    "salary_range": {{"min": null, "max": null, "currency": "EUR"}},
+    "requirements": {{
+      "must_have": ["skill1", "skill2"],
+      "nice_to_have": ["skill3"],
+      "years_experience": {{"min": 0, "max": null}},
+      "education": "Education requirement",
+      "languages": ["English"],
+      "certifications": []
+    }},
+    "responsibilities": ["responsibility1", "responsibility2"],
+    "keywords": ["keyword1", "keyword2"],
+    "red_flags": ["any concerning aspects"],
+    "green_flags": ["positive aspects"]
+  }},
+  "fit_score": {{
+    "total": 85,
+    "breakdown": {{
+      "experience_match": 90,
+      "skills_match": 85,
+      "education_match": 100,
+      "location_match": 80,
+      "salary_match": 75,
+      "culture_match": 80,
+      "role_type_match": 90
+    }},
+    "matched_skills": ["Python", "FastAPI"],
+    "missing_skills": ["Skill candidate doesn't have"]
+  }},
+  "success_probability": {{
+    "probability": 75,
+    "factors": [
+      {{"factor": "Strong technical skills match", "impact": 15}},
+      {{"factor": "Limited experience with X", "impact": -10}}
+    ],
+    "recommendation": "Apply - good fit with areas to highlight"
+  }}
+}}
+"""
+
+    try:
+        response = llm_gateway.generate(prompt=prompt, provider=provider)
+
+        # Extract JSON from response
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            analysis = json.loads(json_match.group(0))
+            return analysis
+        else:
+            logger.error("LLM didn't return valid JSON for job analysis")
+            # Return default structure
+            return {
+                "job_analysis": {
+                    "company": "Unknown",
+                    "role": "Position",
+                    "location": "Unknown",
+                    "remote_policy": "Unknown",
+                    "seniority": "Unknown",
+                    "salary_range": {"min": None, "max": None, "currency": "EUR"},
+                    "requirements": {
+                        "must_have": [],
+                        "nice_to_have": [],
+                        "years_experience": {"min": 0, "max": None},
+                        "education": "Not specified",
+                        "languages": [],
+                        "certifications": []
+                    },
+                    "responsibilities": [],
+                    "keywords": [],
+                    "red_flags": [],
+                    "green_flags": []
+                },
+                "fit_score": {
+                    "total": 0,
+                    "breakdown": {
+                        "experience_match": 0,
+                        "skills_match": 0,
+                        "education_match": 0,
+                        "location_match": 0,
+                        "salary_match": 0,
+                        "culture_match": 0,
+                        "role_type_match": 0
+                    },
+                    "matched_skills": [],
+                    "missing_skills": []
+                },
+                "success_probability": {
+                    "probability": 0,
+                    "factors": [],
+                    "recommendation": "Unable to analyze - please try again"
+                }
+            }
+    except Exception as e:
+        logger.error(f"Error analyzing job with LLM: {e}")
+        raise
+
+
 # ============================================================================
 # Profile Endpoints
 # ============================================================================
@@ -283,6 +398,15 @@ async def analyze_job(
                 detail="Profile not found. Please create a profile first by uploading your CV."
             )
 
+        # Perform LLM-based job analysis
+        logger.info(f"Starting LLM job analysis for user {user.id}")
+        llm_analysis = await analyze_job_with_llm(
+            job_description=analysis_request.job_description,
+            cv_text=profile.cv_text,
+            provider=analysis_request.provider or "grok"
+        )
+        logger.info(f"LLM job analysis completed for user {user.id}")
+
         # Run comparison (with fallback to empty results)
         try:
             comparison_results = await comparison_service.compare_search_performance(
@@ -331,6 +455,10 @@ async def analyze_job(
             skill_clusters=advanced_features.get("aggregations", {}).get("results", {}),
             performance_comparison=comparison_results.get("performance_comparison", {}),
             feature_comparison=comparison_results.get("feature_comparison", {}),
+            # LLM Analysis Results
+            job_analysis=llm_analysis.get("job_analysis", {}),
+            fit_score=llm_analysis.get("fit_score", {}),
+            success_probability=llm_analysis.get("success_probability", {}),
             provider=analysis_request.provider
         )
 

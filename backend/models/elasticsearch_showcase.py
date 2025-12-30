@@ -64,6 +64,11 @@ class ElasticJobAnalysis(Base):
     performance_comparison: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     feature_comparison: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
+    # LLM Job Analysis Results (for frontend display)
+    job_analysis: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    fit_score: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    success_probability: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     provider: Mapped[str | None] = mapped_column(String, default="grok", nullable=True)

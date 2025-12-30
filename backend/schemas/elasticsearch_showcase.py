@@ -236,6 +236,11 @@ class JobAnalysisResponse(BaseModel):
     performance_comparison: Dict[str, Any]
     feature_comparison: Dict[str, Any]
 
+    # LLM Job Analysis (for frontend display)
+    job_analysis: Dict[str, Any]
+    fit_score: Dict[str, Any]
+    success_probability: Dict[str, Any]
+
     created_at: datetime
     provider: Optional[str]
 
