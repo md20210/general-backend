@@ -283,18 +283,35 @@ async def analyze_job(
                 detail="Profile not found. Please create a profile first by uploading your CV."
             )
 
-        # Run comparison
-        comparison_results = await comparison_service.compare_search_performance(
-            user_id=str(user.id),
-            job_description=analysis_request.job_description,
-            required_skills=analysis_request.required_skills or []
-        )
+        # Run comparison (with fallback to empty results)
+        try:
+            comparison_results = await comparison_service.compare_search_performance(
+                user_id=str(user.id),
+                job_description=analysis_request.job_description,
+                required_skills=analysis_request.required_skills or []
+            )
+        except Exception as e:
+            logger.warning(f"Comparison service failed, using empty results: {e}")
+            comparison_results = {
+                "chromadb": {"results": [], "search_time_ms": 0, "total_matches": 0, "relevance_scores": []},
+                "elasticsearch": {"results": [], "search_time_ms": 0, "total_matches": 0, "max_score": 0},
+                "performance_comparison": {},
+                "feature_comparison": {}
+            }
 
-        # Get advanced features demo
-        advanced_features = await comparison_service.get_advanced_features_demo(
-            user_id=str(user.id),
-            required_skills=analysis_request.required_skills or []
-        )
+        # Get advanced features demo (with fallback to empty results)
+        try:
+            advanced_features = await comparison_service.get_advanced_features_demo(
+                user_id=str(user.id),
+                required_skills=analysis_request.required_skills or []
+            )
+        except Exception as e:
+            logger.warning(f"Advanced features demo failed, using empty results: {e}")
+            advanced_features = {
+                "fuzzy_matching": {"results": []},
+                "synonym_matching": {"results": []},
+                "aggregations": {"results": {}}
+            }
 
         # Create analysis record
         analysis = ElasticJobAnalysis(
@@ -466,4 +483,44 @@ async def parse_doc_file(file: UploadFile = File(...)):
         raise HTTPException(
             status_code=400,
             detail=f".doc file parsing failed: {str(e)}. Please save as .docx or copy/paste the text instead."
+        )
+
+
+@router.get("/fetch-url")
+async def fetch_url_proxy(url: str = Query(..., description="URL to fetch")):
+    """
+    Proxy endpoint to fetch content from a URL.
+
+    This bypasses CORS restrictions by fetching the URL from the backend.
+    Used for loading job descriptions and CVs from external URLs.
+    """
+    try:
+        import httpx
+
+        # Validate URL
+        if not url or not url.startswith(('http://', 'https://')):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid URL. Must start with http:// or https://"
+            )
+
+        # Fetch the URL with timeout
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+
+            # Return the text content
+            return {"text": response.text, "success": True}
+
+    except httpx.HTTPError as e:
+        logger.error(f"Error fetching URL {url}: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to fetch URL: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error fetching URL {url}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch URL: {str(e)}"
         )
