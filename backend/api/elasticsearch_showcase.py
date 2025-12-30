@@ -23,6 +23,7 @@ from backend.services.elasticsearch_service import ElasticsearchService
 from backend.services.elasticsearch_comparison_service import ElasticsearchComparisonService
 from backend.services.llm_gateway import LLMGateway
 from backend.services.logstash_service import LogstashService
+from backend.services.demo_data_generator import DemoDataGenerator
 import logging
 import json
 import re
@@ -40,6 +41,7 @@ es_service = ElasticsearchService()
 comparison_service = ElasticsearchComparisonService()
 llm_gateway = LLMGateway()
 logstash_service = LogstashService(logstash_url=os.getenv("LOGSTASH_URL"))
+demo_generator = DemoDataGenerator()
 
 
 # ============================================================================
@@ -1278,3 +1280,254 @@ async def get_elasticsearch_features_overview():
             "kibana": "Not deployed yet (see ELASTIC_STACK_DEPLOYMENT.md)"
         }
     }
+
+
+# ===== Demo Data Generator Endpoints =====
+
+@router.post("/demo/generate")
+async def generate_demo_data(
+    count: int = 100,
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """
+    Generate demo data variations based on user's latest analysis.
+
+    Takes the user's most recent analysis and generates `count` variations
+    with different companies, skills, scores, and performance metrics.
+
+    This creates impressive visualizations showing Elasticsearch advantages.
+    """
+    try:
+        # Get user's latest analysis
+        statement = select(ElasticJobAnalysis).where(
+            ElasticJobAnalysis.user_id == str(user.id)
+        ).order_by(ElasticJobAnalysis.created_at.desc()).limit(1)
+
+        result = await db.execute(statement)
+        base_analysis = result.scalars().first()
+
+        if not base_analysis:
+            raise HTTPException(
+                status_code=404,
+                detail="No analysis found. Please create an analysis first."
+            )
+
+        # Convert to dict for variation
+        base_dict = {
+            "job_analysis": base_analysis.job_analysis,
+            "fit_score": base_analysis.fit_score,
+            "success_probability": base_analysis.success_probability,
+        }
+
+        # Generate variations
+        logger.info(f"Generating {count} demo variations for user {user.id}")
+        variations = demo_generator.generate_variations(
+            base_analysis=base_dict,
+            count=count,
+            user_id=str(user.id)
+        )
+
+        # Save to database
+        saved_count = 0
+        for variation in variations:
+            demo_analysis = ElasticJobAnalysis(**variation)
+            db.add(demo_analysis)
+            saved_count += 1
+
+            # Commit in batches of 20 for performance
+            if saved_count % 20 == 0:
+                await db.commit()
+                logger.info(f"Saved {saved_count}/{count} demo analyses")
+
+        # Final commit
+        await db.commit()
+
+        return {
+            "status": "success",
+            "message": f"Generated {count} demo analyses",
+            "variations_created": count,
+            "base_analysis_id": base_analysis.id,
+            "variations_include": [
+                "Different companies and locations",
+                "Varied skill combinations",
+                "Different experience levels",
+                "Range of fit scores (0-100)",
+                "Different success probabilities",
+                "Performance comparisons (ChromaDB vs Elasticsearch)",
+                "Fuzzy match and synonym examples"
+            ],
+            "next_steps": [
+                "View analyses at /elasticsearch/comparisons",
+                "Get statistics at /elasticsearch/demo/stats",
+                "Use for frontend visualizations"
+            ]
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating demo data: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/demo/stats")
+async def get_demo_statistics(
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """
+    Get statistics on demo data for visualizations.
+
+    Returns aggregated data perfect for charts:
+    - Fit score distribution
+    - Success probability ranges
+    - Performance comparison stats
+    - Skill frequency
+    - Company distribution
+    """
+    try:
+        # Get all analyses for user
+        statement = select(ElasticJobAnalysis).where(
+            ElasticJobAnalysis.user_id == str(user.id)
+        )
+        result = await db.execute(statement)
+        analyses = result.scalars().all()
+
+        if not analyses:
+            return {
+                "status": "success",
+                "message": "No data available. Generate demo data first.",
+                "total_analyses": 0
+            }
+
+        # Calculate statistics
+        fit_scores = [a.fit_score.get("total", 0) for a in analyses if a.fit_score]
+        success_probs = [a.success_probability.get("probability", 0) for a in analyses if a.success_probability]
+
+        # Performance stats
+        chromadb_times = [a.chromadb_search_time_ms for a in analyses if a.chromadb_search_time_ms]
+        es_times = [a.elasticsearch_search_time_ms for a in analyses if a.elasticsearch_search_time_ms]
+
+        # Skill extraction
+        all_skills = {}
+        for a in analyses:
+            if a.job_analysis and "requirements" in a.job_analysis:
+                must_have = a.job_analysis["requirements"].get("must_have", [])
+                for skill in must_have:
+                    all_skills[skill] = all_skills.get(skill, 0) + 1
+
+        top_skills = sorted(all_skills.items(), key=lambda x: x[1], reverse=True)[:20]
+
+        # Company distribution
+        companies = {}
+        for a in analyses:
+            if a.job_analysis:
+                company = a.job_analysis.get("company")
+                if company:
+                    companies[company] = companies.get(company, 0) + 1
+
+        return {
+            "status": "success",
+            "total_analyses": len(analyses),
+            "fit_score_distribution": {
+                "min": min(fit_scores) if fit_scores else 0,
+                "max": max(fit_scores) if fit_scores else 0,
+                "avg": sum(fit_scores) / len(fit_scores) if fit_scores else 0,
+                "buckets": {
+                    "0-20": len([s for s in fit_scores if 0 <= s < 20]),
+                    "20-40": len([s for s in fit_scores if 20 <= s < 40]),
+                    "40-60": len([s for s in fit_scores if 40 <= s < 60]),
+                    "60-80": len([s for s in fit_scores if 60 <= s < 80]),
+                    "80-100": len([s for s in fit_scores if 80 <= s <= 100])
+                }
+            },
+            "success_probability_distribution": {
+                "min": min(success_probs) if success_probs else 0,
+                "max": max(success_probs) if success_probs else 0,
+                "avg": sum(success_probs) / len(success_probs) if success_probs else 0,
+                "buckets": {
+                    "Low (0-40)": len([p for p in success_probs if 0 <= p < 40]),
+                    "Medium (40-70)": len([p for p in success_probs if 40 <= p < 70]),
+                    "High (70-100)": len([p for p in success_probs if 70 <= p <= 100])
+                }
+            },
+            "performance_comparison": {
+                "chromadb": {
+                    "avg_time_ms": sum(chromadb_times) / len(chromadb_times) if chromadb_times else 0,
+                    "min_time_ms": min(chromadb_times) if chromadb_times else 0,
+                    "max_time_ms": max(chromadb_times) if chromadb_times else 0
+                },
+                "elasticsearch": {
+                    "avg_time_ms": sum(es_times) / len(es_times) if es_times else 0,
+                    "min_time_ms": min(es_times) if es_times else 0,
+                    "max_time_ms": max(es_times) if es_times else 0
+                },
+                "speedup_factor": (sum(chromadb_times) / len(chromadb_times)) / (sum(es_times) / len(es_times)) if chromadb_times and es_times else 0
+            },
+            "top_skills": [{"skill": skill, "count": count} for skill, count in top_skills],
+            "company_distribution": [{"company": comp, "count": count} for comp, count in sorted(companies.items(), key=lambda x: x[1], reverse=True)[:10]],
+            "visualization_ready": True,
+            "chart_recommendations": [
+                "Bar chart: Fit score distribution",
+                "Pie chart: Success probability ranges",
+                "Line chart: Performance comparison (ChromaDB vs Elasticsearch)",
+                "Word cloud: Top skills",
+                "Horizontal bar: Company distribution"
+            ]
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting demo statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/demo/clear")
+async def clear_demo_data(
+    keep_latest: int = 1,
+    db: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+):
+    """
+    Clear demo data, optionally keeping the N most recent analyses.
+
+    Args:
+        keep_latest: Number of recent analyses to keep (default: 1)
+    """
+    try:
+        from sqlalchemy import delete
+
+        # Get IDs to keep
+        if keep_latest > 0:
+            statement = select(ElasticJobAnalysis.id).where(
+                ElasticJobAnalysis.user_id == str(user.id)
+            ).order_by(ElasticJobAnalysis.created_at.desc()).limit(keep_latest)
+
+            result = await db.execute(statement)
+            keep_ids = [row[0] for row in result]
+
+            # Delete all except those to keep
+            stmt = delete(ElasticJobAnalysis).where(
+                ElasticJobAnalysis.user_id == str(user.id),
+                ElasticJobAnalysis.id.notin_(keep_ids)
+            )
+        else:
+            # Delete all
+            stmt = delete(ElasticJobAnalysis).where(
+                ElasticJobAnalysis.user_id == str(user.id)
+            )
+
+        result = await db.execute(stmt)
+        await db.commit()
+
+        return {
+            "status": "success",
+            "deleted_count": result.rowcount,
+            "kept_latest": keep_latest
+        }
+
+    except Exception as e:
+        logger.error(f"Error clearing demo data: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
