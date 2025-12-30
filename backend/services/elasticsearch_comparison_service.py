@@ -55,22 +55,31 @@ class ElasticsearchComparisonService:
             )
             chromadb_time_ms = (time.time() - start_time) * 1000
 
+            # Handle empty results
+            if not chromadb_results or not isinstance(chromadb_results, list):
+                chromadb_results = []
+
             comparison_results["chromadb"] = {
                 "search_time_ms": chromadb_time_ms,
                 "results": chromadb_results,
                 "total_matches": len(chromadb_results),
-                "relevance_scores": [r.get("distance", 0) for r in chromadb_results[:5]]
+                "relevance_scores": [r.get("distance", 0) for r in chromadb_results[:5]] if chromadb_results else []
             }
         except Exception as e:
-            logger.error(f"ChromaDB search error: {e}")
+            logger.warning(f"ChromaDB search skipped (no data or error): {e}")
             comparison_results["chromadb"] = {
                 "error": str(e),
                 "search_time_ms": 0,
-                "total_matches": 0
+                "total_matches": 0,
+                "results": [],
+                "relevance_scores": []
             }
 
         # 2. Elasticsearch Search
         try:
+            if not self.elasticsearch.is_available():
+                raise Exception("Elasticsearch service not available")
+
             es_results = await self.elasticsearch.search_cv_match(
                 job_description=job_description,
                 required_skills=required_skills,
@@ -82,14 +91,16 @@ class ElasticsearchComparisonService:
                 "results": es_results["matches"],
                 "total_matches": es_results["total_matches"],
                 "max_score": es_results.get("max_score", 0),
-                "relevance_scores": [m["score"] for m in es_results["matches"][:5]]
+                "relevance_scores": [m["score"] for m in es_results["matches"][:5]] if es_results["matches"] else []
             }
         except Exception as e:
             logger.error(f"Elasticsearch search error: {e}")
             comparison_results["elasticsearch"] = {
                 "error": str(e),
                 "search_time_ms": 0,
-                "total_matches": 0
+                "total_matches": 0,
+                "results": [],
+                "relevance_scores": []
             }
 
         # 3. Performance Comparison
@@ -155,6 +166,9 @@ class ElasticsearchComparisonService:
 
         # 1. Fuzzy Matching (typo tolerance)
         try:
+            if not self.elasticsearch.is_available():
+                raise Exception("Elasticsearch not available")
+
             fuzzy_matches = await self.elasticsearch.get_fuzzy_matches(
                 skills=required_skills,
                 user_id=user_id
@@ -166,11 +180,18 @@ class ElasticsearchComparisonService:
                 "benefit": "Catches candidates even with typos in CV or job description"
             }
         except Exception as e:
-            logger.error(f"Fuzzy matching demo error: {e}")
-            demo_results["fuzzy_matching"] = {"error": str(e)}
+            logger.warning(f"Fuzzy matching demo skipped: {e}")
+            demo_results["fuzzy_matching"] = {
+                "description": "Handles typos and misspellings automatically",
+                "error": str(e),
+                "results": []
+            }
 
         # 2. Synonym Support
         try:
+            if not self.elasticsearch.is_available():
+                raise Exception("Elasticsearch not available")
+
             synonym_matches = await self.elasticsearch.get_synonym_matches(
                 skills=required_skills,
                 user_id=user_id
@@ -187,11 +208,18 @@ class ElasticsearchComparisonService:
                 "benefit": "Finds candidates using different terminology for same skill"
             }
         except Exception as e:
-            logger.error(f"Synonym matching demo error: {e}")
-            demo_results["synonym_matching"] = {"error": str(e)}
+            logger.warning(f"Synonym matching demo skipped: {e}")
+            demo_results["synonym_matching"] = {
+                "description": "Matches related terms and synonyms",
+                "error": str(e),
+                "results": []
+            }
 
         # 3. Skill Aggregations
         try:
+            if not self.elasticsearch.is_available():
+                raise Exception("Elasticsearch not available")
+
             aggregations = await self.elasticsearch.get_skill_aggregations(user_id=user_id)
             demo_results["aggregations"] = {
                 "description": "Analytics and statistics on skills, experience, education",
@@ -199,8 +227,12 @@ class ElasticsearchComparisonService:
                 "benefit": "Understand skill distribution and market trends"
             }
         except Exception as e:
-            logger.error(f"Aggregations demo error: {e}")
-            demo_results["aggregations"] = {"error": str(e)}
+            logger.warning(f"Aggregations demo skipped: {e}")
+            demo_results["aggregations"] = {
+                "description": "Analytics and statistics on skills, experience, education",
+                "error": str(e),
+                "results": {}
+            }
 
         # 4. Multi-field Weighted Search
         demo_results["weighted_search"] = {
