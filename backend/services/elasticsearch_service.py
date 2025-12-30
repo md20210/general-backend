@@ -21,9 +21,13 @@ class ElasticsearchService:
         self.es_password = os.getenv("ELASTICSEARCH_PASSWORD", "")
         self.es_use_ssl = os.getenv("ELASTICSEARCH_USE_SSL", "false").lower() == "true"
 
+        # Build Elasticsearch URL with proper scheme
+        scheme = "https" if self.es_use_ssl else "http"
+        es_url = f"{scheme}://{self.es_host}:{self.es_port}"
+
         # Initialize Elasticsearch client
         self.client = Elasticsearch(
-            hosts=[f"{self.es_host}:{self.es_port}"],
+            hosts=[es_url],
             basic_auth=(self.es_user, self.es_password) if self.es_password else None,
             verify_certs=self.es_use_ssl,
             ssl_show_warn=False,
