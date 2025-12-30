@@ -46,6 +46,9 @@ class ElasticsearchComparisonService:
 
         # 1. ChromaDB Search
         try:
+            if not self.chromadb.is_available():
+                raise Exception("ChromaDB not available")
+
             start_time = time.time()
             chromadb_results = self.chromadb.query(
                 user_id=UUID(user_id) if isinstance(user_id, str) else user_id,

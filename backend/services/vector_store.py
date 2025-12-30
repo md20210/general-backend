@@ -23,13 +23,23 @@ class VectorStore:
             self.client = None
             return
 
-        # Ensure persist directory exists
-        os.makedirs(settings.CHROMA_PERSIST_DIRECTORY, exist_ok=True)
+        try:
+            # Ensure persist directory exists
+            os.makedirs(settings.CHROMA_PERSIST_DIRECTORY, exist_ok=True)
 
-        # Initialize ChromaDB client
-        self.client = chromadb.PersistentClient(
-            path=settings.CHROMA_PERSIST_DIRECTORY
-        )
+            # Initialize ChromaDB client
+            self.client = chromadb.PersistentClient(
+                path=settings.CHROMA_PERSIST_DIRECTORY
+            )
+            print(f"✅ ChromaDB initialized at {settings.CHROMA_PERSIST_DIRECTORY}")
+        except Exception as e:
+            print(f"⚠️  ChromaDB initialization failed: {e}")
+            print("ChromaDB features will be disabled")
+            self.client = None
+
+    def is_available(self) -> bool:
+        """Check if ChromaDB is available and initialized."""
+        return self.client is not None
 
     def _get_collection_name(self, user_id: UUID, project_id: Optional[UUID] = None) -> str:
         """
