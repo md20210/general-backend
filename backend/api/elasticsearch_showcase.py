@@ -22,9 +22,11 @@ from backend.schemas.elasticsearch_showcase import (
 from backend.services.elasticsearch_service import ElasticsearchService
 from backend.services.elasticsearch_comparison_service import ElasticsearchComparisonService
 from backend.services.llm_gateway import LLMGateway
+from backend.services.logstash_service import LogstashService
 import logging
 import json
 import re
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,7 @@ router = APIRouter(
 es_service = ElasticsearchService()
 comparison_service = ElasticsearchComparisonService()
 llm_gateway = LLMGateway()
+logstash_service = LogstashService(logstash_url=os.getenv("LOGSTASH_URL"))
 
 
 # ============================================================================
@@ -808,3 +811,122 @@ async def fetch_url_proxy(url: str = Query(..., description="URL to fetch")):
             status_code=500,
             detail=f"Failed to fetch URL: {str(e)}"
         )
+
+
+# ============================================================================
+# Logstash Integration Endpoints
+# ============================================================================
+
+@router.post("/logstash/parse-cv")
+async def logstash_parse_cv(
+    cv_text: str,
+    user: User = Depends(current_active_user),
+):
+    """
+    Parse CV using Logstash pipeline (or simulated).
+
+    Extracts:
+    - Skills (programming languages, frameworks, databases, etc.)
+    - Years of experience
+    - Education level
+    - Job titles
+
+    Returns:
+        Parsed CV data
+    """
+    try:
+        result = logstash_service.parse_cv(cv_text, str(user.id))
+        return {
+            "status": "success",
+            "data": result,
+            "logstash_deployed": logstash_service.is_logstash_available
+        }
+    except Exception as e:
+        logger.error(f"Error parsing CV: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/logstash/parse-job")
+async def logstash_parse_job(
+    job_description: str,
+    job_id: str = "generated",
+):
+    """
+    Parse job description using Logstash pipeline (or simulated).
+
+    Extracts:
+    - Company name
+    - Location
+    - Remote policy
+    - Required skills
+    - Years of experience required
+    - Salary range
+
+    Returns:
+        Parsed job data
+    """
+    try:
+        import uuid
+        if job_id == "generated":
+            job_id = str(uuid.uuid4())[:8]
+
+        result = logstash_service.parse_job(job_description, job_id)
+        return {
+            "status": "success",
+            "data": result,
+            "logstash_deployed": logstash_service.is_logstash_available
+        }
+    except Exception as e:
+        logger.error(f"Error parsing job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/logstash/pipeline-status")
+async def get_logstash_pipeline_status():
+    """
+    Get status of all Logstash pipelines.
+
+    Returns:
+        Pipeline status for cv-parsing, job-parsing, enrichment
+    """
+    try:
+        status = logstash_service.get_pipeline_status()
+        return status
+    except Exception as e:
+        logger.error(f"Error getting pipeline status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/elastic-stack/status")
+async def get_elastic_stack_status():
+    """
+    Get status of entire Elastic Stack (Elasticsearch, Logstash, Kibana).
+
+    Returns:
+        Status of all Elastic Stack components
+    """
+    try:
+        status = {
+            "elasticsearch": {
+                "available": es_service.is_available(),
+                "url": os.getenv("ELASTICSEARCH_URL", "elasticsearch.railway.internal:9200"),
+                "status": "active" if es_service.is_available() else "unavailable"
+            },
+            "logstash": {
+                "available": logstash_service.is_logstash_available,
+                "url": os.getenv("LOGSTASH_URL", "not_deployed"),
+                "status": "deployed" if logstash_service.is_logstash_available else "simulated",
+                "pipelines": logstash_service.get_pipeline_status()["pipelines"]
+            },
+            "kibana": {
+                "available": os.getenv("KIBANA_URL") is not None,
+                "url": os.getenv("KIBANA_URL", "not_deployed"),
+                "status": "deployed" if os.getenv("KIBANA_URL") else "pending"
+            },
+            "stack_ready": es_service.is_available()  # At minimum, Elasticsearch must be available
+        }
+
+        return status
+    except Exception as e:
+        logger.error(f"Error getting Elastic Stack status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
