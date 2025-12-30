@@ -213,13 +213,13 @@ Examples of GOOD comparisons:
 
 Return JSON with this structure:
 {{
-  "experience_match": {{"score": 0-100, "candidate": "20+ Jahre", "required": "10+ Jahre", "comparison": "Prägnanter deutscher Satz WARUM"}},
-  "skills_match": {{"score": 0-100, "candidate": "15 matched", "required": "20 total", "comparison": "Prägnanter deutscher Satz WARUM"}},
-  "education_match": {{"score": 0-100, "candidate": "Master", "required": "Bachelor", "comparison": "Prägnanter deutscher Satz WARUM"}},
-  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid", "comparison": "Prägnanter deutscher Satz WARUM"}},
-  "salary_match": {{"score": 0-100, "candidate": "€100k", "required": "€80-120k", "comparison": "Prägnanter deutscher Satz WARUM"}},
-  "culture_match": {{"score": 0-100, "candidate": "Flexible", "required": "Startup", "comparison": "Prägnanter deutscher Satz WARUM"}},
-  "role_type_match": {{"score": 0-100, "candidate": "Program Mgmt", "required": "Tech+Mgmt", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "experience_match": {{"score": 0-100, "candidate_value": "20+ Jahre", "required_value": "10+ Jahre", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "skills_match": {{"score": 0-100, "candidate_value": "15 matched", "required_value": "20 total", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "education_match": {{"score": 0-100, "candidate_value": "Master", "required_value": "Bachelor", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "location_match": {{"score": 0-100, "candidate_value": "Barcelona", "required_value": "Madrid", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "salary_match": {{"score": 0-100, "candidate_value": "€100k", "required_value": "€80-120k", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "culture_match": {{"score": 0-100, "candidate_value": "Flexible", "required_value": "Startup", "comparison": "Prägnanter deutscher Satz WARUM"}},
+  "role_type_match": {{"score": 0-100, "candidate_value": "Program Mgmt", "required_value": "Tech+Mgmt", "comparison": "Prägnanter deutscher Satz WARUM"}},
   "matched_skills": ["Skills - no duplicates"],
   "missing_skills": ["Only truly missing skills"]
 }}
@@ -986,13 +986,13 @@ Examples of GOOD comparisons (short and clear):
 
 Return JSON:
 {{
-  "experience_match": {{"score": 0-100, "candidate": "20+ Jahre", "required": "5+ Jahre", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
-  "skills_match": {{"score": 0-100, "candidate": "7 matched", "required": "10 total", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
-  "education_match": {{"score": 0-100, "candidate": "Master", "required": "Bachelor", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
-  "location_match": {{"score": 0-100, "candidate": "Barcelona", "required": "Madrid", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
-  "salary_match": {{"score": 0-100, "candidate": "€100-120k", "required": "€110-130k", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
-  "culture_match": {{"score": 0-100, "candidate": "Enterprise", "required": "Startup", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
-  "role_type_match": {{"score": 0-100, "candidate": "Technical", "required": "Management", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "experience_match": {{"score": 0-100, "candidate_value": "20+ Jahre", "required_value": "5+ Jahre", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "skills_match": {{"score": 0-100, "candidate_value": "7 matched", "required_value": "10 total", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "education_match": {{"score": 0-100, "candidate_value": "Master", "required_value": "Bachelor", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "location_match": {{"score": 0-100, "candidate_value": "Barcelona", "required_value": "Madrid", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "salary_match": {{"score": 0-100, "candidate_value": "€100-120k", "required_value": "€110-130k", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "culture_match": {{"score": 0-100, "candidate_value": "Enterprise", "required_value": "Startup", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
+  "role_type_match": {{"score": 0-100, "candidate_value": "Technical", "required_value": "Management", "comparison": "Eine prägnante deutsche Erklärung WARUM dieser Score"}},
   "matched_skills": ["Python", "React", "Project Management", "etc"],
   "missing_skills": ["TypeScript", "GraphQL", "etc"]
 }}
