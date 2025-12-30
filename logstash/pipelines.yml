@@ -1,0 +1,14 @@
+# Logstash Pipelines Configuration
+# Multiple pipelines for different data sources
+
+- pipeline.id: cv-parsing
+  path.config: "/usr/share/logstash/pipeline/cv-parsing.conf"
+  pipeline.workers: 2
+
+- pipeline.id: job-parsing
+  path.config: "/usr/share/logstash/pipeline/job-parsing.conf"
+  pipeline.workers: 2
+
+- pipeline.id: enrichment
+  path.config: "/usr/share/logstash/pipeline/enrichment.conf"
+  pipeline.workers: 1
