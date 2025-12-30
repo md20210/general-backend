@@ -308,13 +308,12 @@ async def generate_documents(
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    # Get profile
+    # Get profile (optional - will use CV-only mode if not found)
     statement = select(UserProfile).where(UserProfile.user_id == str(user.id))
     result = await db.execute(statement)
     profile = result.scalars().first()
 
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+    # Note: profile can be None - we'll use CV-only mode in that case
 
     try:
         # Reconstruct objects from database
@@ -329,21 +328,54 @@ async def generate_documents(
         )
 
         # Generate documents
-        cover_letter_text = await service.generate_cover_letter(
-            job_analysis=job_analysis,
-            profile=profile,  # Pass the ORM object directly
-            fit_score=fit_score,
-            provider=provider,
-            model=model,
-        )
+        # Note: This now works with or without a profile
+        if profile:
+            # Profile mode: use rich profile data
+            cover_letter_text = await service.generate_cover_letter(
+                job_analysis=job_analysis,
+                profile=profile,
+                fit_score=fit_score,
+                provider=provider,
+                model=model,
+            )
+            cv_customization = await service.customize_cv(
+                job_analysis=job_analysis,
+                profile=profile,
+                fit_score=fit_score,
+                provider=provider,
+                model=model,
+            )
+        else:
+            # No profile: Generate basic documents from fit score data
+            # Create a summary from fit score breakdown
+            summary_text = f"""
+Based on the job analysis for {job_analysis.role} at {job_analysis.company}:
 
-        cv_customization = await service.customize_cv(
-            job_analysis=job_analysis,
-            profile=profile,  # Pass the ORM object directly
-            fit_score=fit_score,
-            provider=provider,
-            model=model,
-        )
+Fit Score: {fit_score.total}%
+
+Key Strengths:
+{chr(10).join('- ' + skill for skill in fit_score.matched_skills[:10])}
+
+Areas for Development:
+{chr(10).join('- ' + skill for skill in fit_score.missing_skills[:5])}
+            """
+
+            cover_letter_text = await service.generate_cover_letter_from_cv(
+                job_analysis=job_analysis,
+                cv_text=summary_text,
+                fit_score=fit_score,
+                existing_cover_letter=None,
+                provider=provider,
+                model=model,
+            )
+            cv_customization = await service.customize_cv(
+                job_analysis=job_analysis,
+                profile=None,
+                fit_score=fit_score,
+                cv_text=summary_text,
+                provider=provider,
+                model=model,
+            )
 
         # Update application
         application.cover_letter_text = cover_letter_text
