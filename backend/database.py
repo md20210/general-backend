@@ -59,6 +59,43 @@ async def create_db_and_tables():
                 await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 # Create tables
                 await conn.run_sync(Base.metadata.create_all)
+
+                # Add missing LLM analysis columns if they don't exist
+                await conn.execute(text("""
+                    DO $$
+                    BEGIN
+                        -- Add job_analysis column if it doesn't exist
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'elastic_job_analyses'
+                            AND column_name = 'job_analysis'
+                        ) THEN
+                            ALTER TABLE elastic_job_analyses
+                            ADD COLUMN job_analysis JSONB NOT NULL DEFAULT '{}';
+                        END IF;
+
+                        -- Add fit_score column if it doesn't exist
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'elastic_job_analyses'
+                            AND column_name = 'fit_score'
+                        ) THEN
+                            ALTER TABLE elastic_job_analyses
+                            ADD COLUMN fit_score JSONB NOT NULL DEFAULT '{}';
+                        END IF;
+
+                        -- Add success_probability column if it doesn't exist
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'elastic_job_analyses'
+                            AND column_name = 'success_probability'
+                        ) THEN
+                            ALTER TABLE elastic_job_analyses
+                            ADD COLUMN success_probability JSONB NOT NULL DEFAULT '{}';
+                        END IF;
+                    END $$;
+                """))
+
             logger.info("✅ Database tables created/verified and pgvector enabled")
             return  # Erfolg → raus aus der Funktion
 
