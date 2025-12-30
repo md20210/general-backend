@@ -1,0 +1,23 @@
+# Railway Configuration for Kibana Service
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "kibana/Dockerfile"
+
+[deploy]
+startCommand = "kibana"
+healthcheckPath = "/api/status"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[[deploy.environmentVariables]]
+name = "ELASTICSEARCH_HOSTS"
+value = "http://elasticsearch.railway.internal:9200"
+
+[[deploy.environmentVariables]]
+name = "ELASTIC_PASSWORD"
+value = "changeme"
+
+[[deploy.environmentVariables]]
+name = "KIBANA_PUBLIC_URL"
+value = "https://kibana-production.up.railway.app"

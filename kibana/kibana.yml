@@ -1,0 +1,33 @@
+# Kibana Configuration for Railway
+
+# Server settings
+server.host: "0.0.0.0"
+server.port: 5601
+server.name: "elastic-showcase-kibana"
+
+# Elasticsearch connection
+elasticsearch.hosts: ["http://elasticsearch.railway.internal:9200"]
+
+# Security (development mode)
+elasticsearch.username: "elastic"
+elasticsearch.password: "${ELASTIC_PASSWORD}"
+
+# UI Settings
+server.publicBaseUrl: "${KIBANA_PUBLIC_URL}"
+
+# Monitoring
+monitoring.ui.enabled: true
+monitoring.ui.container.elasticsearch.enabled: true
+
+# Logging
+logging.root.level: info
+
+# Disable x-pack features that require license
+xpack.security.enabled: false
+xpack.reporting.enabled: false
+xpack.ml.enabled: false
+xpack.graph.enabled: false
+
+# Enable Enterprise Search
+enterpriseSearch.enabled: true
+enterpriseSearch.host: "http://localhost:3002"
