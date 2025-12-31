@@ -1801,3 +1801,32 @@ async def get_elasticsearch_documents(
     except Exception as e:
         logger.error(f"Error getting Elasticsearch documents: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/run-migration")
+async def run_migration(
+    session: AsyncSession = Depends(get_async_session)
+):
+    """
+    Run the Alembic migration to add interview_success field.
+    This is a temporary endpoint for deploying the new field.
+    """
+    try:
+        # Execute the SQL directly to add the interview_success column
+        await session.execute(text("""
+            ALTER TABLE elastic_job_analyses
+            ADD COLUMN IF NOT EXISTS interview_success JSONB;
+        """))
+        await session.commit()
+
+        logger.info("✅ Migration completed: interview_success field added")
+
+        return {
+            "status": "success",
+            "message": "Migration completed successfully",
+            "migration": "Added interview_success field to elastic_job_analyses"
+        }
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"❌ Migration failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
