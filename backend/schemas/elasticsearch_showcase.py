@@ -239,7 +239,8 @@ class JobAnalysisResponse(BaseModel):
     # LLM Job Analysis (for frontend display)
     job_analysis: Dict[str, Any]
     fit_score: Dict[str, Any]
-    success_probability: Dict[str, Any]
+    success_probability: Optional[Dict[str, Any]] = None  # Deprecated, kept for backward compatibility
+    interview_success: Optional[Dict[str, Any]] = None  # New field replacing success_probability
 
     created_at: datetime
     provider: Optional[str]

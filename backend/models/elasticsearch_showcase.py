@@ -67,7 +67,8 @@ class ElasticJobAnalysis(Base):
     # LLM Job Analysis Results (for frontend display)
     job_analysis: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     fit_score: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
-    success_probability: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    success_probability: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)  # Deprecated
+    interview_success: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # New field
 
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

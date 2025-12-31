@@ -601,7 +601,8 @@ async def analyze_job(
             # LLM Analysis Results
             job_analysis=llm_analysis.get("job_analysis", {}),
             fit_score=llm_analysis.get("fit_score", {}),
-            success_probability=llm_analysis.get("success_probability", {}),
+            success_probability=llm_analysis.get("interview_success", llm_analysis.get("success_probability", {})),  # Use interview_success or fallback to success_probability
+            interview_success=llm_analysis.get("interview_success"),  # New field
             provider=analysis_request.provider
         )
 
