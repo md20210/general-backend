@@ -25,7 +25,7 @@ from backend.services.elasticsearch_comparison_service import ElasticsearchCompa
 from backend.services.llm_gateway import LLMGateway
 from backend.services.logstash_service import LogstashService
 from backend.services.demo_data_generator import DemoDataGenerator
-from backend.services.vector_store import VectorStore
+from backend.services.elasticsearch_vector_service import ElasticsearchVectorService
 import logging
 import json
 import re
@@ -45,7 +45,7 @@ comparison_service = ElasticsearchComparisonService()
 llm_gateway = LLMGateway()
 logstash_service = LogstashService(logstash_url=os.getenv("LOGSTASH_URL"))
 demo_generator = DemoDataGenerator()
-vector_store = VectorStore()
+vector_service = ElasticsearchVectorService()  # pgvector instead of ChromaDB!
 
 
 # ============================================================================
@@ -506,12 +506,12 @@ async def create_or_update_profile(
         # Delete existing vector data to avoid duplicates
         logger.info(f"Deleting existing vector data for user {user.id}")
         try:
-            # Delete from ChromaDB
-            if vector_store.is_available():
-                vector_store.delete_collection(user_id=UUID(str(user.id)), project_id=None)
-                logger.info(f"✅ Deleted existing ChromaDB data for user {user.id}")
+            # Delete from pgvector (ChromaDB replacement)
+            if vector_service.is_available():
+                await vector_service.delete_collection(session=db, user_id=UUID(str(user.id)), project_id=None)
+                logger.info(f"✅ Deleted existing pgvector data for user {user.id}")
         except Exception as e:
-            logger.warning(f"⚠️  Failed to delete ChromaDB data: {e}")
+            logger.warning(f"⚠️  Failed to delete pgvector data: {e}")
 
         try:
             # Delete from Elasticsearch
@@ -571,9 +571,9 @@ async def create_or_update_profile(
             linkedin_url=profile_data.linkedin_url
         )
 
-        # Index in ChromaDB (for fair comparison with Elasticsearch)
+        # Index in pgvector (for fair comparison with Elasticsearch)
         try:
-            if vector_store.is_available():
+            if vector_service.is_available():
                 # Prepare document content with all CV information (deduplicated!)
                 cv_content = f"""
 {full_cv_content_deduplicated}
@@ -584,15 +584,15 @@ Education: {education_level if education_level else 'N/A'}
 Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 """.strip()
 
-                # Add to ChromaDB with metadata (filter out None values - ChromaDB doesn't accept them!)
+                # Add to pgvector with metadata
                 metadata = {
                     "type": "cv",
-                    "skills": ",".join(skills) if skills else "",  # Convert list to string
-                    "job_titles": ",".join(job_titles) if job_titles else "",  # Convert list to string
+                    "skills": ",".join(skills) if skills else "",
+                    "job_titles": ",".join(job_titles) if job_titles else "",
                 }
                 # Only add non-None values
                 if experience_years is not None:
-                    metadata["experience_years"] = str(experience_years)  # Convert to string
+                    metadata["experience_years"] = str(experience_years)
                 if education_level is not None:
                     metadata["education_level"] = education_level
                 if profile_data.homepage_url:
@@ -600,20 +600,22 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 if profile_data.linkedin_url:
                     metadata["linkedin_url"] = profile_data.linkedin_url
 
-                chunks_added = vector_store.add_documents(
+                chunks_added = await vector_service.add_documents(
+                    session=db,
                     user_id=UUID(str(user.id)),
                     documents=[{
                         "id": f"cv_{user.id}",
                         "content": cv_content,
                         "metadata": metadata
                     }],
-                    project_id=None  # Use global collection for elasticsearch showcase
+                    project_id=None,  # Use global collection for elasticsearch showcase
+                    chunk_size=500
                 )
-                logger.info(f"✅ Indexed CV in ChromaDB: {chunks_added} chunks added for user {user.id}")
+                logger.info(f"✅ Indexed CV in pgvector: {chunks_added} chunks added for user {user.id}")
             else:
-                logger.warning("⚠️  ChromaDB not available - skipping ChromaDB indexing")
+                logger.warning("⚠️  pgvector not available - skipping vector indexing")
         except Exception as e:
-            logger.error(f"❌ ChromaDB indexing failed (continuing anyway): {e}")
+            logger.error(f"❌ pgvector indexing failed (continuing anyway): {e}")
             # Don't fail the request if ChromaDB fails - Elasticsearch indexing succeeded
 
         logger.info(f"Profile created/updated for user {user.id}")
@@ -2050,9 +2052,9 @@ async def rag_comparison_demo(
         for query in EXAMPLE_QUERIES:
             logger.info(f"Processing query: {query}")
 
-            # Run ChromaDB and Elasticsearch RAG in parallel
+            # Run pgvector and Elasticsearch RAG in parallel
             chromadb_task = asyncio.create_task(
-                run_chromadb_rag(query, user.id, llm)
+                run_chromadb_rag(query, user.id, llm, db)
             )
             elasticsearch_task = asyncio.create_task(
                 run_elasticsearch_rag(query, user.id, llm, db)
@@ -2112,25 +2114,26 @@ async def rag_comparison_demo(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def run_chromadb_rag(query: str, user_id, llm: str):
-    """Run RAG pipeline with ChromaDB (pure vector similarity)"""
+async def run_chromadb_rag(query: str, user_id, llm: str, db: AsyncSession):
+    """Run RAG pipeline with pgvector (pure vector similarity) - formerly ChromaDB"""
     import time
     start_time = time.time()
 
     try:
-        # Retrieve from ChromaDB (vector similarity only)
-        if not vector_store.is_available():
-            # Return mock data if ChromaDB not available
+        # Retrieve from pgvector (vector similarity only)
+        if not vector_service.is_available():
+            # Return mock data if pgvector not available
             return {
-                "answer": "ChromaDB not available. Please ensure it's running.",
+                "answer": "pgvector not available. Embedding model not loaded.",
                 "chunks": [],
                 "retrieval_time_ms": 0,
                 "avg_score": 0.0
             }
 
-        # Search ChromaDB
+        # Search pgvector
         from uuid import UUID
-        search_results = vector_store.query(
+        search_results = await vector_service.query(
+            session=db,
             user_id=UUID(str(user_id)),
             query_text=query,
             project_id=None,
@@ -2141,7 +2144,7 @@ async def run_chromadb_rag(query: str, user_id, llm: str):
 
         if not search_results:
             return {
-                "answer": "No relevant information found in ChromaDB.",
+                "answer": "No relevant information found in pgvector.",
                 "chunks": [],
                 "retrieval_time_ms": round(retrieval_time, 2),
                 "avg_score": 0.0
