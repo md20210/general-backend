@@ -160,7 +160,7 @@ Return format: ["skill1", "skill2", "skill3", ...]
 async def analyze_job_with_llm(job_description: str, cv_text: str, provider: str = "grok") -> dict:
     """Analyze job description and compare with CV using LLM."""
     prompt = f"""Analyze this job description and compare it with the candidate's CV.
-Provide a detailed analysis in JSON format.
+BE REALISTIC and OBJECTIVE. Do NOT exaggerate qualifications. Base analysis ONLY on factual evidence in the CV.
 
 JOB DESCRIPTION:
 {job_description}
@@ -168,27 +168,34 @@ JOB DESCRIPTION:
 CANDIDATE CV:
 {cv_text}
 
+CRITICAL INSTRUCTIONS:
+1. Extract ONLY information explicitly stated in the documents
+2. For skills: Categorize as Exact/Strong/Partial/Missing match
+3. For experience: Compare requested years vs candidate's actual years
+4. Be honest about overqualification or underqualification
+5. NO marketing language or exaggeration
+
 Return ONLY valid JSON in this exact format:
 {{
   "job_analysis": {{
-    "company": "Company name or Unknown",
-    "role": "Job title",
+    "company": "Company name from job posting",
+    "role": "Exact job title from posting",
     "location": "Location or Remote",
     "remote_policy": "Remote/Hybrid/On-site",
-    "seniority": "Junior/Mid/Senior/Lead",
+    "seniority": "Junior/Mid/Senior/Lead/Principal",
     "salary_range": {{"min": null, "max": null, "currency": "EUR"}},
     "requirements": {{
       "must_have": ["skill1", "skill2"],
       "nice_to_have": ["skill3"],
-      "years_experience": {{"min": 0, "max": null}},
-      "education": "Education requirement",
-      "languages": ["English"],
+      "years_experience": {{"min": 5, "max": 10}},
+      "education": "Bachelor/Master/PhD or not specified",
+      "languages": ["German", "English"],
       "certifications": []
     }},
     "responsibilities": ["responsibility1", "responsibility2"],
     "keywords": ["keyword1", "keyword2"],
-    "red_flags": ["any concerning aspects"],
-    "green_flags": ["positive aspects"]
+    "red_flags": ["Concerns like overqualification, salary mismatch, relocation"],
+    "green_flags": ["Genuine strengths from CV"]
   }},
   "fit_score": {{
     "total": 85,
@@ -201,16 +208,34 @@ Return ONLY valid JSON in this exact format:
       "culture_match": 80,
       "role_type_match": 90
     }},
-    "matched_skills": ["Python", "FastAPI"],
-    "missing_skills": ["Skill candidate doesn't have"]
+    "component_explanations": {{
+      "experience_match": "Requested: 5-7 years in Search AI | Candidate: 25+ years (significantly overqualified)",
+      "skills_match": "Has 6/8 core skills. Missing: Kubernetes, Terraform",
+      "education_match": "Requested: Bachelor | Candidate: Master KIT (exceeds requirement)",
+      "location_match": "Job: Barcelona | Candidate: Barcelona (perfect match)",
+      "salary_match": "Candidate likely expects senior compensation above role budget",
+      "culture_match": "Enterprise background aligns with company needs",
+      "role_type_match": "Architect role matches candidate seniority"
+    }},
+    "exact_match_skills": ["Elasticsearch", "Logstash", "Kibana", "Python", "FastAPI"],
+    "strong_match_skills": ["RAG (Job mentions Search AI)", "Vector DBs (Job mentions Semantic Search)"],
+    "partial_match_skills": ["TOGAF (Job mentions Architecture)", "Scrum (Job mentions Agile)"],
+    "missing_skills": ["Kubernetes", "Terraform"]
   }},
-  "success_probability": {{
-    "probability": 75,
+  "interview_success": {{
+    "probability": 92,
+    "interpretation": "Interview Success Probability - likelihood of getting past screening based on resume match",
     "factors": [
-      {{"factor": "Strong technical skills match", "impact": 15}},
-      {{"factor": "Limited experience with X", "impact": -10}}
+      {{"factor": "Native German speaker (explicit requirement)", "impact": 20}},
+      {{"factor": "Elastic Stack hands-on experience (showcase demo)", "impact": 25}},
+      {{"factor": "25 years enterprise experience (strong but possibly overqualified)", "impact": 15}},
+      {{"factor": "Master degree from KIT (exceeds Bachelor requirement)", "impact": 10}},
+      {{"factor": "May be too senior for role level and salary", "impact": -15}},
+      {{"factor": "Exact location match (Barcelona)", "impact": 10}},
+      {{"factor": "Proven customer success track record", "impact": 15}},
+      {{"factor": "Missing DevOps tools (K8s, Terraform)", "impact": -8}}
     ],
-    "recommendation": "Apply - good fit with areas to highlight"
+    "recommendation": "High interview probability. Address overqualification concern in cover letter. Emphasize passion for customer-facing role."
   }}
 }}
 """
@@ -259,11 +284,23 @@ Return ONLY valid JSON in this exact format:
                         "culture_match": 0,
                         "role_type_match": 0
                     },
-                    "matched_skills": [],
+                    "component_explanations": {
+                        "experience_match": "Unable to analyze",
+                        "skills_match": "Unable to analyze",
+                        "education_match": "Unable to analyze",
+                        "location_match": "Unable to analyze",
+                        "salary_match": "Unable to analyze",
+                        "culture_match": "Unable to analyze",
+                        "role_type_match": "Unable to analyze"
+                    },
+                    "exact_match_skills": [],
+                    "strong_match_skills": [],
+                    "partial_match_skills": [],
                     "missing_skills": []
                 },
-                "success_probability": {
+                "interview_success": {
                     "probability": 0,
+                    "interpretation": "Interview Success Probability",
                     "factors": [],
                     "recommendation": "Unable to analyze - please try again"
                 }
@@ -449,11 +486,23 @@ async def analyze_job(
                         "culture_match": 0,
                         "role_type_match": 0
                     },
-                    "matched_skills": [],
+                    "component_explanations": {
+                        "experience_match": "Unable to analyze",
+                        "skills_match": "Unable to analyze",
+                        "education_match": "Unable to analyze",
+                        "location_match": "Unable to analyze",
+                        "salary_match": "Unable to analyze",
+                        "culture_match": "Unable to analyze",
+                        "role_type_match": "Unable to analyze"
+                    },
+                    "exact_match_skills": [],
+                    "strong_match_skills": [],
+                    "partial_match_skills": [],
                     "missing_skills": []
                 },
-                "success_probability": {
+                "interview_success": {
                     "probability": 0,
+                    "interpretation": "Interview Success Probability",
                     "factors": [],
                     "recommendation": "Unable to analyze - LLM service unavailable"
                 }
@@ -1567,8 +1616,8 @@ async def get_database_stats(
         total_skills_elastic = 0
 
         for profile in profiles:
-            if profile.skills:
-                skills_list = profile.skills if isinstance(profile.skills, list) else json.loads(profile.skills)
+            if profile.skills_extracted:
+                skills_list = profile.skills_extracted if isinstance(profile.skills_extracted, list) else json.loads(profile.skills_extracted)
                 total_skills_chromadb += len(skills_list)
                 total_skills_elastic += len(skills_list)
 
@@ -1629,7 +1678,7 @@ async def get_chromadb_documents(
                 "type": "profile",
                 "id": profile.id,
                 "created_at": profile.created_at.isoformat() if profile.created_at else None,
-                "skills": profile.skills if isinstance(profile.skills, list) else json.loads(profile.skills) if profile.skills else [],
+                "skills": profile.skills_extracted if isinstance(profile.skills_extracted, list) else json.loads(profile.skills_extracted) if profile.skills_extracted else [],
                 "experience_years": profile.experience_years,
                 "education_level": profile.education_level,
             })
@@ -1685,7 +1734,7 @@ async def get_elasticsearch_documents(
                 "type": "profile",
                 "id": profile.id,
                 "created_at": profile.created_at.isoformat() if profile.created_at else None,
-                "skills": profile.skills if isinstance(profile.skills, list) else json.loads(profile.skills) if profile.skills else [],
+                "skills": profile.skills_extracted if isinstance(profile.skills_extracted, list) else json.loads(profile.skills_extracted) if profile.skills_extracted else [],
                 "experience_years": profile.experience_years,
                 "education_level": profile.education_level,
             })
