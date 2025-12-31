@@ -1,6 +1,7 @@
 """Elasticsearch Showcase API Router."""
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 import fastapi
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy import select, text
@@ -24,6 +25,7 @@ from backend.services.elasticsearch_comparison_service import ElasticsearchCompa
 from backend.services.llm_gateway import LLMGateway
 from backend.services.logstash_service import LogstashService
 from backend.services.demo_data_generator import DemoDataGenerator
+from backend.services.vector_store import VectorStore
 import logging
 import json
 import re
@@ -42,6 +44,7 @@ comparison_service = ElasticsearchComparisonService()
 llm_gateway = LLMGateway()
 logstash_service = LogstashService(logstash_url=os.getenv("LOGSTASH_URL"))
 demo_generator = DemoDataGenerator()
+vector_store = VectorStore()
 
 
 # ============================================================================
@@ -386,6 +389,45 @@ async def create_or_update_profile(
             homepage_url=profile_data.homepage_url,
             linkedin_url=profile_data.linkedin_url
         )
+
+        # Index in ChromaDB (for fair comparison with Elasticsearch)
+        try:
+            if vector_store.is_available():
+                # Prepare document content with all CV information
+                cv_content = f"""
+CV Text:
+{profile_data.cv_text}
+
+Skills: {', '.join(skills) if skills else 'N/A'}
+Experience: {experience_years if experience_years else 'N/A'} years
+Education: {education_level if education_level else 'N/A'}
+Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
+                """.strip()
+
+                # Add to ChromaDB with metadata
+                chunks_added = vector_store.add_documents(
+                    user_id=UUID(str(user.id)),
+                    documents=[{
+                        "id": f"cv_{user.id}",
+                        "content": cv_content,
+                        "metadata": {
+                            "type": "cv",
+                            "skills": skills,
+                            "experience_years": experience_years,
+                            "education_level": education_level,
+                            "job_titles": job_titles,
+                            "homepage_url": profile_data.homepage_url,
+                            "linkedin_url": profile_data.linkedin_url
+                        }
+                    }],
+                    project_id=None  # Use global collection for elasticsearch showcase
+                )
+                logger.info(f"✅ Indexed CV in ChromaDB: {chunks_added} chunks added for user {user.id}")
+            else:
+                logger.warning("⚠️  ChromaDB not available - skipping ChromaDB indexing")
+        except Exception as e:
+            logger.error(f"❌ ChromaDB indexing failed (continuing anyway): {e}")
+            # Don't fail the request if ChromaDB fails - Elasticsearch indexing succeeded
 
         logger.info(f"Profile created/updated for user {user.id}")
         return profile
