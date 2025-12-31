@@ -584,21 +584,28 @@ Education: {education_level if education_level else 'N/A'}
 Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 """.strip()
 
-                # Add to ChromaDB with metadata
+                # Add to ChromaDB with metadata (filter out None values - ChromaDB doesn't accept them!)
+                metadata = {
+                    "type": "cv",
+                    "skills": ",".join(skills) if skills else "",  # Convert list to string
+                    "job_titles": ",".join(job_titles) if job_titles else "",  # Convert list to string
+                }
+                # Only add non-None values
+                if experience_years is not None:
+                    metadata["experience_years"] = str(experience_years)  # Convert to string
+                if education_level is not None:
+                    metadata["education_level"] = education_level
+                if profile_data.homepage_url:
+                    metadata["homepage_url"] = profile_data.homepage_url
+                if profile_data.linkedin_url:
+                    metadata["linkedin_url"] = profile_data.linkedin_url
+
                 chunks_added = vector_store.add_documents(
                     user_id=UUID(str(user.id)),
                     documents=[{
                         "id": f"cv_{user.id}",
                         "content": cv_content,
-                        "metadata": {
-                            "type": "cv",
-                            "skills": skills,
-                            "experience_years": experience_years,
-                            "education_level": education_level,
-                            "job_titles": job_titles,
-                            "homepage_url": profile_data.homepage_url,
-                            "linkedin_url": profile_data.linkedin_url
-                        }
+                        "metadata": metadata
                     }],
                     project_id=None  # Use global collection for elasticsearch showcase
                 )

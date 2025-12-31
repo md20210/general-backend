@@ -892,7 +892,7 @@ class ElasticsearchService:
                                     "fields": [
                                         "cv_text^1",
                                         "skills_extracted^3",  # Boost skills 3x
-                                        "experience_years^2",  # Boost experience 2x
+                                        # NOTE: experience_years is a 'long' field - fuzzy matching only works on text/keyword!
                                         "education_level^1.5",
                                         "job_titles^2"
                                     ],
