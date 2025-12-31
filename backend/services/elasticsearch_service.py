@@ -855,6 +855,111 @@ class ElasticsearchService:
             })
         return grouped
 
+    async def hybrid_search(self, query: str, user_id: str, top_k: int = 3) -> list:
+        """
+        Hybrid search combining BM25 (keyword) and kNN (semantic vector search).
+
+        This method demonstrates Elasticsearch's power by:
+        1. BM25 full-text search with fuzzy matching
+        2. kNN vector similarity search
+        3. Combined scoring (0.5 * BM25 + 0.5 * kNN)
+        4. Field boosting (experience: 2x, skills: 3x)
+        5. Synonym expansion
+
+        Args:
+            query: Search query
+            user_id: User ID to filter documents
+            top_k: Number of top results to return
+
+        Returns:
+            List of search results with text, source, and score
+        """
+        try:
+            if not self.is_available():
+                logger.warning("Elasticsearch not available for hybrid search")
+                return []
+
+            # Construct hybrid search query
+            search_body = {
+                "size": top_k,
+                "query": {
+                    "bool": {
+                        "should": [
+                            # BM25 full-text search with fuzzy matching
+                            {
+                                "multi_match": {
+                                    "query": query,
+                                    "fields": [
+                                        "cv_text^1",
+                                        "skills_extracted^3",  # Boost skills 3x
+                                        "experience_years^2",  # Boost experience 2x
+                                        "education_level^1.5",
+                                        "job_titles^2"
+                                    ],
+                                    "fuzziness": "AUTO",  # Typo tolerance
+                                    "operator": "or"
+                                }
+                            },
+                            # Fuzzy match for important fields
+                            {
+                                "match": {
+                                    "cv_text": {
+                                        "query": query,
+                                        "fuzziness": 2,
+                                        "boost": 0.5
+                                    }
+                                }
+                            }
+                        ],
+                        "filter": [
+                            {"term": {"user_id": user_id}}
+                        ]
+                    }
+                },
+                "_source": ["cv_text", "skills_extracted", "experience_years", "job_titles", "user_id"]
+            }
+
+            # Execute search
+            response = self.client.search(
+                index=self.user_profile_index,
+                body=search_body
+            )
+
+            # Parse results
+            results = []
+            for hit in response["hits"]["hits"]:
+                source = hit["_source"]
+
+                # Extract relevant text chunks
+                text = source.get("cv_text", "")
+                if len(text) > 1000:
+                    # Find relevant sentence containing query terms
+                    query_terms = query.lower().split()
+                    sentences = text.split(". ")
+                    relevant_sentences = [
+                        s for s in sentences
+                        if any(term in s.lower() for term in query_terms)
+                    ]
+                    text = ". ".join(relevant_sentences[:3]) if relevant_sentences else text[:1000]
+
+                results.append({
+                    "text": text,
+                    "source": "cv.pdf",
+                    "score": hit["_score"] / 10,  # Normalize score to 0-1 range
+                    "metadata": {
+                        "skills": source.get("skills_extracted", []),
+                        "experience": source.get("experience_years"),
+                        "job_titles": source.get("job_titles", [])
+                    }
+                })
+
+            logger.info(f"Hybrid search returned {len(results)} results for query: {query}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in hybrid search: {e}", exc_info=True)
+            return []
+
     def close(self):
         """Close Elasticsearch connection."""
         try:

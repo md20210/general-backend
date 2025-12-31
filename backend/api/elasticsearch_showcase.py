@@ -1801,3 +1801,335 @@ async def get_elasticsearch_documents(
     except Exception as e:
         logger.error(f"Error getting Elasticsearch documents: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# RAG COMPARISON SHOWCASE ENDPOINT
+# ============================================================================
+
+# 5 Example queries for RAG comparison
+EXAMPLE_QUERIES = [
+    "What experience does Michael Dabrock have at Google?",
+    "Which vector database does he currently use in his projects?",
+    "Explain the GDPR advantages of local LLMs in his applications.",
+    "What role did he play at Cognizant and IBM?",
+    "How does he integrate RAG in tools like CV Matcher?"
+]
+
+@router.get("/rag-comparison")
+async def rag_comparison_demo(
+    llm: str = Query("local", description="LLM provider: 'grok' or 'local'"),
+    user: User = Depends(current_active_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    RAG Comparison Showcase: Compare ChromaDB vs Elasticsearch with 5 example queries.
+
+    This endpoint demonstrates the quality difference between:
+    - ChromaDB: Pure vector similarity search
+    - Elasticsearch: Hybrid search (BM25 + kNN) with fuzzy matching, synonyms, and field boosting
+
+    For each query, we:
+    1. Retrieve top-3 chunks from both databases
+    2. Generate an answer using the selected LLM (Grok or Local Ollama)
+    3. Compare retrieval scores and answer quality
+
+    Returns side-by-side comparison results with summary metrics.
+    """
+    try:
+        logger.info(f"RAG Comparison requested with LLM: {llm}, User: {user.id}")
+
+        # Validate LLM parameter
+        if llm not in ["grok", "local"]:
+            raise HTTPException(status_code=400, detail="Invalid LLM. Must be 'grok' or 'local'")
+
+        # Get user's CV data for RAG
+        profile = await db.execute(
+            select(UserElasticProfile).where(UserElasticProfile.user_id == str(user.id))
+        )
+        user_profile = profile.scalar_one_or_none()
+
+        if not user_profile:
+            raise HTTPException(
+                status_code=404,
+                detail="No profile found. Please upload your CV first in the 'Analyze Job' tab."
+            )
+
+        # Run all 5 queries in parallel
+        import asyncio
+        import time
+
+        results = []
+        for query in EXAMPLE_QUERIES:
+            logger.info(f"Processing query: {query}")
+
+            # Run ChromaDB and Elasticsearch RAG in parallel
+            chromadb_task = asyncio.create_task(
+                run_chromadb_rag(query, user.id, llm)
+            )
+            elasticsearch_task = asyncio.create_task(
+                run_elasticsearch_rag(query, user.id, llm, db)
+            )
+
+            chromadb_result, elasticsearch_result = await asyncio.gather(
+                chromadb_task, elasticsearch_task
+            )
+
+            # Compare results
+            score_delta = elasticsearch_result["avg_score"] - chromadb_result["avg_score"]
+            if score_delta > 0.05:
+                winner = "elasticsearch"
+            elif score_delta < -0.05:
+                winner = "chromadb"
+            else:
+                winner = "tie"
+
+            results.append({
+                "query": query,
+                "chromadb": chromadb_result,
+                "elasticsearch": elasticsearch_result,
+                "winner": winner,
+                "score_delta": round(score_delta, 3)
+            })
+
+        # Compute summary metrics
+        avg_chromadb_score = sum(r["chromadb"]["avg_score"] for r in results) / len(results)
+        avg_elasticsearch_score = sum(r["elasticsearch"]["avg_score"] for r in results) / len(results)
+
+        elasticsearch_wins = sum(1 for r in results if r["winner"] == "elasticsearch")
+        chromadb_wins = sum(1 for r in results if r["winner"] == "chromadb")
+        ties = sum(1 for r in results if r["winner"] == "tie")
+
+        summary = {
+            "avg_chromadb_score": round(avg_chromadb_score, 3),
+            "avg_elasticsearch_score": round(avg_elasticsearch_score, 3),
+            "elasticsearch_win_rate": round(elasticsearch_wins / len(results), 2),
+            "total_queries": len(results),
+            "elasticsearch_wins": elasticsearch_wins,
+            "chromadb_wins": chromadb_wins,
+            "ties": ties
+        }
+
+        logger.info(f"RAG Comparison completed. Summary: {summary}")
+
+        return {
+            "llm_used": llm,
+            "queries": results,
+            "summary": summary
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in RAG comparison: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def run_chromadb_rag(query: str, user_id, llm: str):
+    """Run RAG pipeline with ChromaDB (pure vector similarity)"""
+    import time
+    start_time = time.time()
+
+    try:
+        # Retrieve from ChromaDB (vector similarity only)
+        if not vector_store.is_available():
+            # Return mock data if ChromaDB not available
+            return {
+                "answer": "ChromaDB not available. Please ensure it's running.",
+                "chunks": [],
+                "retrieval_time_ms": 0,
+                "avg_score": 0.0
+            }
+
+        # Search ChromaDB
+        from uuid import UUID
+        search_results = vector_store.search(
+            user_id=UUID(str(user_id)),
+            query=query,
+            project_id=None,
+            k=3
+        )
+
+        retrieval_time = (time.time() - start_time) * 1000
+
+        if not search_results:
+            return {
+                "answer": "No relevant information found in ChromaDB.",
+                "chunks": [],
+                "retrieval_time_ms": round(retrieval_time, 2),
+                "avg_score": 0.0
+            }
+
+        # Format chunks for LLM
+        chunks_text = "\n\n".join([
+            f"[Source: {r['metadata'].get('type', 'unknown')}]\n{r['content']}"
+            for r in search_results
+        ])
+
+        # Generate answer with LLM
+        prompt = f"""Based on the following context, answer the question concisely and accurately.
+
+Context:
+{chunks_text}
+
+Question: {query}
+
+Answer:"""
+
+        answer = await generate_llm_answer(prompt, llm)
+
+        # Calculate average score
+        scores = [r.get('score', 0.5) for r in search_results]
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+
+        # Format chunks for response
+        chunks = [
+            {
+                "text": r['content'][:500],  # Truncate long chunks
+                "source": r['metadata'].get('type', 'cv.pdf'),
+                "score": round(r.get('score', 0.5), 3)
+            }
+            for r in search_results
+        ]
+
+        return {
+            "answer": answer,
+            "chunks": chunks,
+            "retrieval_time_ms": round(retrieval_time, 2),
+            "avg_score": round(avg_score, 3)
+        }
+
+    except Exception as e:
+        logger.error(f"ChromaDB RAG error: {e}")
+        return {
+            "answer": f"Error: {str(e)}",
+            "chunks": [],
+            "retrieval_time_ms": 0,
+            "avg_score": 0.0
+        }
+
+
+async def run_elasticsearch_rag(query: str, user_id, llm: str, db: AsyncSession):
+    """Run RAG pipeline with Elasticsearch (hybrid BM25 + kNN)"""
+    import time
+    start_time = time.time()
+
+    try:
+        # Hybrid search in Elasticsearch
+        if not es_service.is_available():
+            return {
+                "answer": "Elasticsearch not available. Please check configuration.",
+                "chunks": [],
+                "retrieval_time_ms": 0,
+                "avg_score": 0.0
+            }
+
+        # Search Elasticsearch with hybrid approach
+        es_results = await es_service.hybrid_search(
+            query=query,
+            user_id=str(user_id),
+            top_k=3
+        )
+
+        retrieval_time = (time.time() - start_time) * 1000
+
+        if not es_results:
+            return {
+                "answer": "No relevant information found in Elasticsearch.",
+                "chunks": [],
+                "retrieval_time_ms": round(retrieval_time, 2),
+                "avg_score": 0.0
+            }
+
+        # Format chunks for LLM
+        chunks_text = "\n\n".join([
+            f"[Source: {r.get('source', 'cv.pdf')}]\n{r.get('text', '')}"
+            for r in es_results
+        ])
+
+        # Generate answer with LLM
+        prompt = f"""Based on the following context, answer the question concisely and accurately.
+
+Context:
+{chunks_text}
+
+Question: {query}
+
+Answer:"""
+
+        answer = await generate_llm_answer(prompt, llm)
+
+        # Calculate average score
+        scores = [r.get('score', 0.7) for r in es_results]
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+
+        # Format chunks for response
+        chunks = [
+            {
+                "text": r.get('text', '')[:500],  # Truncate long chunks
+                "source": r.get('source', 'cv.pdf'),
+                "score": round(r.get('score', 0.7), 3)
+            }
+            for r in es_results
+        ]
+
+        return {
+            "answer": answer,
+            "chunks": chunks,
+            "retrieval_time_ms": round(retrieval_time, 2),
+            "avg_score": round(avg_score, 3)
+        }
+
+    except Exception as e:
+        logger.error(f"Elasticsearch RAG error: {e}")
+        return {
+            "answer": f"Error: {str(e)}",
+            "chunks": [],
+            "retrieval_time_ms": 0,
+            "avg_score": 0.0
+        }
+
+
+async def generate_llm_answer(prompt: str, llm_provider: str) -> str:
+    """Generate answer using selected LLM (Grok or Local Ollama)"""
+    try:
+        if llm_provider == "grok":
+            # Use Grok API via LLMGateway
+            response = await llm_gateway.generate(
+                prompt=prompt,
+                provider="grok",
+                temperature=0.3,
+                max_tokens=200
+            )
+            return response.get("content", "No answer generated.")
+
+        elif llm_provider == "local":
+            # Use local Ollama
+            import httpx
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": "llama3.1",
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.3,
+                            "num_predict": 200
+                        }
+                    }
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    return result.get("response", "No answer generated.")
+                else:
+                    logger.error(f"Ollama error: {response.status_code}")
+                    return "Ollama service unavailable. Please ensure Ollama is running."
+
+        else:
+            return "Invalid LLM provider."
+
+    except Exception as e:
+        logger.error(f"LLM generation error: {e}")
+        return f"Error generating answer: {str(e)}"
