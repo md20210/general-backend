@@ -451,6 +451,23 @@ async def create_or_update_profile(
             await db.refresh(new_profile)
             profile = new_profile
 
+        # Delete existing vector data to avoid duplicates
+        logger.info(f"Deleting existing vector data for user {user.id}")
+        try:
+            # Delete from ChromaDB
+            if vector_store.is_available():
+                vector_store.delete_collection(user_id=UUID(str(user.id)), project_id=None)
+                logger.info(f"✅ Deleted existing ChromaDB data for user {user.id}")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to delete ChromaDB data: {e}")
+
+        try:
+            # Delete from Elasticsearch
+            await es_service.delete_user_cv_data(user_id=str(user.id))
+            logger.info(f"✅ Deleted existing Elasticsearch data for user {user.id}")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to delete Elasticsearch data: {e}")
+
         # Crawl URLs and extract additional content
         additional_content = ""
 
@@ -2051,7 +2068,7 @@ async def run_chromadb_rag(query: str, user_id, llm: str):
             user_id=UUID(str(user_id)),
             query_text=query,
             project_id=None,
-            top_k=3
+            n_results=3
         )
 
         retrieval_time = (time.time() - start_time) * 1000

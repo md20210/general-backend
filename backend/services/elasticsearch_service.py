@@ -960,6 +960,39 @@ class ElasticsearchService:
             logger.error(f"Error in hybrid search: {e}", exc_info=True)
             return []
 
+    async def delete_user_cv_data(self, user_id: str):
+        """
+        Delete all CV data for a specific user from Elasticsearch.
+
+        Args:
+            user_id: User ID whose data should be deleted
+        """
+        try:
+            if not self.is_available():
+                logger.warning("Elasticsearch not available for deletion")
+                return
+
+            # Delete from CV index
+            delete_query = {
+                "query": {
+                    "term": {
+                        "user_id": user_id
+                    }
+                }
+            }
+
+            response = self.client.delete_by_query(
+                index=self.cv_index,
+                body=delete_query
+            )
+
+            deleted_count = response.get('deleted', 0)
+            logger.info(f"Deleted {deleted_count} CV documents for user {user_id} from Elasticsearch")
+
+        except Exception as e:
+            logger.error(f"Error deleting user CV data from Elasticsearch: {e}", exc_info=True)
+            raise
+
     def close(self):
         """Close Elasticsearch connection."""
         try:
