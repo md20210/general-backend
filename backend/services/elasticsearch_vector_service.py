@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.document import Document
+from backend.models.document import Document, DocumentType
 from backend.services.vector_service import VectorService
 
 
@@ -82,7 +82,7 @@ class ElasticsearchVectorService:
                     id=uuid4(),
                     user_id=user_id,
                     project_id=project_id,
-                    type="cv_showcase",  # Special type for Elasticsearch Showcase
+                    type=DocumentType.CV_SHOWCASE,  # Use enum instead of string
                     filename=f"{doc_id}_chunk_{idx}",
                     content=chunk_text,
                     embedding=embedding,
@@ -143,7 +143,7 @@ class ElasticsearchVectorService:
                 .where(
                     and_(
                         Document.user_id == user_id,
-                        Document.type == "cv_showcase",
+                        Document.type == DocumentType.CV_SHOWCASE,  # Use enum instead of string
                         Document.project_id.is_(None) if project_id is None else Document.project_id == project_id
                     )
                 )
@@ -187,7 +187,7 @@ class ElasticsearchVectorService:
             stmt = delete(Document).where(
                 and_(
                     Document.user_id == user_id,
-                    Document.type == "cv_showcase",
+                    Document.type == DocumentType.CV_SHOWCASE,  # Use enum instead of string
                     Document.project_id.is_(None) if project_id is None else Document.project_id == project_id
                 )
             )
