@@ -1943,11 +1943,11 @@ async def run_chromadb_rag(query: str, user_id, llm: str):
 
         # Search ChromaDB
         from uuid import UUID
-        search_results = vector_store.search(
+        search_results = vector_store.query(
             user_id=UUID(str(user_id)),
-            query=query,
+            query_text=query,
             project_id=None,
-            k=3
+            top_k=3
         )
 
         retrieval_time = (time.time() - start_time) * 1000
