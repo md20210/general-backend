@@ -30,6 +30,7 @@ import logging
 import json
 import re
 import os
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,78 @@ vector_store = VectorStore()
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
+async def crawl_url(url: str, max_length: int = 10000) -> str:
+    """
+    Crawl URL and extract clean text content.
+
+    Args:
+        url: The URL to crawl
+        max_length: Maximum length of extracted text (default: 10000 chars)
+
+    Returns:
+        Cleaned text content from the URL, or empty string if crawling fails
+    """
+    try:
+        async with httpx.AsyncClient(
+            timeout=30.0,
+            follow_redirects=True,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        ) as client:
+            response = await client.get(url)
+
+            if response.status_code != 200:
+                logger.warning(f"URL {url} returned status code {response.status_code}")
+                return ""
+
+            # Try to parse HTML
+            try:
+                from bs4 import BeautifulSoup
+
+                # Parse HTML
+                soup = BeautifulSoup(response.text, 'html.parser')
+
+                # Remove script, style, nav, footer, header elements
+                for element in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "noscript"]):
+                    element.decompose()
+
+                # Get text from main content areas (prioritize main, article, section)
+                main_content = soup.find('main') or soup.find('article') or soup.find('div', class_=re.compile(r'content|main|body'))
+
+                if main_content:
+                    text = main_content.get_text(separator=' ', strip=True)
+                else:
+                    text = soup.get_text(separator=' ', strip=True)
+
+                # Clean whitespace
+                lines = (line.strip() for line in text.splitlines())
+                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                text = ' '.join(chunk for chunk in chunks if chunk)
+
+                # Truncate if too long
+                if len(text) > max_length:
+                    text = text[:max_length] + "..."
+
+                return text
+
+            except ImportError:
+                # BeautifulSoup not available, return raw text (fallback)
+                logger.warning("BeautifulSoup not available, using raw text extraction")
+                text = response.text[:max_length]
+                # Simple cleanup: remove HTML tags
+                text = re.sub(r'<[^>]+>', ' ', text)
+                text = re.sub(r'\s+', ' ', text).strip()
+                return text
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout while crawling {url}")
+        return ""
+    except Exception as e:
+        logger.error(f"Failed to crawl {url}: {e}")
+        return ""
+
 
 def extract_skills_from_cv(cv_text: str) -> List[str]:
     """Extract skills from CV text using simple keyword matching."""
@@ -378,10 +451,42 @@ async def create_or_update_profile(
             await db.refresh(new_profile)
             profile = new_profile
 
+        # Crawl URLs and extract additional content
+        additional_content = ""
+
+        # Crawl Homepage URL
+        if profile_data.homepage_url:
+            try:
+                logger.info(f"Crawling homepage: {profile_data.homepage_url}")
+                homepage_content = await crawl_url(profile_data.homepage_url)
+                if homepage_content:
+                    additional_content += f"\n\n=== Homepage Content ({profile_data.homepage_url}) ===\n{homepage_content}\n"
+                    logger.info(f"✅ Successfully crawled homepage: {len(homepage_content)} chars")
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to crawl homepage: {e}")
+
+        # Crawl LinkedIn URL
+        if profile_data.linkedin_url:
+            try:
+                logger.info(f"Crawling LinkedIn: {profile_data.linkedin_url}")
+                linkedin_content = await crawl_url(profile_data.linkedin_url)
+                if linkedin_content:
+                    additional_content += f"\n\n=== LinkedIn Profile ({profile_data.linkedin_url}) ===\n{linkedin_content}\n"
+                    logger.info(f"✅ Successfully crawled LinkedIn: {len(linkedin_content)} chars")
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to crawl LinkedIn: {e}")
+
+        # Combine all content for indexing
+        full_cv_content = profile_data.cv_text
+        if profile_data.cover_letter_text:
+            full_cv_content += f"\n\n=== Cover Letter ===\n{profile_data.cover_letter_text}"
+        if additional_content:
+            full_cv_content += additional_content
+
         # Index in Elasticsearch
         await es_service.index_cv_data(
             user_id=str(user.id),
-            cv_text=profile_data.cv_text,
+            cv_text=full_cv_content,  # Now includes crawled content
             skills=skills,
             experience_years=experience_years,
             education_level=education_level,
@@ -393,10 +498,9 @@ async def create_or_update_profile(
         # Index in ChromaDB (for fair comparison with Elasticsearch)
         try:
             if vector_store.is_available():
-                # Prepare document content with all CV information
+                # Prepare document content with all CV information (including crawled URLs!)
                 cv_content = f"""
-CV Text:
-{profile_data.cv_text}
+{full_cv_content}
 
 Skills: {', '.join(skills) if skills else 'N/A'}
 Experience: {experience_years if experience_years else 'N/A'} years
