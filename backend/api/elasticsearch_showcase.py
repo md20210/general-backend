@@ -124,6 +124,58 @@ async def crawl_url(url: str, max_length: int = 10000) -> str:
         return ""
 
 
+def deduplicate_text_content(text: str, similarity_threshold: float = 0.75) -> str:
+    """
+    Remove semantically similar/duplicate sentences from text.
+
+    This prevents redundant information from being indexed multiple times
+    when the same fact appears in CV, Homepage, and LinkedIn profile.
+
+    Args:
+        text: Input text that may contain duplicates
+        similarity_threshold: Jaccard similarity threshold (0-1) for considering sentences similar
+
+    Returns:
+        Deduplicated text with unique sentences only
+    """
+    # Split into sentences
+    sentences = re.split(r'[.!?]+', text)
+    sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 10]
+
+    if not sentences:
+        return text
+
+    # Track unique sentences
+    unique_sentences = []
+    seen_words_sets = []
+
+    for sentence in sentences:
+        # Convert to word set (lowercase, alphanumeric only)
+        words = set(re.findall(r'\b\w+\b', sentence.lower()))
+
+        if not words:
+            continue
+
+        # Check similarity with already seen sentences
+        is_duplicate = False
+        for seen_words in seen_words_sets:
+            # Jaccard similarity = intersection / union
+            intersection = len(words & seen_words)
+            union = len(words | seen_words)
+            similarity = intersection / union if union > 0 else 0
+
+            if similarity >= similarity_threshold:
+                is_duplicate = True
+                break
+
+        if not is_duplicate:
+            unique_sentences.append(sentence)
+            seen_words_sets.append(words)
+
+    # Reconstruct text
+    return '. '.join(unique_sentences) + '.'
+
+
 def extract_skills_from_cv(cv_text: str) -> List[str]:
     """Extract skills from CV text using simple keyword matching."""
     # Common skills to look for (case-insensitive)
@@ -500,10 +552,17 @@ async def create_or_update_profile(
         if additional_content:
             full_cv_content += additional_content
 
+        # Deduplicate content to avoid redundant information
+        # (e.g., "Cognizant" appears in CV, Homepage, AND LinkedIn)
+        logger.info(f"Original content length: {len(full_cv_content)} chars")
+        full_cv_content_deduplicated = deduplicate_text_content(full_cv_content, similarity_threshold=0.75)
+        logger.info(f"Deduplicated content length: {len(full_cv_content_deduplicated)} chars")
+        logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
+
         # Index in Elasticsearch
         await es_service.index_cv_data(
             user_id=str(user.id),
-            cv_text=full_cv_content,  # Now includes crawled content
+            cv_text=full_cv_content_deduplicated,  # Deduplicated content (no redundant sentences)
             skills=skills,
             experience_years=experience_years,
             education_level=education_level,
@@ -515,9 +574,9 @@ async def create_or_update_profile(
         # Index in ChromaDB (for fair comparison with Elasticsearch)
         try:
             if vector_store.is_available():
-                # Prepare document content with all CV information (including crawled URLs!)
+                # Prepare document content with all CV information (deduplicated!)
                 cv_content = f"""
-{full_cv_content}
+{full_cv_content_deduplicated}
 
 Skills: {', '.join(skills) if skills else 'N/A'}
 Experience: {experience_years if experience_years else 'N/A'} years
