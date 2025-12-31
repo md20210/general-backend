@@ -257,7 +257,7 @@ def extract_job_titles(cv_text: str) -> List[str]:
     return found_titles[:5]  # Return max 5 titles
 
 
-async def extract_skills_with_llm(cv_text: str, provider: str = "grok") -> List[str]:
+async def extract_skills_with_llm(cv_text: str, provider: str = "ollama") -> List[str]:
     """Extract skills from CV using LLM for better accuracy."""
     prompt = f"""Extract all technical and professional skills from this CV.
 Return ONLY a JSON array of strings, no explanations.
@@ -285,7 +285,7 @@ Return format: ["skill1", "skill2", "skill3", ...]
         return extract_skills_from_cv(cv_text)
 
 
-async def analyze_job_with_llm(job_description: str, cv_text: str, provider: str = "grok") -> dict:
+async def analyze_job_with_llm(job_description: str, cv_text: str, provider: str = "ollama") -> dict:
     """Analyze job description and compare with CV using LLM."""
     prompt = f"""Analyze this job description and compare it with the candidate's CV.
 BE REALISTIC and OBJECTIVE. Do NOT exaggerate qualifications. Base analysis ONLY on factual evidence in the CV.
@@ -445,7 +445,7 @@ Return ONLY valid JSON in this exact format:
 @router.post("/profile", response_model=UserProfileResponse)
 async def create_or_update_profile(
     profile_data: UserProfileRequest,
-    provider: str = Query("grok", description="LLM provider for skill extraction"),
+    provider: str = Query("ollama", description="LLM provider for skill extraction (ollama, grok, anthropic)"),
     db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
 ):
@@ -679,7 +679,7 @@ async def analyze_job(
             llm_analysis = await analyze_job_with_llm(
                 job_description=analysis_request.job_description,
                 cv_text=profile.cv_text,
-                provider=analysis_request.provider or "grok"
+                provider=analysis_request.provider or "ollama"
             )
             logger.info(f"LLM job analysis completed for user {user.id}")
         except Exception as e:

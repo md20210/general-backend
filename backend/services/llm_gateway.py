@@ -124,11 +124,11 @@ class LLMGateway:
         timeout: int,
     ) -> Dict[str, Any]:
         """Generate text using GROK."""
-        if not self.grok_api_key:
-            raise ValueError(f"GROK API key not configured. Key value: '{self.grok_api_key}', length: {len(self.grok_api_key) if self.grok_api_key else 0}")
+        if not self.grok_api_key or self.grok_api_key.strip() == "":
+            raise ValueError("GROK API key not configured. Please set GROK_API_KEY environment variable or use 'ollama' provider for local LLM.")
 
         if not self.grok_client:
-            raise ValueError(f"GROK client failed to initialize. API key length: {len(self.grok_api_key)}")
+            raise ValueError("GROK client failed to initialize. Please check your GROK_API_KEY.")
 
         model = model or "grok-2-latest"
 
@@ -160,8 +160,11 @@ class LLMGateway:
         timeout: int,
     ) -> Dict[str, Any]:
         """Generate text using Anthropic Claude."""
+        if not self.anthropic_api_key or self.anthropic_api_key.strip() == "":
+            raise ValueError("Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable or use 'ollama' provider for local LLM.")
+
         if not self.anthropic_client:
-            raise ValueError("Anthropic API key not configured")
+            raise ValueError("Anthropic client failed to initialize. Please check your ANTHROPIC_API_KEY.")
 
         model = model or "claude-3-5-sonnet-20241022"
 
