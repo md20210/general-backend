@@ -921,7 +921,7 @@ class ElasticsearchService:
 
             # Execute search
             response = self.client.search(
-                index=self.user_profile_index,
+                index=self.cv_index,
                 body=search_body
             )
 
