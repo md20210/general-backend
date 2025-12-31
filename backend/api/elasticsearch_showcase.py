@@ -1531,3 +1531,181 @@ async def clear_demo_data(
         logger.error(f"Error clearing demo data: {e}")
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Database Visualization Endpoints
+# ============================================================================
+
+@router.get("/database/stats")
+async def get_database_stats(
+    user: User = Depends(current_active_user),
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Get database statistics for ChromaDB and Elasticsearch."""
+    try:
+        # Get all profiles for this user
+        profile_stmt = select(UserElasticProfile).where(
+            UserElasticProfile.user_id == str(user.id)
+        )
+        profile_result = await db.execute(profile_stmt)
+        profiles = profile_result.scalars().all()
+
+        # Get all job analyses for this user
+        analysis_stmt = select(ElasticJobAnalysis).where(
+            ElasticJobAnalysis.user_id == str(user.id)
+        )
+        analysis_result = await db.execute(analysis_stmt)
+        analyses = analysis_result.scalars().all()
+
+        # Calculate statistics
+        total_profiles = len(profiles)
+        total_jobs = len(analyses)
+
+        # Calculate average skills per profile
+        total_skills_chromadb = 0
+        total_skills_elastic = 0
+
+        for profile in profiles:
+            if profile.skills:
+                skills_list = profile.skills if isinstance(profile.skills, list) else json.loads(profile.skills)
+                total_skills_chromadb += len(skills_list)
+                total_skills_elastic += len(skills_list)
+
+        avg_skills_chromadb = total_skills_chromadb / total_profiles if total_profiles > 0 else 0
+        avg_skills_elastic = total_skills_elastic / total_profiles if total_profiles > 0 else 0
+
+        # Total documents = profiles + job analyses
+        total_docs_chromadb = total_profiles + total_jobs
+        total_docs_elastic = total_profiles + total_jobs
+
+        return {
+            "chromadb": {
+                "total_documents": total_docs_chromadb,
+                "total_profiles": total_profiles,
+                "total_jobs": total_jobs,
+                "avg_skills_per_profile": round(avg_skills_chromadb, 1)
+            },
+            "elasticsearch": {
+                "total_documents": total_docs_elastic,
+                "total_profiles": total_profiles,
+                "total_jobs": total_jobs,
+                "avg_skills_per_profile": round(avg_skills_elastic, 1)
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting database stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/chromadb/documents")
+async def get_chromadb_documents(
+    user: User = Depends(current_active_user),
+    db: AsyncSession = Depends(get_async_session),
+    limit: int = Query(100, ge=1, le=1000)
+):
+    """Get ChromaDB documents (profiles and job analyses)."""
+    try:
+        # Get profiles
+        profile_stmt = select(UserElasticProfile).where(
+            UserElasticProfile.user_id == str(user.id)
+        ).limit(limit)
+        profile_result = await db.execute(profile_stmt)
+        profiles = profile_result.scalars().all()
+
+        # Get job analyses
+        analysis_stmt = select(ElasticJobAnalysis).where(
+            ElasticJobAnalysis.user_id == str(user.id)
+        ).limit(limit)
+        analysis_result = await db.execute(analysis_stmt)
+        analyses = analysis_result.scalars().all()
+
+        documents = []
+
+        # Add profiles
+        for profile in profiles:
+            documents.append({
+                "type": "profile",
+                "id": profile.id,
+                "created_at": profile.created_at.isoformat() if profile.created_at else None,
+                "skills": profile.skills if isinstance(profile.skills, list) else json.loads(profile.skills) if profile.skills else [],
+                "experience_years": profile.experience_years,
+                "education_level": profile.education_level,
+            })
+
+        # Add job analyses
+        for analysis in analyses:
+            documents.append({
+                "type": "job_analysis",
+                "id": analysis.id,
+                "created_at": analysis.created_at.isoformat() if analysis.created_at else None,
+                "job_title": getattr(analysis, 'job_title', None),
+                "chromadb_search_time_ms": analysis.chromadb_search_time_ms,
+                "elasticsearch_search_time_ms": analysis.elasticsearch_search_time_ms,
+            })
+
+        return {
+            "total": len(documents),
+            "documents": documents
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting ChromaDB documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/elasticsearch/documents")
+async def get_elasticsearch_documents(
+    user: User = Depends(current_active_user),
+    db: AsyncSession = Depends(get_async_session),
+    limit: int = Query(100, ge=1, le=1000)
+):
+    """Get Elasticsearch documents (profiles and job analyses)."""
+    try:
+        # Get profiles
+        profile_stmt = select(UserElasticProfile).where(
+            UserElasticProfile.user_id == str(user.id)
+        ).limit(limit)
+        profile_result = await db.execute(profile_stmt)
+        profiles = profile_result.scalars().all()
+
+        # Get job analyses
+        analysis_stmt = select(ElasticJobAnalysis).where(
+            ElasticJobAnalysis.user_id == str(user.id)
+        ).limit(limit)
+        analysis_result = await db.execute(analysis_stmt)
+        analyses = analysis_result.scalars().all()
+
+        documents = []
+
+        # Add profiles
+        for profile in profiles:
+            documents.append({
+                "type": "profile",
+                "id": profile.id,
+                "created_at": profile.created_at.isoformat() if profile.created_at else None,
+                "skills": profile.skills if isinstance(profile.skills, list) else json.loads(profile.skills) if profile.skills else [],
+                "experience_years": profile.experience_years,
+                "education_level": profile.education_level,
+            })
+
+        # Add job analyses
+        for analysis in analyses:
+            documents.append({
+                "type": "job_analysis",
+                "id": analysis.id,
+                "created_at": analysis.created_at.isoformat() if analysis.created_at else None,
+                "job_title": getattr(analysis, 'job_title', None),
+                "chromadb_search_time_ms": analysis.chromadb_search_time_ms,
+                "elasticsearch_search_time_ms": analysis.elasticsearch_search_time_ms,
+            })
+
+        return {
+            "total": len(documents),
+            "documents": documents
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting Elasticsearch documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
