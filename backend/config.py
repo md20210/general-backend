@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # LLM APIs
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_BASE_URL: str = "http://ollama.railway.internal:11434"  # Railway private network
+    OLLAMA_MODEL: str = "llama3.2:3b"  # CPU-optimized model on Railway
     GROK_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
 

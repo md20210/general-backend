@@ -2284,13 +2284,15 @@ async def generate_llm_answer(prompt: str, llm_provider: str) -> str:
             return response.get("content", "No answer generated.")
 
         elif llm_provider == "local":
-            # Use local Ollama
+            # Use Ollama on Railway (private network)
             import httpx
+            from backend.config import settings
+
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    "http://localhost:11434/api/generate",
+                    f"{settings.OLLAMA_BASE_URL}/api/generate",
                     json={
-                        "model": "llama3.1",
+                        "model": settings.OLLAMA_MODEL,
                         "prompt": prompt,
                         "stream": False,
                         "options": {
