@@ -18,6 +18,7 @@ class DocumentType(str, enum.Enum):
     TXT = "txt"
     URL = "url"
     TEXT = "text"
+    CV_SHOWCASE = "cv_showcase"
 
 
 class Document(Base):
