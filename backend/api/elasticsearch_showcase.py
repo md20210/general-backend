@@ -2748,7 +2748,7 @@ async def get_current_model(
         raise HTTPException(status_code=500, detail=f"Failed to get model: {str(e)}")
 
 
-@router.post("/recreate-indices")
+@router.get("/recreate-indices")
 async def recreate_elasticsearch_indices(
     current_user: User = Depends(current_active_user),
 ):
