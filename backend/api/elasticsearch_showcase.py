@@ -2796,11 +2796,22 @@ async def compare_query(
             for i, chunk in enumerate(pgvector_chunks)
         ])
 
-        pgvector_answer = await llm_gateway.generate_answer(
-            query=question,
-            context=pgvector_context,
-            provider=provider
+        pgvector_prompt = f"""Answer the following question based on the context provided.
+
+Question: {question}
+
+Context:
+{pgvector_context}
+
+Answer:"""
+
+        pgvector_response = llm_gateway.generate(
+            prompt=pgvector_prompt,
+            provider=provider,
+            temperature=0.3,
+            max_tokens=500
         )
+        pgvector_answer = pgvector_response.get('response', '')
 
         # Step 4: Generate answer from Elasticsearch chunks
         logger.info("🤖 Generating Elasticsearch answer...")
@@ -2809,11 +2820,22 @@ async def compare_query(
             for i, chunk in enumerate(es_chunks)
         ])
 
-        es_answer = await llm_gateway.generate_answer(
-            query=question,
-            context=es_context,
-            provider=provider
+        es_prompt = f"""Answer the following question based on the context provided.
+
+Question: {question}
+
+Context:
+{es_context}
+
+Answer:"""
+
+        es_response = llm_gateway.generate(
+            prompt=es_prompt,
+            provider=provider,
+            temperature=0.3,
+            max_tokens=500
         )
+        es_answer = es_response.get('response', '')
 
         # Step 5: LLM evaluation of answers
         logger.info("⚖️  Evaluating answers with LLM...")
@@ -2839,11 +2861,13 @@ Respond in JSON format with:
 
 Only respond with valid JSON, no other text."""
 
-        evaluation_response = await llm_gateway.generate_answer(
-            query=evaluation_prompt,
-            context="",
-            provider=provider
+        evaluation_result = llm_gateway.generate(
+            prompt=evaluation_prompt,
+            provider=provider,
+            temperature=0.1,
+            max_tokens=300
         )
+        evaluation_response = evaluation_result.get('response', '')
 
         # Parse LLM evaluation
         try:
