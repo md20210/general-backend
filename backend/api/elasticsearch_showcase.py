@@ -2748,6 +2748,42 @@ async def get_current_model(
         raise HTTPException(status_code=500, detail=f"Failed to get model: {str(e)}")
 
 
+@router.get("/recreate-indices-public")
+async def recreate_elasticsearch_indices_public():
+    """Public endpoint to delete and recreate Elasticsearch indices with correct analyzer configuration."""
+    try:
+        if not es_service.is_available():
+            return {"error": "Elasticsearch not available"}
+
+        # Delete existing indices
+        deleted = []
+        if es_service.client.indices.exists(index=es_service.cv_index):
+            es_service.client.indices.delete(index=es_service.cv_index)
+            deleted.append(es_service.cv_index)
+            logger.info(f"Deleted index: {es_service.cv_index}")
+
+        if es_service.client.indices.exists(index=es_service.job_index):
+            es_service.client.indices.delete(index=es_service.job_index)
+            deleted.append(es_service.job_index)
+            logger.info(f"Deleted index: {es_service.job_index}")
+
+        # Recreate indices with correct configuration
+        es_service._ensure_indices()
+        logger.info("Recreated indices with skill_analyzer")
+
+        return {
+            "status": "success",
+            "deleted_indices": deleted,
+            "message": "Indices recreated successfully with skill_analyzer. You need to re-import your CV data now."
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to recreate indices: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Recreate failed: {str(e)}")
+
+
 @router.get("/recreate-indices")
 async def recreate_elasticsearch_indices(
     current_user: User = Depends(current_active_user),
