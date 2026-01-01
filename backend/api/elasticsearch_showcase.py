@@ -625,13 +625,18 @@ async def create_or_update_profile(
         except Exception as e:
             logger.warning(f"Profile update failed (likely aborted transaction), rolling back and retrying: {e}")
             await db.rollback()
-            # Retry: Refresh profile and update again
-            await db.refresh(profile)
-            profile.cv_text = full_cv_content_deduplicated
-            db.add(profile)
-            await db.commit()
-            await db.refresh(profile)
-            logger.info(f"✅ Profile cv_text updated after retry: {len(full_cv_content_deduplicated)} chars")
+            # Retry: Load profile fresh from database (can't use refresh after rollback)
+            statement = select(UserElasticProfile).where(UserElasticProfile.user_id == str(user.id))
+            result = await db.execute(statement)
+            profile = result.scalars().first()
+            if profile:
+                profile.cv_text = full_cv_content_deduplicated
+                db.add(profile)
+                await db.commit()
+                await db.refresh(profile)
+                logger.info(f"✅ Profile cv_text updated after retry: {len(full_cv_content_deduplicated)} chars")
+            else:
+                raise Exception("Profile not found after rollback")
 
         # Index in Elasticsearch
         await es_service.index_cv_data(
