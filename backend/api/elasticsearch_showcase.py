@@ -2972,33 +2972,39 @@ Answer:"""
 
         # Step 5: LLM evaluation of answers
         logger.info("⚖️  Evaluating answers with LLM...")
-        evaluation_prompt = f"""You are comparing two answers to the same question. Evaluate which answer is better based on:
+        evaluation_prompt = f"""You are evaluating two database systems answering the same question. Rate each answer independently.
 
-PRIORITY ORDER (most important first):
+EVALUATION CRITERIA (most important first):
 1. **Correctness**: Are the facts accurate? (MOST IMPORTANT)
 2. **Relevance**: Does it directly answer the question?
 3. **Precision**: Is the answer concise and to the point?
 4. **Specificity**: Does it use concrete facts from the source?
 
-IMPORTANT RULES:
+RULES:
 - A shorter, precise answer is BETTER than a longer, rambling one
 - Correctness matters MORE than length
-- Verbose answers should be penalized if they don't add value
 - Both answers can score 100% if both are correct and precise
 
 Question: {question}
 
-Answer A (pgvector): {pgvector_answer}
+**pgvector database answer:**
+{pgvector_answer}
 
-Answer B (Elasticsearch): {es_answer}
+**Elasticsearch database answer:**
+{es_answer}
 
-Respond in JSON format with:
+Respond with JSON containing scores for EACH database:
 {{
-  "winner": "pgvector" or "elasticsearch" or "tie",
-  "reasoning": "brief explanation why",
   "pgvector_score": 0-100,
-  "elasticsearch_score": 0-100
+  "elasticsearch_score": 0-100,
+  "winner": "pgvector" or "elasticsearch" or "tie",
+  "reasoning": "brief explanation"
 }}
+
+IMPORTANT:
+- pgvector_score must be the score for the pgvector answer above
+- elasticsearch_score must be the score for the Elasticsearch answer above
+- Do NOT swap the scores
 
 Only respond with valid JSON, no other text."""
 
