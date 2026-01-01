@@ -2727,3 +2727,195 @@ async def fix_enum_value(
     except Exception as e:
         logger.error(f"Failed to add CV_SHOWCASE enum: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to add enum: {str(e)}")
+
+
+@router.get("/current-model")
+async def get_current_model(
+    current_user: User = Depends(current_active_user),
+):
+    """Get the currently configured LLM model."""
+    try:
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+
+        return {
+            "model": ollama_model,
+            "provider": "local",
+            "type": "ollama",
+            "description": f"Local Ollama model: {ollama_model}"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get current model: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get model: {str(e)}")
+
+
+@router.post("/compare-query")
+async def compare_query(
+    question: str = Query(..., description="Question to ask both vector databases"),
+    provider: str = Query("local", description="LLM provider: 'local' or 'grok'"),
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user),
+):
+    """Compare a single query across pgvector and Elasticsearch with LLM evaluation.
+
+    This endpoint:
+    1. Searches both pgvector and Elasticsearch for relevant chunks
+    2. Generates answers using the selected LLM
+    3. Uses LLM to evaluate which answer is better
+    4. Returns structured comparison with winner highlighted
+    """
+    try:
+        import time
+
+        logger.info(f"🔍 Comparing query across vector DBs: '{question}' (provider={provider})")
+
+        # Step 1: Search pgvector
+        logger.info("📊 Searching pgvector...")
+        pgvector_start = time.time()
+        pgvector_chunks = await vector_service.search(
+            session=db,
+            user_id=current_user.id,
+            query=question,
+            top_k=3
+        )
+        pgvector_time = (time.time() - pgvector_start) * 1000
+
+        # Step 2: Search Elasticsearch
+        logger.info("🔍 Searching Elasticsearch...")
+        es_start = time.time()
+        es_chunks = await es_service.hybrid_search(
+            user_id=str(current_user.id),
+            query=question,
+            top_k=3
+        )
+        es_time = (time.time() - es_start) * 1000
+
+        # Step 3: Generate answer from pgvector chunks
+        logger.info("🤖 Generating pgvector answer...")
+        pgvector_context = "\n\n".join([
+            f"[Chunk {i+1}] {chunk.get('content', chunk.get('text', ''))}"
+            for i, chunk in enumerate(pgvector_chunks)
+        ])
+
+        pgvector_answer = await llm_gateway.generate_answer(
+            query=question,
+            context=pgvector_context,
+            provider=provider
+        )
+
+        # Step 4: Generate answer from Elasticsearch chunks
+        logger.info("🤖 Generating Elasticsearch answer...")
+        es_context = "\n\n".join([
+            f"[Chunk {i+1}] {chunk.get('content', chunk.get('_source', {}).get('content', ''))}"
+            for i, chunk in enumerate(es_chunks)
+        ])
+
+        es_answer = await llm_gateway.generate_answer(
+            query=question,
+            context=es_context,
+            provider=provider
+        )
+
+        # Step 5: LLM evaluation of answers
+        logger.info("⚖️  Evaluating answers with LLM...")
+        evaluation_prompt = f"""You are comparing two answers to the same question. Evaluate which answer is better based on:
+- Accuracy and relevance to the question
+- Completeness of information
+- Clarity and coherence
+- Use of specific facts from the source material
+
+Question: {question}
+
+Answer A (pgvector): {pgvector_answer}
+
+Answer B (Elasticsearch): {es_answer}
+
+Respond in JSON format with:
+{{
+  "winner": "pgvector" or "elasticsearch" or "tie",
+  "reasoning": "brief explanation why",
+  "pgvector_score": 0-100,
+  "elasticsearch_score": 0-100
+}}
+
+Only respond with valid JSON, no other text."""
+
+        evaluation_response = await llm_gateway.generate_answer(
+            query=evaluation_prompt,
+            context="",
+            provider=provider
+        )
+
+        # Parse LLM evaluation
+        try:
+            # Extract JSON from response (LLM might add extra text)
+            import json
+            json_match = re.search(r'\{.*\}', evaluation_response, re.DOTALL)
+            if json_match:
+                evaluation = json.loads(json_match.group())
+            else:
+                # Fallback if JSON parsing fails
+                evaluation = {
+                    "winner": "tie",
+                    "reasoning": "Could not parse evaluation",
+                    "pgvector_score": 50,
+                    "elasticsearch_score": 50
+                }
+        except Exception as parse_err:
+            logger.warning(f"Failed to parse evaluation JSON: {parse_err}")
+            evaluation = {
+                "winner": "tie",
+                "reasoning": "Evaluation parsing failed",
+                "pgvector_score": 50,
+                "elasticsearch_score": 50
+            }
+
+        # Format chunks for response
+        pgvector_chunks_formatted = [
+            {
+                "text": chunk.get('content', chunk.get('text', '')),
+                "source": chunk.get('metadata', {}).get('source', 'pgvector'),
+                "score": chunk.get('score', chunk.get('distance', 0.0))
+            }
+            for chunk in pgvector_chunks[:3]
+        ]
+
+        es_chunks_formatted = [
+            {
+                "text": chunk.get('content', chunk.get('_source', {}).get('content', '')),
+                "source": chunk.get('_source', {}).get('metadata', {}).get('source', 'elasticsearch'),
+                "score": chunk.get('_score', 0.0) / 10.0  # Normalize ES score to 0-1 range
+            }
+            for chunk in es_chunks[:3]
+        ]
+
+        logger.info(f"✅ Comparison complete! Winner: {evaluation['winner']}")
+
+        return {
+            "question": question,
+            "pgvector": {
+                "answer": pgvector_answer,
+                "chunks": pgvector_chunks_formatted,
+                "retrieval_time_ms": pgvector_time,
+                "score": evaluation["pgvector_score"]
+            },
+            "elasticsearch": {
+                "answer": es_answer,
+                "chunks": es_chunks_formatted,
+                "retrieval_time_ms": es_time,
+                "score": evaluation["elasticsearch_score"]
+            },
+            "evaluation": {
+                "winner": evaluation["winner"],
+                "reasoning": evaluation["reasoning"],
+                "pgvector_score": evaluation["pgvector_score"],
+                "elasticsearch_score": evaluation["elasticsearch_score"]
+            },
+            "llm_used": provider,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to compare query: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
