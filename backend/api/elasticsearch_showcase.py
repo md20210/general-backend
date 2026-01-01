@@ -509,14 +509,16 @@ async def create_or_update_profile(
         # Store user_id early to avoid lazy loading after rollback
         user_id = str(user.id)
 
+        logger.info(f"🚀 Starting CV import for user {user_id}")
+        logger.info(f"📋 Step 1/7: Extracting CV information with LLM provider: {provider}")
         # Extract ALL information from CV using LLM (more accurate than regex)
-        logger.info(f"Extracting CV information with LLM provider: {provider}")
         cv_info = await extract_cv_info_with_llm(profile_data.cv_text, provider)
         skills = cv_info.get("skills", [])
         experience_years = cv_info.get("experience_years")
         education_level = cv_info.get("education_level")
         job_titles = cv_info.get("job_titles", [])
 
+        logger.info(f"📋 Step 2/7: Saving profile to database...")
         # Check if profile exists
         statement = select(UserElasticProfile).where(UserElasticProfile.user_id == user_id)
         result = await db.execute(statement)
@@ -556,6 +558,7 @@ async def create_or_update_profile(
             await db.refresh(new_profile)
             profile = new_profile
 
+        logger.info(f"📋 Step 3/7: Deleting old vector data...")
         # Delete existing vector data to avoid duplicates (pgvector only)
         # Note: If this fails, we skip all pgvector operations to avoid session errors
         pgvector_available = False
@@ -578,6 +581,7 @@ async def create_or_update_profile(
         except Exception as e:
             logger.warning(f"⚠️  Failed to delete Elasticsearch data: {e}")
 
+        logger.info(f"📋 Step 4/7: Crawling URLs (Homepage + LinkedIn)...")
         # Crawl URLs and extract additional content
         additional_content = ""
 
@@ -617,6 +621,7 @@ async def create_or_update_profile(
         logger.info(f"Deduplicated content length: {len(full_cv_content_deduplicated)} chars")
         logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
 
+        logger.info(f"📋 Step 5/7: Indexing in Elasticsearch...")
         # Index in Elasticsearch FIRST (before profile update)
         # This way, if profile update fails due to aborted transaction, Elasticsearch is already indexed
         await es_service.index_cv_data(
@@ -631,6 +636,7 @@ async def create_or_update_profile(
         )
         logger.info(f"✅ Indexed CV in Elasticsearch for user {user_id}")
 
+        logger.info(f"📋 Step 6/7: Updating profile with crawled content...")
         # Update profile with full content (including crawled data)
         # Note: If pgvector delete failed, transaction may be in aborted state
         # In that case, skip the profile update (Elasticsearch is already indexed)
@@ -650,11 +656,14 @@ async def create_or_update_profile(
             session_aborted = True
             # No more awaits after rollback - just continue to logging and return
 
+        logger.info(f"📋 Step 7/7: Indexing in pgvector...")
         # Index in pgvector (for fair comparison with Elasticsearch)
         # Only if delete succeeded AND session not aborted (otherwise can't use db session)
+        pgvector_chunks = 0
         if pgvector_available and not session_aborted:
             try:
                 if vector_service.is_available():
+                    logger.info(f"📝 Preparing pgvector indexing for user {user_id}...")
                     # Prepare document content with all CV information (deduplicated!)
                     cv_content = f"""
 {full_cv_content_deduplicated}
@@ -681,7 +690,8 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                     if profile_data.linkedin_url:
                         metadata["linkedin_url"] = profile_data.linkedin_url
 
-                    chunks_added = await vector_service.add_documents(
+                    logger.info(f"📦 Adding documents to pgvector (chunk_size=500)...")
+                    pgvector_chunks = await vector_service.add_documents(
                         session=db,
                         user_id=UUID(user_id),
                         documents=[{
@@ -692,7 +702,7 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                         project_id=None,  # Use global collection for elasticsearch showcase
                         chunk_size=500
                     )
-                    logger.info(f"✅ Indexed CV in pgvector: {chunks_added} chunks added for user {user_id}")
+                    logger.info(f"✅ Indexed CV in pgvector: {pgvector_chunks} chunks added for user {user_id}")
                 else:
                     logger.warning("⚠️  pgvector not available - skipping vector indexing")
             except Exception as e:
@@ -712,9 +722,13 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
         logger.info(f"  - Experience: {experience_years} years" if experience_years else "  - Experience: N/A")
         logger.info(f"  - Education: {education_level}" if education_level else "  - Education: N/A")
         logger.info(f"  - Job titles: {len(job_titles)}")
-        logger.info(f"  - CV content: {len(full_cv_content_deduplicated)} chars")
-        logger.info(f"  - Elasticsearch: Indexed")
-        logger.info(f"  - pgvector: {'Indexed' if (pgvector_available and not session_aborted) else 'Skipped'}")
+        logger.info(f"  - CV content: {len(full_cv_content_deduplicated)} chars (deduplicated)")
+        logger.info(f"  - Elasticsearch: ✅ Indexed successfully")
+        if pgvector_chunks > 0:
+            logger.info(f"  - pgvector: ✅ Indexed {pgvector_chunks} chunks")
+        else:
+            logger.info(f"  - pgvector: ⚠️ Skipped (session error or unavailable)")
+        logger.info(f"🎉 Import process completed successfully!")
         return profile
 
     except Exception as e:
