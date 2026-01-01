@@ -2688,7 +2688,7 @@ async def fix_enum_value(
             from urllib.parse import urlparse
 
             # Parse DATABASE_URL
-            db_url = settings.SQLALCHEMY_DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
+            db_url = settings.DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
             parsed = urlparse(db_url)
 
             # Connect with psycopg2 (autocommit mode)
