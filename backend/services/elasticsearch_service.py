@@ -891,7 +891,7 @@ class ElasticsearchService:
                                     "query": query,
                                     "fields": [
                                         "cv_text^1",
-                                        "skills_extracted^3",  # Boost skills 3x
+                                        "skills^3",  # Boost skills 3x (NOTE: field is 'skills' not 'skills_extracted')
                                         # NOTE: experience_years is a 'long' field - fuzzy matching only works on text/keyword!
                                         "education_level^1.5",
                                         "job_titles^2"
@@ -944,12 +944,13 @@ class ElasticsearchService:
 
                 results.append({
                     "text": text,
+                    "content": text,  # Add 'content' field for consistency with compare-query expectations
                     "source": "cv.pdf",
                     "score": hit["_score"] / 10,  # Normalize score to 0-1 range
                     "metadata": {
-                        "skills": source.get("skills_extracted", []),
+                        "skills": source.get("skills", ""),  # Fixed: field is 'skills' not 'skills_extracted'
                         "experience": source.get("experience_years"),
-                        "job_titles": source.get("job_titles", [])
+                        "job_titles": source.get("job_titles", "")
                     }
                 })
 

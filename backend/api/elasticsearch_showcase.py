@@ -2748,6 +2748,57 @@ async def get_current_model(
         raise HTTPException(status_code=500, detail=f"Failed to get model: {str(e)}")
 
 
+@router.get("/debug-index")
+async def debug_elasticsearch_index(
+    current_user: User = Depends(current_active_user),
+):
+    """Debug endpoint to see what's actually indexed in Elasticsearch."""
+    try:
+        if not es_service.is_available():
+            return {"error": "Elasticsearch not available"}
+
+        # Get index mapping
+        mapping = es_service.client.indices.get_mapping(index=es_service.cv_index)
+
+        # Get a sample document for this user
+        search_result = es_service.client.search(
+            index=es_service.cv_index,
+            body={
+                "query": {
+                    "term": {"user_id": str(current_user.id)}
+                },
+                "size": 1
+            }
+        )
+
+        sample_doc = None
+        if search_result["hits"]["total"]["value"] > 0:
+            sample_doc = search_result["hits"]["hits"][0]["_source"]
+            # Truncate long fields for readability
+            if "cv_text" in sample_doc and len(sample_doc["cv_text"]) > 500:
+                sample_doc["cv_text"] = sample_doc["cv_text"][:500] + "... (truncated)"
+
+        # Get count
+        count_result = es_service.client.count(
+            index=es_service.cv_index,
+            body={"query": {"term": {"user_id": str(current_user.id)}}}
+        )
+
+        return {
+            "index_name": es_service.cv_index,
+            "total_documents": count_result["count"],
+            "mapping": mapping,
+            "sample_document": sample_doc,
+            "field_names": list(sample_doc.keys()) if sample_doc else []
+        }
+
+    except Exception as e:
+        logger.error(f"Debug index failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
+
+
 @router.post("/compare-query")
 async def compare_query(
     question: str = Query(..., description="Question to ask both vector databases"),
