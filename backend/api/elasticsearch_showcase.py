@@ -618,6 +618,7 @@ async def create_or_update_profile(
         # Note: If pgvector delete failed, transaction may be in aborted state
         # In that case, skip the profile update and just continue with Elasticsearch indexing
         # (Profile already has basic CV data from initial creation)
+        session_aborted = False
         try:
             profile.cv_text = full_cv_content_deduplicated
             db.add(profile)
@@ -629,6 +630,7 @@ async def create_or_update_profile(
             logger.warning(f"⚠️ Continuing with Elasticsearch indexing (profile already has basic CV data)")
             # Rollback to clear aborted transaction state
             await db.rollback()
+            session_aborted = True
             # Continue with Elasticsearch indexing - profile already exists with basic data
 
         # Index in Elasticsearch
@@ -644,8 +646,8 @@ async def create_or_update_profile(
         )
 
         # Index in pgvector (for fair comparison with Elasticsearch)
-        # Only if delete succeeded (otherwise session may be in error state)
-        if pgvector_available:
+        # Only if delete succeeded AND session not aborted (otherwise can't use db session)
+        if pgvector_available and not session_aborted:
             try:
                 if vector_service.is_available():
                     # Prepare document content with all CV information (deduplicated!)
@@ -693,7 +695,10 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 # Profile is already committed - just log the error and continue
                 # Don't fail the request if pgvector fails - Elasticsearch indexing succeeded
         else:
-            logger.warning("⚠️  Skipping pgvector add_documents (delete failed or unavailable)")
+            if session_aborted:
+                logger.warning("⚠️  Skipping pgvector add_documents (session aborted after transaction error)")
+            else:
+                logger.warning("⚠️  Skipping pgvector add_documents (delete failed or unavailable)")
 
         logger.info(f"Profile created/updated for user {user.id}")
         return profile
