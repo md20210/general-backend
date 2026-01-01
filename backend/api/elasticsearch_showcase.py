@@ -507,19 +507,20 @@ async def create_or_update_profile(
             await db.refresh(new_profile)
             profile = new_profile
 
-        # Delete existing vector data to avoid duplicates
+        # Delete existing vector data to avoid duplicates (pgvector only)
+        # Note: If this fails, we skip all pgvector operations to avoid session errors
+        pgvector_available = False
         logger.info(f"Deleting existing vector data for user {user.id}")
-        pgvector_delete_failed = False
         try:
             # Delete from pgvector (ChromaDB replacement)
             if vector_service.is_available():
                 await vector_service.delete_collection(session=db, user_id=UUID(str(user.id)), project_id=None)
                 logger.info(f"✅ Deleted existing pgvector data for user {user.id}")
+                pgvector_available = True  # Only set to True if delete succeeded
         except Exception as e:
             logger.warning(f"⚠️  Failed to delete pgvector data: {e}")
-            pgvector_delete_failed = True
-            # Clear session error state without rollback (expire all cached objects)
-            db.expire_all()
+            logger.warning(f"⚠️  Skipping all pgvector operations (session may be in error state)")
+            # Don't manipulate session - it causes greenlet_spawn errors
 
         try:
             # Delete from Elasticsearch
@@ -580,8 +581,8 @@ async def create_or_update_profile(
         )
 
         # Index in pgvector (for fair comparison with Elasticsearch)
-        # Skip if delete failed (session is in error state)
-        if not pgvector_delete_failed:
+        # Only if delete succeeded (otherwise session may be in error state)
+        if pgvector_available:
             try:
                 if vector_service.is_available():
                     # Prepare document content with all CV information (deduplicated!)
@@ -625,11 +626,11 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 else:
                     logger.warning("⚠️  pgvector not available - skipping vector indexing")
             except Exception as e:
-                logger.error(f"❌ pgvector indexing failed (continuing anyway): {e}")
+                logger.error(f"❌ pgvector add_documents failed (continuing anyway): {e}")
                 # Profile is already committed - just log the error and continue
                 # Don't fail the request if pgvector fails - Elasticsearch indexing succeeded
         else:
-            logger.warning("⚠️  Skipping pgvector add_documents because delete failed (session error state)")
+            logger.warning("⚠️  Skipping pgvector add_documents (delete failed or unavailable)")
 
         logger.info(f"Profile created/updated for user {user.id}")
         return profile
