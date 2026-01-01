@@ -916,14 +916,16 @@ class ElasticsearchService:
                         ]
                     }
                 },
-                "_source": ["cv_text", "skills_extracted", "experience_years", "job_titles", "user_id"]
+                "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id"]
             }
 
             # Execute search
+            logger.info(f"🔍 Elasticsearch hybrid_search: user_id={user_id}, query='{query}'")
             response = self.client.search(
                 index=self.cv_index,
                 body=search_body
             )
+            logger.info(f"📊 Elasticsearch returned {response['hits']['total']['value']} hits")
 
             # Parse results
             results = []
