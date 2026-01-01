@@ -2572,6 +2572,70 @@ async def check_enum_status(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/test-pgvector")
+async def test_pgvector_indexing(
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user)
+):
+    """Diagnostic endpoint to test pgvector indexing and return actual error"""
+    try:
+        from backend.services.vector_service import VectorService
+        from uuid import UUID
+
+        vector_service = VectorService()
+
+        if not vector_service.is_available():
+            return {
+                "success": False,
+                "error": "VectorService not available",
+                "message": "❌ pgvector service is not initialized"
+            }
+
+        # Try to add a test document
+        test_content = "This is a test CV content for pgvector diagnostic testing."
+        test_metadata = {"type": "cv", "skills": "Python,FastAPI", "job_titles": "Developer"}
+
+        logger.info("🔍 Testing pgvector add_documents...")
+        try:
+            chunks = await vector_service.add_documents(
+                session=db,
+                user_id=UUID(str(current_user.id)),
+                documents=[{
+                    "id": f"test_cv_{current_user.id}",
+                    "content": test_content,
+                    "metadata": test_metadata
+                }],
+                project_id=None,
+                chunk_size=500
+            )
+
+            return {
+                "success": True,
+                "chunks_added": chunks,
+                "message": f"✅ pgvector test succeeded - {chunks} chunks added"
+            }
+        except Exception as add_error:
+            import traceback
+            return {
+                "success": False,
+                "error": str(add_error),
+                "error_type": type(add_error).__name__,
+                "traceback": traceback.format_exc(),
+                "message": "❌ pgvector add_documents failed"
+            }
+
+    except Exception as e:
+        import traceback
+        logger.error(f"pgvector test failed: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc(),
+            "message": "❌ pgvector test endpoint failed"
+        }
+
+
 @router.post("/fix-enum")
 async def fix_enum_value(
     current_user: User = Depends(current_active_user)
