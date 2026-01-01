@@ -2897,7 +2897,7 @@ async def compare_query(
             "grok": "grok",
             "anthropic": "anthropic"
         }
-        llm_provider = provider_mapping.get(provider.lower(), "ollama")
+        llm_provider = provider_mapping.get(provider.lower(), "grok")
 
         logger.info(f"🔍 Comparing query across vector DBs: '{question}' (provider={provider} -> {llm_provider})")
 
