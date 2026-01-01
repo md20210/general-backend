@@ -3103,7 +3103,7 @@ async def get_elasticsearch_aggregations(current_user: User = Depends(current_ac
         index_name = f"cv_showcase_{user_id}"
 
         # Check if index exists
-        if not es_service.es.indices.exists(index=index_name):
+        if not es_service.client.indices.exists(index=index_name):
             return {
                 "databases": [],
                 "programming_languages": [],
@@ -3151,7 +3151,7 @@ async def get_elasticsearch_aggregations(current_user: User = Depends(current_ac
         }
 
         # Execute aggregation query
-        response = es_service.es.search(index=index_name, **agg_query)
+        response = es_service.client.search(index=index_name, **agg_query)
 
         # Format results
         return {
@@ -3203,7 +3203,7 @@ async def faceted_search(
         index_name = f"cv_showcase_{user_id}"
 
         # Check if index exists
-        if not es_service.es.indices.exists(index=index_name):
+        if not es_service.client.indices.exists(index=index_name):
             return {
                 "results": [],
                 "total": 0,
@@ -3292,7 +3292,7 @@ async def faceted_search(
             }
 
         # Execute search
-        response = es_service.es.search(index=index_name, **search_query)
+        response = es_service.client.search(index=index_name, **search_query)
 
         # Format results
         results = []
@@ -3338,7 +3338,7 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
         index_name = f"cv_showcase_{user_id}"
 
         # Check if index exists
-        if not es_service.es.indices.exists(index=index_name):
+        if not es_service.client.indices.exists(index=index_name):
             return {
                 "total_documents": 0,
                 "index_size_bytes": 0,
@@ -3351,7 +3351,7 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
             }
 
         # Get index stats
-        stats = es_service.es.indices.stats(index=index_name)
+        stats = es_service.client.indices.stats(index=index_name)
         total_docs = stats["indices"][index_name]["total"]["docs"]["count"]
         index_size = stats["indices"][index_name]["total"]["store"]["size_in_bytes"]
 
@@ -3361,7 +3361,7 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
             "size": 1000,  # Adjust if needed
             "_source": ["content", "databases", "programming_languages", "companies", "skills", "certifications"]
         }
-        all_docs = es_service.es.search(index=index_name, **all_docs_query)
+        all_docs = es_service.client.search(index=index_name, **all_docs_query)
 
         # Calculate average chunk size
         total_chars = sum(len(doc["_source"].get("content", "")) for doc in all_docs["hits"]["hits"])
@@ -3377,7 +3377,7 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
         }
 
         # Get top skills aggregation
-        skills_agg = es_service.es.search(
+        skills_agg = es_service.client.search(
             index=index_name,
             size=0,
             aggs={
@@ -3395,7 +3395,7 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
         ]
 
         # Get database distribution
-        db_agg = es_service.es.search(
+        db_agg = es_service.client.search(
             index=index_name,
             size=0,
             aggs={
@@ -3413,7 +3413,7 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
         ]
 
         # Get programming language distribution
-        lang_agg = es_service.es.search(
+        lang_agg = es_service.client.search(
             index=index_name,
             size=0,
             aggs={
@@ -3431,7 +3431,7 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
         ]
 
         # Create timeline (company work periods) - simplified for now
-        company_agg = es_service.es.search(
+        company_agg = es_service.client.search(
             index=index_name,
             size=0,
             aggs={
