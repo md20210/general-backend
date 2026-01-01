@@ -87,6 +87,7 @@ class ElasticsearchService:
                     },
                     "homepage_url": {"type": "keyword"},
                     "linkedin_url": {"type": "keyword"},
+                    "chunk_index": {"type": "integer"},
                     "created_at": {"type": "date"},
                     "updated_at": {"type": "date"}
                 }
@@ -217,7 +218,7 @@ class ElasticsearchService:
         linkedin_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Index CV data into Elasticsearch.
+        Index CV data into Elasticsearch as chunked documents.
 
         Args:
             user_id: Unique user identifier
@@ -232,28 +233,83 @@ class ElasticsearchService:
         Returns:
             Indexing result with document ID
         """
-        doc = {
-            "user_id": user_id,
-            "cv_text": cv_text,
-            "skills": " ".join(skills) if skills else "",
-            "experience_years": experience_years,
-            "education_level": education_level,
-            "job_titles": " ".join(job_titles) if job_titles else "",
-            "homepage_url": homepage_url,
-            "linkedin_url": linkedin_url,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        }
-
         try:
-            # Use user_id as document ID to enable updates
-            result = self.client.index(
-                index=self.cv_index,
-                id=user_id,
-                document=doc
-            )
-            logger.info(f"Indexed CV for user {user_id}: {result['result']}")
-            return {"status": "success", "result": result["result"], "id": user_id}
+            # First, delete any existing chunks for this user
+            delete_query = {"query": {"term": {"user_id": user_id}}}
+            try:
+                self.client.delete_by_query(index=self.cv_index, body=delete_query)
+                logger.info(f"Deleted existing CV chunks for user {user_id}")
+            except Exception as del_err:
+                logger.warning(f"No existing chunks to delete for user {user_id}: {del_err}")
+
+            # Chunk the CV text into smaller pieces (similar to pgvector)
+            chunk_size = 500  # characters per chunk
+            overlap = 100     # overlap between chunks for context continuity
+
+            chunks = []
+            start = 0
+            chunk_index = 0
+
+            while start < len(cv_text):
+                end = start + chunk_size
+                chunk_text = cv_text[start:end]
+
+                # Try to break at sentence boundary if possible
+                if end < len(cv_text):
+                    last_period = chunk_text.rfind('.')
+                    last_newline = chunk_text.rfind('\n')
+                    break_point = max(last_period, last_newline)
+                    if break_point > chunk_size * 0.7:  # Only break if we're at least 70% through
+                        chunk_text = chunk_text[:break_point + 1]
+                        end = start + break_point + 1
+
+                chunks.append({
+                    "text": chunk_text.strip(),
+                    "index": chunk_index
+                })
+
+                # Move start position with overlap
+                start = end - overlap
+                chunk_index += 1
+
+            logger.info(f"Split CV into {len(chunks)} chunks for user {user_id}")
+
+            # Index each chunk as a separate document
+            indexed_count = 0
+            skills_str = " ".join(skills) if skills else ""
+            job_titles_str = " ".join(job_titles) if job_titles else ""
+
+            for chunk in chunks:
+                doc = {
+                    "user_id": user_id,
+                    "cv_text": chunk["text"],
+                    "chunk_index": chunk["index"],
+                    "skills": skills_str,
+                    "experience_years": experience_years,
+                    "education_level": education_level,
+                    "job_titles": job_titles_str,
+                    "homepage_url": homepage_url,
+                    "linkedin_url": linkedin_url,
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+
+                # Use user_id + chunk_index as document ID
+                doc_id = f"{user_id}_chunk_{chunk['index']}"
+                result = self.client.index(
+                    index=self.cv_index,
+                    id=doc_id,
+                    document=doc
+                )
+                indexed_count += 1
+
+            logger.info(f"Successfully indexed {indexed_count} CV chunks for user {user_id}")
+            return {
+                "status": "success",
+                "result": "created",
+                "chunks_indexed": indexed_count,
+                "id": user_id
+            }
         except Exception as e:
             logger.error(f"Error indexing CV for user {user_id}: {e}")
             raise
@@ -964,28 +1020,19 @@ class ElasticsearchService:
             results = []
             for hit in response["hits"]["hits"]:
                 source = hit["_source"]
+                text = source.get("cv_text", "").strip()
 
-                # Extract relevant text chunks
-                text = source.get("cv_text", "")
-                if len(text) > 1000:
-                    # Find relevant sentence containing query terms
-                    query_terms = query.lower().split()
-                    sentences = text.split(". ")
-                    relevant_sentences = [
-                        s for s in sentences
-                        if any(term in s.lower() for term in query_terms)
-                    ]
-                    text = ". ".join(relevant_sentences[:3]) if relevant_sentences else text[:1000]
-
+                # Each document is already a focused chunk, no need for sentence extraction
                 results.append({
                     "text": text,
                     "content": text,  # Add 'content' field for consistency with compare-query expectations
-                    "source": "cv.pdf",
+                    "source": f"cv.pdf (chunk {source.get('chunk_index', 0)})",
                     "score": hit["_score"] / 10,  # Normalize score to 0-1 range
                     "metadata": {
-                        "skills": source.get("skills", ""),  # Fixed: field is 'skills' not 'skills_extracted'
+                        "skills": source.get("skills", ""),
                         "experience": source.get("experience_years"),
-                        "job_titles": source.get("job_titles", "")
+                        "job_titles": source.get("job_titles", ""),
+                        "chunk_index": source.get("chunk_index", 0)
                     }
                 })
 
