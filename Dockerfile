@@ -31,12 +31,11 @@ FROM dependencies as application
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 8000
+# Expose port (Railway sets PORT dynamically)
+EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+# No health check - Railway handles this
+# Health checks with fixed ports don't work with dynamic PORT env var
 
 # Start command (uses patch_and_start.py which handles bcrypt patch + migrations + uvicorn)
 CMD ["python3", "patch_and_start.py"]
