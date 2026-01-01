@@ -2631,32 +2631,31 @@ async def test_pgvector_indexing(
 
 @router.get("/check-enum-values")
 async def check_enum_values(
-    current_user: User = Depends(current_active_user)
+    current_user: User = Depends(current_active_user),
+    db: AsyncSession = Depends(get_async_session)
 ):
     """Query PostgreSQL to see what enum values actually exist"""
     try:
-        from backend.database import engine
+        from sqlalchemy import text
 
-        async with await engine.raw_connection() as raw_conn:
-            driver_conn = raw_conn.driver_connection
-            # Query PostgreSQL system catalog for enum values
-            result = await driver_conn.fetch(
-                """
-                SELECT e.enumlabel
-                FROM pg_enum e
-                JOIN pg_type t ON e.enumtypid = t.oid
-                WHERE t.typname = 'documenttype'
-                ORDER BY e.enumsortorder
-                """
-            )
-            enum_values = [row['enumlabel'] for row in result]
+        # Use AsyncSession - clean async approach without raw_connection()
+        result = await db.execute(text(
+            """
+            SELECT enumlabel
+            FROM pg_enum
+            WHERE enumtypid = 'documenttype'::regtype
+            ORDER BY enumsortorder
+            """
+        ))
+        enum_values = [row[0] for row in result.fetchall()]
 
         return {
             "enum_name": "documenttype",
             "values": enum_values,
             "count": len(enum_values),
-            "has_cv_showcase": 'cv_showcase' in enum_values,
-            "message": f"✅ Found {len(enum_values)} enum values"
+            "has_cv_showcase": "cv_showcase" in enum_values,
+            "has_CV_SHOWCASE": "CV_SHOWCASE" in enum_values,
+            "message": f"✅ Found {len(enum_values)} enum values: {enum_values}"
         }
 
     except Exception as e:
