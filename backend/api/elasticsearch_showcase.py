@@ -615,7 +615,9 @@ async def create_or_update_profile(
         logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
 
         # Update profile with full content (including crawled data)
-        # Note: If pgvector delete failed, transaction may be in aborted state - rollback and retry
+        # Note: If pgvector delete failed, transaction may be in aborted state
+        # In that case, skip the profile update and just continue with Elasticsearch indexing
+        # (Profile already has basic CV data from initial creation)
         try:
             profile.cv_text = full_cv_content_deduplicated
             db.add(profile)
@@ -623,20 +625,11 @@ async def create_or_update_profile(
             await db.refresh(profile)
             logger.info(f"✅ Updated profile cv_text with crawled content: {len(full_cv_content_deduplicated)} chars")
         except Exception as e:
-            logger.warning(f"Profile update failed (likely aborted transaction), rolling back and retrying: {e}")
+            logger.warning(f"⚠️ Profile cv_text update failed (transaction aborted): {e}")
+            logger.warning(f"⚠️ Continuing with Elasticsearch indexing (profile already has basic CV data)")
+            # Rollback to clear aborted transaction state
             await db.rollback()
-            # Retry: Load profile fresh from database (can't use refresh after rollback)
-            statement = select(UserElasticProfile).where(UserElasticProfile.user_id == str(user.id))
-            result = await db.execute(statement)
-            profile = result.scalars().first()
-            if profile:
-                profile.cv_text = full_cv_content_deduplicated
-                db.add(profile)
-                await db.commit()
-                await db.refresh(profile)
-                logger.info(f"✅ Profile cv_text updated after retry: {len(full_cv_content_deduplicated)} chars")
-            else:
-                raise Exception("Profile not found after rollback")
+            # Continue with Elasticsearch indexing - profile already exists with basic data
 
         # Index in Elasticsearch
         await es_service.index_cv_data(
