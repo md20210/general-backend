@@ -568,6 +568,13 @@ async def create_or_update_profile(
         logger.info(f"Deduplicated content length: {len(full_cv_content_deduplicated)} chars")
         logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
 
+        # Update profile with full content (including crawled data)
+        profile.cv_text = full_cv_content_deduplicated
+        db.add(profile)
+        await db.commit()
+        await db.refresh(profile)
+        logger.info(f"✅ Updated profile cv_text with crawled content: {len(full_cv_content_deduplicated)} chars")
+
         # Index in Elasticsearch
         await es_service.index_cv_data(
             user_id=str(user.id),
