@@ -2574,44 +2574,37 @@ async def check_enum_status(
 
 @router.post("/fix-enum")
 async def fix_enum_value(
-    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Emergency fix: Manually add CV_SHOWCASE enum value to database"""
+    """Emergency fix: Manually add CV_SHOWCASE enum value to database
+
+    CRITICAL: ALTER TYPE ADD VALUE cannot run in a transaction block!
+    This endpoint uses AUTOCOMMIT mode to add the enum value.
+    """
     try:
         from sqlalchemy import text
+        from backend.database import async_engine
 
         logger.info("🔧 Manually adding CV_SHOWCASE enum value to database...")
+        logger.info("⚠️  Using AUTOCOMMIT mode (ADD VALUE cannot run in transactions)")
 
-        # Execute raw SQL to add enum value (safe to run multiple times)
-        await db.execute(text(
-            "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'"
-        ))
-        await db.commit()
-
-        logger.info("✅ CV_SHOWCASE enum value added successfully")
-
-        # Verify it worked
-        from backend.models.document import Document, DocumentType
-        try:
-            result = await db.execute(
-                select(Document).where(Document.type == DocumentType.CV_SHOWCASE).limit(1)
+        # Use raw connection with AUTOCOMMIT isolation level
+        # This is required because ALTER TYPE ADD VALUE cannot run in a transaction
+        async with async_engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+                text("ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'")
             )
-            result.scalars().all()
 
-            return {
-                "success": True,
-                "message": "✅ CV_SHOWCASE enum value added successfully",
-                "enum_value": "cv_showcase"
-            }
-        except Exception as verify_error:
-            return {
-                "success": False,
-                "message": f"⚠️ Enum addition executed but verification failed: {str(verify_error)}",
-                "note": "The enum might have been added but needs a database connection refresh"
-            }
+        logger.info("✅ CV_SHOWCASE enum value added successfully in AUTOCOMMIT mode")
+
+        return {
+            "success": True,
+            "message": "✅ CV_SHOWCASE enum value added successfully",
+            "enum_value": "cv_showcase",
+            "mode": "AUTOCOMMIT (required for ALTER TYPE ADD VALUE)",
+            "note": "The enum was added outside a transaction. Restart the application for all connections to see it."
+        }
 
     except Exception as e:
         logger.error(f"Failed to add CV_SHOWCASE enum: {e}")
-        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to add enum: {str(e)}")
