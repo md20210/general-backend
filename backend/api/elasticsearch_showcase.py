@@ -615,11 +615,23 @@ async def create_or_update_profile(
         logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
 
         # Update profile with full content (including crawled data)
-        profile.cv_text = full_cv_content_deduplicated
-        db.add(profile)
-        await db.commit()
-        await db.refresh(profile)
-        logger.info(f"✅ Updated profile cv_text with crawled content: {len(full_cv_content_deduplicated)} chars")
+        # Note: If pgvector delete failed, transaction may be in aborted state - rollback and retry
+        try:
+            profile.cv_text = full_cv_content_deduplicated
+            db.add(profile)
+            await db.commit()
+            await db.refresh(profile)
+            logger.info(f"✅ Updated profile cv_text with crawled content: {len(full_cv_content_deduplicated)} chars")
+        except Exception as e:
+            logger.warning(f"Profile update failed (likely aborted transaction), rolling back and retrying: {e}")
+            await db.rollback()
+            # Retry: Refresh profile and update again
+            await db.refresh(profile)
+            profile.cv_text = full_cv_content_deduplicated
+            db.add(profile)
+            await db.commit()
+            await db.refresh(profile)
+            logger.info(f"✅ Profile cv_text updated after retry: {len(full_cv_content_deduplicated)} chars")
 
         # Index in Elasticsearch
         await es_service.index_cv_data(
