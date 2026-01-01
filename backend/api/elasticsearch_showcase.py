@@ -3084,3 +3084,148 @@ Only respond with valid JSON, no other text."""
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
+
+
+@router.post("/demo-questions")
+async def get_demo_questions(
+    provider: str = Query(default="grok", description="LLM provider: 'local' or 'grok'"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generate demo questions and answers automatically after CV import.
+    This gives recruiters an immediate showcase of the system's capabilities.
+    """
+    from backend.services.elasticsearch_service import ElasticsearchService
+    from backend.services.llm_gateway import LLMGateway
+    from datetime import datetime
+
+    demo_questions = [
+        "How long was Michael employed at Cognizant",
+        "What improvements Michael Did at Cognizant?",
+        "List all programming languages Michael knows",
+        "What databases has Michael worked with?",
+        "What is the Leadership Experience of Michael?",
+        "What is the AI experience of Michael?"
+    ]
+
+    try:
+        user_id = current_user["id"]
+        es_service = ElasticsearchService()
+        llm_gateway = LLMGateway()
+
+        logger.info(f"🎯 Generating demo questions for user_id={user_id} with provider={provider}")
+
+        results = []
+
+        for question in demo_questions:
+            logger.info(f"📝 Processing demo question: {question}")
+
+            # Query both databases
+            import time
+
+            # pgvector query
+            pgvector_start = time.time()
+            pgvector_chunks = es_service.query_pgvector(user_id=user_id, query=question, top_k=3)
+            pgvector_time = (time.time() - pgvector_start) * 1000
+
+            # Elasticsearch query
+            es_start = time.time()
+            es_chunks = es_service.hybrid_search(user_id=user_id, query=question, top_k=3)
+            es_time = (time.time() - es_start) * 1000
+
+            # Generate answers
+            if pgvector_chunks:
+                pgvector_context = "\n\n".join([chunk.get('text', chunk.get('cv_text', '')) for chunk in pgvector_chunks])
+                pgvector_answer = llm_gateway.generate_answer(question, pgvector_context, provider=provider)
+            else:
+                pgvector_answer = "No relevant information found."
+
+            if es_chunks:
+                es_context = "\n\n".join([chunk.get('_source', {}).get('cv_text', '') for chunk in es_chunks])
+                es_answer = llm_gateway.generate_answer(question, es_context, provider=provider)
+            else:
+                es_answer = "No relevant information found."
+
+            # Evaluate answers
+            evaluation_prompt = f"""You are comparing two answers to the same question. Evaluate which answer is better based on:
+
+PRIORITY ORDER (most important first):
+1. **Correctness**: Are the facts accurate? (MOST IMPORTANT)
+2. **Relevance**: Does it directly answer the question?
+3. **Precision**: Is the answer concise and to the point?
+4. **Specificity**: Does it use concrete facts from the source?
+
+IMPORTANT RULES:
+- A shorter, precise answer is BETTER than a longer, rambling one
+- Correctness matters MORE than length
+- Verbose answers should be penalized if they don't add value
+- Both answers can score 100% if both are correct and precise
+
+Question: {question}
+
+Answer A (pgvector): {pgvector_answer}
+
+Answer B (Elasticsearch): {es_answer}
+
+Respond in JSON format with:
+{{
+  "winner": "pgvector" or "elasticsearch" or "tie",
+  "reasoning": "brief explanation why",
+  "pgvector_score": 0-100,
+  "elasticsearch_score": 0-100
+}}
+
+Only respond with valid JSON, no other text."""
+
+            evaluation_response = llm_gateway.chat(evaluation_prompt, provider=provider)
+
+            # Parse evaluation
+            import json
+            import re
+            json_match = re.search(r'\{[^}]*"winner"[^}]*\}', evaluation_response, re.DOTALL)
+            if json_match:
+                evaluation = json.loads(json_match.group(0))
+            else:
+                evaluation = {
+                    "winner": "tie",
+                    "reasoning": "Could not evaluate",
+                    "pgvector_score": 50,
+                    "elasticsearch_score": 50
+                }
+
+            # Format result
+            result = {
+                "question": question,
+                "pgvector": {
+                    "answer": pgvector_answer,
+                    "chunks": [],
+                    "retrieval_time_ms": pgvector_time,
+                    "score": evaluation["pgvector_score"]
+                },
+                "elasticsearch": {
+                    "answer": es_answer,
+                    "chunks": [],
+                    "retrieval_time_ms": es_time,
+                    "score": evaluation["elasticsearch_score"]
+                },
+                "evaluation": {
+                    "winner": evaluation["winner"],
+                    "reasoning": evaluation["reasoning"],
+                    "pgvector_score": evaluation["pgvector_score"],
+                    "elasticsearch_score": evaluation["elasticsearch_score"]
+                },
+                "llm_used": provider,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+            results.append(result)
+            logger.info(f"✅ Demo question completed: {question} - Winner: {evaluation['winner']}")
+
+        logger.info(f"🎉 All {len(results)} demo questions completed!")
+        return {"results": results}
+
+    except Exception as e:
+        logger.error(f"Failed to generate demo questions: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Demo questions failed: {str(e)}")
