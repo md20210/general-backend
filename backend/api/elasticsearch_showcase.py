@@ -2629,6 +2629,41 @@ async def test_pgvector_indexing(
         }
 
 
+@router.get("/check-enum-values")
+async def check_enum_values(
+    current_user: User = Depends(current_active_user)
+):
+    """Query PostgreSQL to see what enum values actually exist"""
+    try:
+        from backend.database import engine
+
+        async with engine.raw_connection() as raw_conn:
+            driver_conn = raw_conn.driver_connection
+            # Query PostgreSQL system catalog for enum values
+            result = await driver_conn.fetch(
+                """
+                SELECT e.enumlabel
+                FROM pg_enum e
+                JOIN pg_type t ON e.enumtypid = t.oid
+                WHERE t.typname = 'documenttype'
+                ORDER BY e.enumsortorder
+                """
+            )
+            enum_values = [row['enumlabel'] for row in result]
+
+        return {
+            "enum_name": "documenttype",
+            "values": enum_values,
+            "count": len(enum_values),
+            "has_cv_showcase": 'cv_showcase' in enum_values,
+            "message": f"✅ Found {len(enum_values)} enum values"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to query enum values: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to query enum: {str(e)}")
+
+
 @router.post("/fix-enum")
 async def fix_enum_value(
     current_user: User = Depends(current_active_user)
