@@ -506,6 +506,9 @@ async def create_or_update_profile(
     3. Indexes data in Elasticsearch for fast searching
     """
     try:
+        # Store user_id early to avoid lazy loading after rollback
+        user_id = str(user.id)
+
         # Extract ALL information from CV using LLM (more accurate than regex)
         logger.info(f"Extracting CV information with LLM provider: {provider}")
         cv_info = await extract_cv_info_with_llm(profile_data.cv_text, provider)
@@ -515,7 +518,7 @@ async def create_or_update_profile(
         job_titles = cv_info.get("job_titles", [])
 
         # Check if profile exists
-        statement = select(UserElasticProfile).where(UserElasticProfile.user_id == str(user.id))
+        statement = select(UserElasticProfile).where(UserElasticProfile.user_id == user_id)
         result = await db.execute(statement)
         existing_profile = result.scalars().first()
 
@@ -538,7 +541,7 @@ async def create_or_update_profile(
         else:
             # Create new profile
             new_profile = UserElasticProfile(
-                user_id=str(user.id),
+                user_id=user_id,
                 cv_text=profile_data.cv_text,
                 cover_letter_text=profile_data.cover_letter_text,
                 homepage_url=profile_data.homepage_url,
@@ -556,12 +559,12 @@ async def create_or_update_profile(
         # Delete existing vector data to avoid duplicates (pgvector only)
         # Note: If this fails, we skip all pgvector operations to avoid session errors
         pgvector_available = False
-        logger.info(f"Deleting existing vector data for user {user.id}")
+        logger.info(f"Deleting existing vector data for user {user_id}")
         try:
             # Delete from pgvector (ChromaDB replacement)
             if vector_service.is_available():
-                await vector_service.delete_collection(session=db, user_id=UUID(str(user.id)), project_id=None)
-                logger.info(f"✅ Deleted existing pgvector data for user {user.id}")
+                await vector_service.delete_collection(session=db, user_id=UUID(user_id), project_id=None)
+                logger.info(f"✅ Deleted existing pgvector data for user {user_id}")
                 pgvector_available = True  # Only set to True if delete succeeded
         except Exception as e:
             logger.warning(f"⚠️  Failed to delete pgvector data: {e}")
@@ -570,8 +573,8 @@ async def create_or_update_profile(
 
         try:
             # Delete from Elasticsearch
-            await es_service.delete_user_cv_data(user_id=str(user.id))
-            logger.info(f"✅ Deleted existing Elasticsearch data for user {user.id}")
+            await es_service.delete_user_cv_data(user_id=user_id)
+            logger.info(f"✅ Deleted existing Elasticsearch data for user {user_id}")
         except Exception as e:
             logger.warning(f"⚠️  Failed to delete Elasticsearch data: {e}")
 
@@ -617,7 +620,7 @@ async def create_or_update_profile(
         # Index in Elasticsearch FIRST (before profile update)
         # This way, if profile update fails due to aborted transaction, Elasticsearch is already indexed
         await es_service.index_cv_data(
-            user_id=str(user.id),
+            user_id=user_id,
             cv_text=full_cv_content_deduplicated,  # Deduplicated content (no redundant sentences)
             skills=skills,
             experience_years=experience_years,
@@ -626,7 +629,7 @@ async def create_or_update_profile(
             homepage_url=profile_data.homepage_url,
             linkedin_url=profile_data.linkedin_url
         )
-        logger.info(f"✅ Indexed CV in Elasticsearch for user {user.id}")
+        logger.info(f"✅ Indexed CV in Elasticsearch for user {user_id}")
 
         # Update profile with full content (including crawled data)
         # Note: If pgvector delete failed, transaction may be in aborted state
@@ -680,16 +683,16 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
 
                     chunks_added = await vector_service.add_documents(
                         session=db,
-                        user_id=UUID(str(user.id)),
+                        user_id=UUID(user_id),
                         documents=[{
-                            "id": f"cv_{user.id}",
+                            "id": f"cv_{user_id}",
                             "content": cv_content,
                             "metadata": metadata
                         }],
                         project_id=None,  # Use global collection for elasticsearch showcase
                         chunk_size=500
                     )
-                    logger.info(f"✅ Indexed CV in pgvector: {chunks_added} chunks added for user {user.id}")
+                    logger.info(f"✅ Indexed CV in pgvector: {chunks_added} chunks added for user {user_id}")
                 else:
                     logger.warning("⚠️  pgvector not available - skipping vector indexing")
             except Exception as e:
@@ -703,7 +706,7 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 logger.warning("⚠️  Skipping pgvector add_documents (delete failed or unavailable)")
 
         # Log success summary with important metrics
-        logger.info(f"✅ Profile import completed for user {user.id}")
+        logger.info(f"✅ Profile import completed for user {user_id}")
         logger.info(f"📊 Import Summary:")
         logger.info(f"  - Skills extracted: {len(skills)}")
         logger.info(f"  - Experience: {experience_years} years" if experience_years else "  - Experience: N/A")
