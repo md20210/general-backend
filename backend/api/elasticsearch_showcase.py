@@ -2590,8 +2590,8 @@ async def fix_enum_value(
 
         # Use raw connection with AUTOCOMMIT isolation level
         # This is required because ALTER TYPE ADD VALUE cannot run in a transaction
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+        async with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
+            await conn.execute(
                 text("ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'")
             )
 
