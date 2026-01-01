@@ -2766,7 +2766,15 @@ async def compare_query(
     try:
         import time
 
-        logger.info(f"🔍 Comparing query across vector DBs: '{question}' (provider={provider})")
+        # Map frontend provider names to backend provider names
+        provider_mapping = {
+            "local": "ollama",
+            "grok": "grok",
+            "anthropic": "anthropic"
+        }
+        llm_provider = provider_mapping.get(provider.lower(), "ollama")
+
+        logger.info(f"🔍 Comparing query across vector DBs: '{question}' (provider={provider} -> {llm_provider})")
 
         # Step 1: Search pgvector
         logger.info("📊 Searching pgvector...")
@@ -2807,7 +2815,7 @@ Answer:"""
 
         pgvector_response = llm_gateway.generate(
             prompt=pgvector_prompt,
-            provider=provider,
+            provider=llm_provider,
             temperature=0.3,
             max_tokens=500
         )
@@ -2831,7 +2839,7 @@ Answer:"""
 
         es_response = llm_gateway.generate(
             prompt=es_prompt,
-            provider=provider,
+            provider=llm_provider,
             temperature=0.3,
             max_tokens=500
         )
@@ -2863,7 +2871,7 @@ Only respond with valid JSON, no other text."""
 
         evaluation_result = llm_gateway.generate(
             prompt=evaluation_prompt,
-            provider=provider,
+            provider=llm_provider,
             temperature=0.1,
             max_tokens=300
         )
