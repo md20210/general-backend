@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'elasticsearch_001'
-down_revision = '20251229_005333_add_documents_field'
+down_revision = 'add_docs_field_001'  # Updated to use shortened revision ID
 branch_labels = None
 depends_on = None
 

@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
-revision = '20251229_005333_add_documents_field'
+revision = 'add_docs_field_001'  # Shortened to fit VARCHAR(32)
 down_revision = 'job_assistant_001'
 branch_labels = None
 depends_on = None
