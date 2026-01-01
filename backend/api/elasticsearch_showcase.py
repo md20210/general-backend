@@ -729,7 +729,18 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
         else:
             logger.info(f"  - pgvector: ⚠️ Skipped (session error or unavailable)")
         logger.info(f"🎉 Import process completed successfully!")
-        return profile
+
+        # Re-query the profile to ensure it's attached to a valid session
+        # This prevents greenlet_spawn errors when FastAPI serializes the response
+        fresh_statement = select(UserElasticProfile).where(UserElasticProfile.user_id == user_id)
+        fresh_result = await db.execute(fresh_statement)
+        fresh_profile = fresh_result.scalars().first()
+
+        if not fresh_profile:
+            logger.error(f"❌ Failed to retrieve profile after import for user {user_id}")
+            raise HTTPException(status_code=500, detail="Profile import succeeded but failed to retrieve result")
+
+        return fresh_profile
 
     except Exception as e:
         logger.error(f"❌ Error creating/updating profile for user: {e}")
@@ -2496,8 +2507,8 @@ async def get_database_stats(
         # Get Elasticsearch count
         if es_service.is_available():
             try:
-                # Count documents in CV index
-                result = await es_service.client.count(index=es_service.cv_index)
+                # Count documents in CV index (synchronous call)
+                result = es_service.client.count(index=es_service.cv_index)
                 stats["elasticsearch"]["count"] = result.get("count", 0)
             except Exception as e:
                 logger.error(f"Failed to get Elasticsearch count: {e}")
