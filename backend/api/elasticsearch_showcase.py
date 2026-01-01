@@ -2579,12 +2579,12 @@ async def test_pgvector_indexing(
 ):
     """Diagnostic endpoint to test pgvector indexing and return actual error"""
     try:
-        from backend.services.vector_service import VectorService
+        from backend.services.elasticsearch_vector_service import ElasticsearchVectorService
         from uuid import UUID
 
-        vector_service = VectorService()
+        test_vector_service = ElasticsearchVectorService()
 
-        if not vector_service.is_available():
+        if not test_vector_service.is_available():
             return {
                 "success": False,
                 "error": "VectorService not available",
@@ -2597,7 +2597,7 @@ async def test_pgvector_indexing(
 
         logger.info("🔍 Testing pgvector add_documents...")
         try:
-            chunks = await vector_service.add_documents(
+            chunks = await test_vector_service.add_documents(
                 session=db,
                 user_id=UUID(str(current_user.id)),
                 documents=[{
