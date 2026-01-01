@@ -155,7 +155,40 @@ class ElasticsearchService:
             },
             "settings": {
                 "number_of_shards": 1,
-                "number_of_replicas": 0
+                "number_of_replicas": 0,
+                "analysis": {
+                    "analyzer": {
+                        "skill_analyzer": {
+                            "type": "custom",
+                            "tokenizer": "standard",
+                            "filter": ["lowercase", "synonym_filter"]
+                        }
+                    },
+                    "filter": {
+                        "synonym_filter": {
+                            "type": "synonym",
+                            "synonyms": [
+                                "python, py",
+                                "javascript, js, ecmascript",
+                                "typescript, ts",
+                                "react, reactjs",
+                                "vue, vuejs",
+                                "angular, angularjs",
+                                "node, nodejs, node.js",
+                                "docker, containerization",
+                                "kubernetes, k8s",
+                                "aws, amazon web services",
+                                "gcp, google cloud platform",
+                                "azure, microsoft azure",
+                                "sql, structured query language",
+                                "nosql, mongodb, cassandra",
+                                "ci/cd, continuous integration, continuous deployment",
+                                "ml, machine learning, ai, artificial intelligence",
+                                "devops, dev ops"
+                            ]
+                        }
+                    }
+                }
             }
         }
 
