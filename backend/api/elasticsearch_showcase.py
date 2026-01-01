@@ -2715,6 +2715,7 @@ async def fix_enum_value(
 
         logger.info("✅ CV_SHOWCASE enum value added successfully (uppercase to match SQL Enum names)")
 
+        # Enum successfully added - connection pool refresh needed
         return {
             "success": True,
             "message": "✅ CV_SHOWCASE enum value added successfully (uppercase)",
