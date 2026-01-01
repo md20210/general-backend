@@ -2584,18 +2584,11 @@ async def test_pgvector_indexing(
 
         test_vector_service = ElasticsearchVectorService()
 
-        if not test_vector_service.is_available():
-            return {
-                "success": False,
-                "error": "VectorService not available",
-                "message": "❌ pgvector service is not initialized"
-            }
-
-        # Try to add a test document
+        # Try to add a test document (skip is_available check to avoid caching issues)
         test_content = "This is a test CV content for pgvector diagnostic testing."
         test_metadata = {"type": "cv", "skills": "Python,FastAPI", "job_titles": "Developer"}
 
-        logger.info("🔍 Testing pgvector add_documents...")
+        logger.info("🔍 Testing pgvector add_documents directly...")
         try:
             chunks = await test_vector_service.add_documents(
                 session=db,
