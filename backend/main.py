@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI app
-# Force redeploy to refresh DB connections after CV_SHOWCASE enum addition
+# CV_SHOWCASE enum now added - restarting to refresh all DB connection pools
 app = FastAPI(
     title="General Backend",
     description="Central backend for all showcases (CV Matcher, PrivateGxT, LifeChronicle)",
