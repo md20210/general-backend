@@ -2973,10 +2973,18 @@ Answer:"""
         # Step 5: LLM evaluation of answers
         logger.info("⚖️  Evaluating answers with LLM...")
         evaluation_prompt = f"""You are comparing two answers to the same question. Evaluate which answer is better based on:
-- Accuracy and relevance to the question
-- Completeness of information
-- Clarity and coherence
-- Use of specific facts from the source material
+
+PRIORITY ORDER (most important first):
+1. **Correctness**: Are the facts accurate? (MOST IMPORTANT)
+2. **Relevance**: Does it directly answer the question?
+3. **Precision**: Is the answer concise and to the point?
+4. **Specificity**: Does it use concrete facts from the source?
+
+IMPORTANT RULES:
+- A shorter, precise answer is BETTER than a longer, rambling one
+- Correctness matters MORE than length
+- Verbose answers should be penalized if they don't add value
+- Both answers can score 100% if both are correct and precise
 
 Question: {question}
 
