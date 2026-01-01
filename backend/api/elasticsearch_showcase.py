@@ -2680,20 +2680,22 @@ async def fix_enum_value(
 
         # Use raw asyncpg connection to execute outside of transaction
         # This is required because ALTER TYPE ADD VALUE cannot run in a transaction block
+        # IMPORTANT: Use uppercase 'CV_SHOWCASE' to match existing enum names (PDF, DOCX, etc.)
+        # SQLAlchemy's SQLEnum uses enum NAMES by default, not values!
         async with await engine.raw_connection() as raw_conn:
             driver_conn = raw_conn.driver_connection
             await driver_conn.execute(
-                "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'"
+                "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'CV_SHOWCASE'"
             )
 
-        logger.info("✅ CV_SHOWCASE enum value added successfully using raw connection")
+        logger.info("✅ CV_SHOWCASE enum value added successfully (uppercase to match SQL Enum names)")
 
         return {
             "success": True,
-            "message": "✅ CV_SHOWCASE enum value added successfully",
-            "enum_value": "cv_showcase",
+            "message": "✅ CV_SHOWCASE enum value added successfully (uppercase)",
+            "enum_value": "CV_SHOWCASE",
             "method": "Raw asyncpg connection (outside transaction)",
-            "note": "The enum was added directly via asyncpg. Restart the application for all connections to see it."
+            "note": "Added 'CV_SHOWCASE' (uppercase) to match SQLAlchemy's enum name convention. Restart the application for all connections to see it."
         }
 
     except Exception as e:
