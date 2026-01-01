@@ -509,6 +509,7 @@ async def create_or_update_profile(
 
         # Delete existing vector data to avoid duplicates
         logger.info(f"Deleting existing vector data for user {user.id}")
+        pgvector_delete_failed = False
         try:
             # Delete from pgvector (ChromaDB replacement)
             if vector_service.is_available():
@@ -516,8 +517,9 @@ async def create_or_update_profile(
                 logger.info(f"✅ Deleted existing pgvector data for user {user.id}")
         except Exception as e:
             logger.warning(f"⚠️  Failed to delete pgvector data: {e}")
-            # Profile is already committed - just log the error and continue
-            # Don't rollback after commit - it causes async session errors
+            pgvector_delete_failed = True
+            # Clear session error state without rollback (expire all cached objects)
+            db.expire_all()
 
         try:
             # Delete from Elasticsearch
@@ -578,53 +580,56 @@ async def create_or_update_profile(
         )
 
         # Index in pgvector (for fair comparison with Elasticsearch)
-        try:
-            if vector_service.is_available():
-                # Prepare document content with all CV information (deduplicated!)
-                cv_content = f"""
+        # Skip if delete failed (session is in error state)
+        if not pgvector_delete_failed:
+            try:
+                if vector_service.is_available():
+                    # Prepare document content with all CV information (deduplicated!)
+                    cv_content = f"""
 {full_cv_content_deduplicated}
 
 Skills: {', '.join(skills) if skills else 'N/A'}
 Experience: {experience_years if experience_years else 'N/A'} years
 Education: {education_level if education_level else 'N/A'}
 Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
-                """.strip()
+                    """.strip()
 
-                # Add to pgvector with metadata
-                metadata = {
-                    "type": "cv",
-                    "skills": ",".join(skills) if skills else "",
-                    "job_titles": ",".join(job_titles) if job_titles else "",
-                }
-                # Only add non-None values
-                if experience_years is not None:
-                    metadata["experience_years"] = str(experience_years)
-                if education_level is not None:
-                    metadata["education_level"] = education_level
-                if profile_data.homepage_url:
-                    metadata["homepage_url"] = profile_data.homepage_url
-                if profile_data.linkedin_url:
-                    metadata["linkedin_url"] = profile_data.linkedin_url
+                    # Add to pgvector with metadata
+                    metadata = {
+                        "type": "cv",
+                        "skills": ",".join(skills) if skills else "",
+                        "job_titles": ",".join(job_titles) if job_titles else "",
+                    }
+                    # Only add non-None values
+                    if experience_years is not None:
+                        metadata["experience_years"] = str(experience_years)
+                    if education_level is not None:
+                        metadata["education_level"] = education_level
+                    if profile_data.homepage_url:
+                        metadata["homepage_url"] = profile_data.homepage_url
+                    if profile_data.linkedin_url:
+                        metadata["linkedin_url"] = profile_data.linkedin_url
 
-                chunks_added = await vector_service.add_documents(
-                    session=db,
-                    user_id=UUID(str(user.id)),
-                    documents=[{
-                        "id": f"cv_{user.id}",
-                        "content": cv_content,
-                        "metadata": metadata
-                    }],
-                    project_id=None,  # Use global collection for elasticsearch showcase
-                    chunk_size=500
-                )
-                logger.info(f"✅ Indexed CV in pgvector: {chunks_added} chunks added for user {user.id}")
-            else:
-                logger.warning("⚠️  pgvector not available - skipping vector indexing")
-        except Exception as e:
-            logger.error(f"❌ pgvector indexing failed (continuing anyway): {e}")
-            # Profile is already committed - just log the error and continue
-            # Don't rollback after commit - it causes async session errors
-            # Don't fail the request if pgvector fails - Elasticsearch indexing succeeded
+                    chunks_added = await vector_service.add_documents(
+                        session=db,
+                        user_id=UUID(str(user.id)),
+                        documents=[{
+                            "id": f"cv_{user.id}",
+                            "content": cv_content,
+                            "metadata": metadata
+                        }],
+                        project_id=None,  # Use global collection for elasticsearch showcase
+                        chunk_size=500
+                    )
+                    logger.info(f"✅ Indexed CV in pgvector: {chunks_added} chunks added for user {user.id}")
+                else:
+                    logger.warning("⚠️  pgvector not available - skipping vector indexing")
+            except Exception as e:
+                logger.error(f"❌ pgvector indexing failed (continuing anyway): {e}")
+                # Profile is already committed - just log the error and continue
+                # Don't fail the request if pgvector fails - Elasticsearch indexing succeeded
+        else:
+            logger.warning("⚠️  Skipping pgvector add_documents because delete failed (session error state)")
 
         logger.info(f"Profile created/updated for user {user.id}")
         return profile
