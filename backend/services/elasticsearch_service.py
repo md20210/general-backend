@@ -334,8 +334,8 @@ class ElasticsearchService:
                 logger.warning(f"No existing chunks to delete for user {user_id}: {del_err}")
 
             # Chunk the CV text into smaller pieces (similar to pgvector)
-            chunk_size = 500  # characters per chunk
-            overlap = 100     # overlap between chunks for context continuity
+            chunk_size = 800  # characters per chunk (increased for better semantic context)
+            overlap = 150     # overlap between chunks for context continuity
 
             chunks = []
             start = 0
@@ -1142,7 +1142,7 @@ class ElasticsearchService:
                     "field": "embedding",
                     "query_vector": query_embedding,
                     "k": top_k,
-                    "num_candidates": top_k * 3,  # Consider 3x candidates for better results
+                    "num_candidates": top_k * 10,  # Consider 10x candidates for much better results
                     "filter": [
                         {"term": {"user_id": user_id}}
                     ]
