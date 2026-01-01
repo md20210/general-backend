@@ -150,7 +150,9 @@ class PDFReportService:
             elements.append(Paragraph("Recommendations", self.styles['CustomHeading']))
             for rec in recommendations:
                 # Wrap recommendation text for proper line breaking
-                elements.append(Paragraph(f"→ {rec.replace('\n', '<br/>')}", self.styles['CustomBody']))
+                # F-strings cannot contain backslashes in expressions
+                rec_formatted = rec.replace('\n', '<br/>')
+                elements.append(Paragraph(f"→ {rec_formatted}", self.styles['CustomBody']))
                 elements.append(Spacer(1, 0.2*cm))
             elements.append(Spacer(1, 0.3*cm))
 

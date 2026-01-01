@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_cv_showcase_001'
-down_revision = '20251231_add_interview_success_field'
+down_revision = 'elasticsearch_003'
 branch_labels = None
 depends_on = None
 
