@@ -2683,18 +2683,30 @@ async def fix_enum_value(
         logger.info("⚠️  Using sync engine in thread pool (ADD VALUE cannot run in transactions)")
 
         def add_enum_sync():
-            """Run ALTER TYPE in sync context with autocommit"""
-            # Create temporary sync engine with autocommit
-            sync_engine = create_engine(
-                settings.SQLALCHEMY_DATABASE_URL.replace('+asyncpg', ''),
-                isolation_level="AUTOCOMMIT"
+            """Run ALTER TYPE in sync context with autocommit using raw psycopg2"""
+            import psycopg2
+            from urllib.parse import urlparse
+
+            # Parse DATABASE_URL
+            db_url = settings.SQLALCHEMY_DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
+            parsed = urlparse(db_url)
+
+            # Connect with psycopg2 (autocommit mode)
+            conn = psycopg2.connect(
+                host=parsed.hostname,
+                port=parsed.port or 5432,
+                user=parsed.username,
+                password=parsed.password,
+                database=parsed.path.lstrip('/')
             )
-            with sync_engine.connect() as conn:
-                conn.execute(text(
-                    "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'CV_SHOWCASE'"
-                ))
-                conn.commit()
-            sync_engine.dispose()
+            conn.set_session(autocommit=True)
+
+            try:
+                cur = conn.cursor()
+                cur.execute("ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'CV_SHOWCASE'")
+                cur.close()
+            finally:
+                conn.close()
 
         # Run in thread pool to avoid blocking async loop
         loop = asyncio.get_event_loop()
