@@ -509,6 +509,12 @@ async def create_or_update_profile(
         # Store user_id early to avoid lazy loading after rollback
         user_id = str(user.id)
 
+        # Initialize import status tracking
+        elasticsearch_indexed = False
+        pgvector_chunks = 0
+        homepage_crawled = False
+        linkedin_crawled = False
+
         logger.info(f"🚀 Starting CV import for user {user_id}")
         logger.info(f"📋 Step 1/7: Extracting CV information with LLM provider: {provider}")
         # Extract ALL information from CV using LLM (more accurate than regex)
@@ -593,6 +599,7 @@ async def create_or_update_profile(
                 if homepage_content:
                     additional_content += f"\n\n=== Homepage Content ({profile_data.homepage_url}) ===\n{homepage_content}\n"
                     logger.info(f"✅ Successfully crawled homepage: {len(homepage_content)} chars")
+                    homepage_crawled = True
             except Exception as e:
                 logger.warning(f"⚠️  Failed to crawl homepage: {e}")
 
@@ -604,6 +611,7 @@ async def create_or_update_profile(
                 if linkedin_content:
                     additional_content += f"\n\n=== LinkedIn Profile ({profile_data.linkedin_url}) ===\n{linkedin_content}\n"
                     logger.info(f"✅ Successfully crawled LinkedIn: {len(linkedin_content)} chars")
+                    linkedin_crawled = True
             except Exception as e:
                 logger.warning(f"⚠️  Failed to crawl LinkedIn: {e}")
 
@@ -635,6 +643,7 @@ async def create_or_update_profile(
             linkedin_url=profile_data.linkedin_url
         )
         logger.info(f"✅ Indexed CV in Elasticsearch for user {user_id}")
+        elasticsearch_indexed = True
 
         logger.info(f"📋 Step 6/7: Updating profile with crawled content...")
         # Update profile with full content (including crawled data)
@@ -659,7 +668,6 @@ async def create_or_update_profile(
         logger.info(f"📋 Step 7/7: Indexing in pgvector...")
         # Index in pgvector (for fair comparison with Elasticsearch)
         # Only if delete succeeded AND session not aborted (otherwise can't use db session)
-        pgvector_chunks = 0
         if pgvector_available and not session_aborted:
             try:
                 if vector_service.is_available():
@@ -739,6 +747,12 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
         if not fresh_profile:
             logger.error(f"❌ Failed to retrieve profile after import for user {user_id}")
             raise HTTPException(status_code=500, detail="Profile import succeeded but failed to retrieve result")
+
+        # Add import status information to response
+        fresh_profile.elasticsearch_indexed = elasticsearch_indexed
+        fresh_profile.pgvector_chunks = pgvector_chunks
+        fresh_profile.homepage_crawled = homepage_crawled
+        fresh_profile.linkedin_crawled = linkedin_crawled
 
         return fresh_profile
 

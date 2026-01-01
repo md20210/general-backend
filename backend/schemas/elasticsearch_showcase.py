@@ -29,6 +29,11 @@ class UserProfileResponse(BaseModel):
     job_titles: List[str]
     created_at: datetime
     updated_at: datetime
+    # Import status fields (only present after import)
+    elasticsearch_indexed: Optional[bool] = None
+    pgvector_chunks: Optional[int] = None
+    homepage_crawled: Optional[bool] = None
+    linkedin_crawled: Optional[bool] = None
 
     class Config:
         from_attributes = True
