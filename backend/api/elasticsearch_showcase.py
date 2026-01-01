@@ -2637,7 +2637,7 @@ async def check_enum_values(
     try:
         from backend.database import engine
 
-        async with engine.raw_connection() as raw_conn:
+        async with await engine.raw_connection() as raw_conn:
             driver_conn = raw_conn.driver_connection
             # Query PostgreSQL system catalog for enum values
             result = await driver_conn.fetch(
@@ -2681,7 +2681,7 @@ async def fix_enum_value(
 
         # Use raw asyncpg connection to execute outside of transaction
         # This is required because ALTER TYPE ADD VALUE cannot run in a transaction block
-        async with engine.raw_connection() as raw_conn:
+        async with await engine.raw_connection() as raw_conn:
             driver_conn = raw_conn.driver_connection
             await driver_conn.execute(
                 "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'"
