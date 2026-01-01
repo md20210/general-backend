@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional
 from elasticsearch import Elasticsearch, AsyncElasticsearch
 from datetime import datetime
 import os
+from backend.services.llm_gateway import LLMGateway
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class ElasticsearchService:
         self.client = None
         self.cv_index = "elastic_showcase_cv"
         self.job_index = "elastic_showcase_jobs"
+        self.llm_gateway = LLMGateway()  # For generating embeddings
 
         try:
             # Get Elasticsearch connection details from environment
@@ -92,6 +94,12 @@ class ElasticsearchService:
                     "programming_languages": {"type": "keyword"},
                     "companies": {"type": "keyword"},
                     "certifications": {"type": "keyword"},
+                    "embedding": {
+                        "type": "dense_vector",
+                        "dims": 768,
+                        "index": True,
+                        "similarity": "cosine"
+                    },
                     "created_at": {"type": "date"},
                     "updated_at": {"type": "date"}
                 }
@@ -370,6 +378,15 @@ class ElasticsearchService:
             job_titles_str = " ".join(job_titles) if job_titles else ""
 
             for chunk in chunks:
+                # Generate embedding for this chunk using Ollama
+                try:
+                    chunk_embedding = self.llm_gateway.embed(chunk["text"], model="nomic-embed-text")
+                    logger.info(f"Generated embedding for chunk {chunk['index']}, dims: {len(chunk_embedding)}")
+                except Exception as embed_err:
+                    logger.error(f"Failed to generate embedding for chunk {chunk['index']}: {embed_err}")
+                    # Continue without embedding rather than failing the entire indexing
+                    chunk_embedding = None
+
                 doc = {
                     "user_id": user_id,
                     "cv_text": chunk["text"],
@@ -387,6 +404,10 @@ class ElasticsearchService:
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow()
                 }
+
+                # Add embedding if generated successfully
+                if chunk_embedding:
+                    doc["embedding"] = chunk_embedding
 
                 # Use user_id + chunk_index as document ID
                 doc_id = f"{user_id}_chunk_{chunk['index']}"
@@ -1062,7 +1083,16 @@ class ElasticsearchService:
                 logger.warning("Elasticsearch not available for hybrid search")
                 return []
 
-            # Construct hybrid search query
+            # Generate query embedding for kNN search
+            try:
+                query_embedding = self.llm_gateway.embed(query, model="nomic-embed-text")
+                logger.info(f"Generated query embedding, dims: {len(query_embedding)}")
+            except Exception as embed_err:
+                logger.error(f"Failed to generate query embedding: {embed_err}")
+                # Fall back to BM25-only if embedding fails
+                query_embedding = None
+
+            # Construct RRF hybrid search query combining kNN + BM25
             search_body = {
                 "size": top_k,
                 "query": {
@@ -1106,8 +1136,22 @@ class ElasticsearchService:
                            "databases", "programming_languages", "companies", "certifications", "chunk_index"]
             }
 
+            # Add kNN search if embedding was generated
+            if query_embedding:
+                search_body["knn"] = {
+                    "field": "embedding",
+                    "query_vector": query_embedding,
+                    "k": top_k,
+                    "num_candidates": top_k * 3,  # Consider 3x candidates for better results
+                    "filter": [
+                        {"term": {"user_id": user_id}}
+                    ]
+                }
+                logger.info(f"🔍 Elasticsearch RRF hybrid search (kNN + BM25): user_id={user_id}, query='{query}'")
+            else:
+                logger.info(f"🔍 Elasticsearch BM25-only search (kNN unavailable): user_id={user_id}, query='{query}'")
+
             # Execute search
-            logger.info(f"🔍 Elasticsearch hybrid_search: user_id={user_id}, query='{query}'")
             response = self.client.search(
                 index=self.cv_index,
                 body=search_body
