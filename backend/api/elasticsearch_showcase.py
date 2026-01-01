@@ -614,26 +614,8 @@ async def create_or_update_profile(
         logger.info(f"Deduplicated content length: {len(full_cv_content_deduplicated)} chars")
         logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
 
-        # Update profile with full content (including crawled data)
-        # Note: If pgvector delete failed, transaction may be in aborted state
-        # In that case, skip the profile update and just continue with Elasticsearch indexing
-        # (Profile already has basic CV data from initial creation)
-        session_aborted = False
-        try:
-            profile.cv_text = full_cv_content_deduplicated
-            db.add(profile)
-            await db.commit()
-            await db.refresh(profile)
-            logger.info(f"✅ Updated profile cv_text with crawled content: {len(full_cv_content_deduplicated)} chars")
-        except Exception as e:
-            logger.warning(f"⚠️ Profile cv_text update failed (transaction aborted): {e}")
-            logger.warning(f"⚠️ Continuing with Elasticsearch indexing (profile already has basic CV data)")
-            # Rollback to clear aborted transaction state
-            await db.rollback()
-            session_aborted = True
-            # Continue with Elasticsearch indexing - profile already exists with basic data
-
-        # Index in Elasticsearch
+        # Index in Elasticsearch FIRST (before profile update)
+        # This way, if profile update fails due to aborted transaction, Elasticsearch is already indexed
         await es_service.index_cv_data(
             user_id=str(user.id),
             cv_text=full_cv_content_deduplicated,  # Deduplicated content (no redundant sentences)
@@ -644,6 +626,26 @@ async def create_or_update_profile(
             homepage_url=profile_data.homepage_url,
             linkedin_url=profile_data.linkedin_url
         )
+        logger.info(f"✅ Indexed CV in Elasticsearch for user {user.id}")
+
+        # Update profile with full content (including crawled data)
+        # Note: If pgvector delete failed, transaction may be in aborted state
+        # In that case, skip the profile update (Elasticsearch is already indexed)
+        # (Profile already has basic CV data from initial creation)
+        session_aborted = False
+        try:
+            profile.cv_text = full_cv_content_deduplicated
+            db.add(profile)
+            await db.commit()
+            await db.refresh(profile)
+            logger.info(f"✅ Updated profile cv_text with crawled content: {len(full_cv_content_deduplicated)} chars")
+        except Exception as e:
+            logger.warning(f"⚠️ Profile cv_text update failed (transaction aborted): {e}")
+            logger.warning(f"⚠️ Skipping profile update (Elasticsearch already indexed)")
+            # Rollback to clear aborted transaction state
+            await db.rollback()
+            session_aborted = True
+            # No more awaits after rollback - just continue to logging and return
 
         # Index in pgvector (for fair comparison with Elasticsearch)
         # Only if delete succeeded AND session not aborted (otherwise can't use db session)
