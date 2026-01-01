@@ -170,14 +170,15 @@ def test_analyze_job(token: str) -> Dict[str, Any]:
     print(f"   - Winner: {perf['faster_system']}")
 
     print(f"\n   🔍 pgvector Results:")
-    print(f"   - Matches: {data['chromadb_results']['total_matches']}")
-    if data['chromadb_results']['matches']:
+    print(f"   - Matches: {data.get('chromadb_matches_count', 0)}")
+    print(f"   - Search Time: {data.get('chromadb_search_time_ms', 0):.2f}ms")
+    if data.get('chromadb_results', {}).get('matches'):
         print(f"   - Top Score: {data['chromadb_results']['matches'][0]['score']:.4f}")
 
     print(f"\n   ⚡ Elasticsearch Results:")
-    print(f"   - Matches: {data['elasticsearch_results']['total_matches']}")
-    print(f"   - Search Time: {data['elasticsearch_results']['search_time_ms']:.2f}ms")
-    if data['elasticsearch_results']['matches']:
+    print(f"   - Matches: {data.get('elasticsearch_matches_count', 0)}")
+    print(f"   - Search Time: {data.get('elasticsearch_search_time_ms', 0):.2f}ms")
+    if data.get('elasticsearch_results', {}).get('matches'):
         match = data['elasticsearch_results']['matches'][0]
         print(f"   - Top Score: {match['score']:.4f}")
         print(f"   - Highlights: {len(match.get('highlights', {}))} fields highlighted")

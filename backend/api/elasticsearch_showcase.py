@@ -687,11 +687,32 @@ async def analyze_job(
                 detail="Profile not found. Please create a profile first by uploading your CV."
             )
 
+        # Get job description - either from request or by crawling URL
+        job_description = analysis_request.job_description
+        if not job_description and analysis_request.job_url:
+            # Crawl job URL to get description
+            logger.info(f"Crawling job URL: {analysis_request.job_url}")
+            try:
+                crawled_text = await crawl_url(analysis_request.job_url)
+                if crawled_text:
+                    job_description = crawled_text
+                    logger.info(f"Successfully crawled job description: {len(job_description)} chars")
+                else:
+                    logger.warning(f"URL crawling returned empty content")
+            except Exception as e:
+                logger.error(f"Failed to crawl job URL: {e}")
+
+        if not job_description:
+            raise HTTPException(
+                status_code=400,
+                detail="Either job_description or job_url must be provided"
+            )
+
         # Perform LLM-based job analysis (with fallback to default values)
         logger.info(f"Starting LLM job analysis for user {user.id}")
         try:
             llm_analysis = await analyze_job_with_llm(
-                job_description=analysis_request.job_description,
+                job_description=job_description,
                 cv_text=profile.cv_text,
                 provider=analysis_request.provider or "grok"
             )
@@ -757,7 +778,7 @@ async def analyze_job(
         try:
             comparison_results = await comparison_service.compare_search_performance(
                 user_id=str(user.id),
-                job_description=analysis_request.job_description,
+                job_description=job_description,
                 required_skills=analysis_request.required_skills or []
             )
         except Exception as e:
@@ -786,7 +807,7 @@ async def analyze_job(
         # Create analysis record
         analysis = ElasticJobAnalysis(
             user_id=str(user.id),
-            job_description=analysis_request.job_description,
+            job_description=job_description,
             job_url=analysis_request.job_url,
             chromadb_results=comparison_results["chromadb"].get("results", {}),
             chromadb_search_time_ms=comparison_results["chromadb"].get("search_time_ms"),

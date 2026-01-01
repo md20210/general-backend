@@ -40,7 +40,7 @@ class UserProfileResponse(BaseModel):
 
 class JobAnalysisRequest(BaseModel):
     """Request to analyze a job posting."""
-    job_description: str = Field(..., description="Full job description text")
+    job_description: Optional[str] = Field(None, description="Full job description text")
     job_url: Optional[str] = Field(None, description="URL to job posting")
     required_skills: Optional[List[str]] = Field(None, description="List of required skills")
     provider: str = Field("grok", description="LLM provider for analysis")
