@@ -2423,3 +2423,43 @@ async def generate_llm_answer(prompt: str, llm_provider: str) -> str:
     except Exception as e:
         logger.error(f"LLM generation error: {e}")
         return f"Error generating answer: {str(e)}"
+
+
+@router.get("/database-stats")
+async def get_database_stats():
+    """Get statistics about vector database entries."""
+    try:
+        stats = {
+            "pgvector": {
+                "available": vector_service.is_available(),
+                "count": 0
+            },
+            "elasticsearch": {
+                "available": es_service.is_available(),
+                "count": 0
+            },
+            "ollama_model": os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+        }
+
+        # Get pgvector count
+        if vector_service.is_available():
+            try:
+                # pgvector collections are per-user, get total count
+                collections = await vector_service.client.list_collections()
+                stats["pgvector"]["count"] = len(collections)
+            except Exception as e:
+                logger.error(f"Failed to get pgvector count: {e}")
+
+        # Get Elasticsearch count
+        if es_service.is_available():
+            try:
+                # Count documents in CV index
+                result = await es_service.client.count(index=es_service.cv_index)
+                stats["elasticsearch"]["count"] = result.get("count", 0)
+            except Exception as e:
+                logger.error(f"Failed to get Elasticsearch count: {e}")
+
+        return stats
+    except Exception as e:
+        logger.error(f"Error getting database stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
