@@ -1,6 +1,6 @@
 """add documents field for PDF storage
 
-Revision ID: add_documents_field  
+Revision ID: add_documents_field
 Revises:
 Create Date: 2025-12-29
 
@@ -8,6 +8,7 @@ Create Date: 2025-12-29
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -18,10 +19,21 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add documents JSONB field to job_applications table
-    op.add_column('job_applications', 
-        sa.Column('documents', JSONB, nullable=False, server_default='{}'))
+    # Add documents JSONB field to job_applications table (skip if exists)
+    bind = op.get_bind()
+    inspector = inspect(bind)
+
+    # Check if column already exists
+    columns = [col['name'] for col in inspector.get_columns('job_applications')]
+    if 'documents' not in columns:
+        op.add_column('job_applications',
+            sa.Column('documents', JSONB, nullable=False, server_default='{}'))
 
 
 def downgrade() -> None:
-    op.drop_column('job_applications', 'documents')
+    bind = op.get_bind()
+    inspector = inspect(bind)
+
+    columns = [col['name'] for col in inspector.get_columns('job_applications')]
+    if 'documents' in columns:
+        op.drop_column('job_applications', 'documents')
