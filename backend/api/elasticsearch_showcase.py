@@ -2536,3 +2536,37 @@ async def get_database_stats(
     except Exception as e:
         logger.error(f"Error getting database stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/enum-diagnostic")
+async def check_enum_status(
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user)
+):
+    """Diagnostic endpoint to check if CV_SHOWCASE enum exists"""
+    try:
+        from backend.models.document import Document, DocumentType
+
+        # Try to query with CV_SHOWCASE enum
+        try:
+            result = await db.execute(
+                select(Document).where(Document.type == DocumentType.CV_SHOWCASE).limit(1)
+            )
+            docs = result.scalars().all()
+
+            return {
+                "enum_exists": True,
+                "enum_value": DocumentType.CV_SHOWCASE.value,
+                "document_count": len(docs),
+                "message": "✅ CV_SHOWCASE enum exists in database"
+            }
+        except Exception as enum_error:
+            return {
+                "enum_exists": False,
+                "error": str(enum_error),
+                "error_type": type(enum_error).__name__,
+                "message": "❌ CV_SHOWCASE enum does NOT exist in database"
+            }
+    except Exception as e:
+        logger.error(f"Enum diagnostic failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
