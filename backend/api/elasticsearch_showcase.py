@@ -2771,11 +2771,11 @@ async def compare_query(
         # Step 1: Search pgvector
         logger.info("📊 Searching pgvector...")
         pgvector_start = time.time()
-        pgvector_chunks = await vector_service.search(
+        pgvector_chunks = await vector_service.query(
             session=db,
             user_id=current_user.id,
-            query=question,
-            top_k=3
+            query_text=question,
+            n_results=3
         )
         pgvector_time = (time.time() - pgvector_start) * 1000
 
