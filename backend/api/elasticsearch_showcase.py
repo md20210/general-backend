@@ -2583,14 +2583,14 @@ async def fix_enum_value(
     """
     try:
         from sqlalchemy import text
-        from backend.database import async_engine
+        from backend.database import engine
 
         logger.info("🔧 Manually adding CV_SHOWCASE enum value to database...")
         logger.info("⚠️  Using AUTOCOMMIT mode (ADD VALUE cannot run in transactions)")
 
         # Use raw connection with AUTOCOMMIT isolation level
         # This is required because ALTER TYPE ADD VALUE cannot run in a transaction
-        async with async_engine.connect() as conn:
+        async with engine.connect() as conn:
             await conn.execution_options(isolation_level="AUTOCOMMIT").execute(
                 text("ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'")
             )
