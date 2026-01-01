@@ -3093,13 +3093,13 @@ Only respond with valid JSON, no other text."""
 
 
 @router.get("/aggregations")
-async def get_elasticsearch_aggregations(current_user: dict = Depends(get_current_active_user)):
+async def get_elasticsearch_aggregations(current_user: User = Depends(current_active_user)):
     """
     Get aggregated statistics from Elasticsearch for analytics dashboard.
     Returns top databases, programming languages, companies, certifications, and skills.
     """
     try:
-        user_id = current_user["sub"]
+        user_id = str(current_user.id)
         index_name = f"cv_showcase_{user_id}"
 
         # Check if index exists
@@ -3192,14 +3192,14 @@ async def faceted_search(
     programming_languages: List[str] = [],
     companies: List[str] = [],
     certifications: List[str] = [],
-    current_user: dict = Depends(get_current_active_user)
+    current_user: User = Depends(current_active_user)
 ):
     """
     Perform faceted search with filters.
     Combines Elasticsearch hybrid search with filtering by databases, programming languages, companies, and certifications.
     """
     try:
-        user_id = current_user["sub"]
+        user_id = str(current_user.id)
         index_name = f"cv_showcase_{user_id}"
 
         # Check if index exists
@@ -3328,13 +3328,13 @@ async def faceted_search(
 
 
 @router.get("/analytics")
-async def get_analytics_data(current_user: dict = Depends(get_current_active_user)):
+async def get_analytics_data(current_user: User = Depends(current_active_user)):
     """
     Get analytics data for the dashboard.
     Returns performance metrics, query distribution, and data insights.
     """
     try:
-        user_id = current_user["sub"]
+        user_id = str(current_user.id)
         index_name = f"cv_showcase_{user_id}"
 
         # Check if index exists
