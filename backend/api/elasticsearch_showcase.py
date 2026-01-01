@@ -2444,7 +2444,9 @@ async def generate_llm_answer(prompt: str, llm_provider: str) -> str:
 
 
 @router.get("/database-stats")
-async def get_database_stats():
+async def get_database_stats(
+    db: AsyncSession = Depends(get_async_session)
+):
     """Get statistics about vector database entries."""
     try:
         stats = {
@@ -2459,12 +2461,16 @@ async def get_database_stats():
             "ollama_model": os.getenv("OLLAMA_MODEL", "llama3.2:3b")
         }
 
-        # Get pgvector count
+        # Get pgvector count from Document table
         if vector_service.is_available():
             try:
-                # pgvector collections are per-user, get total count
-                collections = await vector_service.client.list_collections()
-                stats["pgvector"]["count"] = len(collections)
+                from backend.models.document import Document, DocumentType
+                # Count all CV_SHOWCASE documents
+                result = await db.execute(
+                    select(Document).where(Document.type == DocumentType.CV_SHOWCASE)
+                )
+                documents = result.scalars().all()
+                stats["pgvector"]["count"] = len(documents)
             except Exception as e:
                 logger.error(f"Failed to get pgvector count: {e}")
 
