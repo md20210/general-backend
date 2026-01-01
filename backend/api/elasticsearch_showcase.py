@@ -516,6 +516,8 @@ async def create_or_update_profile(
                 logger.info(f"✅ Deleted existing pgvector data for user {user.id}")
         except Exception as e:
             logger.warning(f"⚠️  Failed to delete pgvector data: {e}")
+            # Rollback the transaction to clear any error state
+            await db.rollback()
 
         try:
             # Delete from Elasticsearch
@@ -620,7 +622,9 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 logger.warning("⚠️  pgvector not available - skipping vector indexing")
         except Exception as e:
             logger.error(f"❌ pgvector indexing failed (continuing anyway): {e}")
-            # Don't fail the request if ChromaDB fails - Elasticsearch indexing succeeded
+            # Rollback the transaction to clear the error state
+            await db.rollback()
+            # Don't fail the request if pgvector fails - Elasticsearch indexing succeeded
 
         logger.info(f"Profile created/updated for user {user.id}")
         return profile
