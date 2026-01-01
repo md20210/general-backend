@@ -88,6 +88,10 @@ class ElasticsearchService:
                     "homepage_url": {"type": "keyword"},
                     "linkedin_url": {"type": "keyword"},
                     "chunk_index": {"type": "integer"},
+                    "databases": {"type": "keyword"},
+                    "programming_languages": {"type": "keyword"},
+                    "companies": {"type": "keyword"},
+                    "certifications": {"type": "keyword"},
                     "created_at": {"type": "date"},
                     "updated_at": {"type": "date"}
                 }
@@ -206,6 +210,85 @@ class ElasticsearchService:
         except Exception as e:
             logger.warning(f"Error creating indices (may already exist): {e}")
 
+    def _extract_structured_fields(self, text: str) -> Dict[str, List[str]]:
+        """Extract structured fields from CV text using keyword matching."""
+        text_lower = text.lower()
+
+        # Database keywords
+        database_keywords = {
+            "postgresql": ["postgresql", "postgres", "psql"],
+            "elasticsearch": ["elasticsearch", "elastic", "es cluster"],
+            "chromadb": ["chromadb", "chroma"],
+            "pgvector": ["pgvector", "pg_vector"],
+            "mongodb": ["mongodb", "mongo"],
+            "redis": ["redis"],
+            "mysql": ["mysql"],
+            "oracle": ["oracle database", "oracle"],
+            "mssql": ["sql server", "mssql", "microsoft sql"],
+            "cassandra": ["cassandra"],
+            "dynamodb": ["dynamodb", "dynamo"],
+            "neo4j": ["neo4j"],
+            "sqlite": ["sqlite"]
+        }
+
+        # Programming language keywords
+        language_keywords = {
+            "python": ["python", "py3", "python3"],
+            "javascript": ["javascript", "js", "node.js", "nodejs"],
+            "typescript": ["typescript", "ts"],
+            "java": ["java", " java "],  # Space to avoid matching javascript
+            "go": ["golang", " go "],
+            "rust": ["rust"],
+            "c++": ["c++", "cpp"],
+            "c#": ["c#", "csharp"],
+            "php": ["php"],
+            "ruby": ["ruby"],
+            "swift": ["swift"],
+            "kotlin": ["kotlin"],
+            "scala": ["scala"],
+            "r": [" r "],
+            "sql": ["sql", "t-sql", "pl/sql"]
+        }
+
+        # Company keywords
+        company_keywords = {
+            "cognizant": ["cognizant"],
+            "deutsche telekom": ["deutsche telekom", "telekom"],
+            "sap": ["sap"],
+            "mercedes-benz": ["mercedes-benz", "mercedes", "daimler"],
+            "google": ["google"],
+            "microsoft": ["microsoft"],
+            "amazon": ["amazon", "aws"],
+            "ibm": ["ibm"]
+        }
+
+        # Certification keywords
+        certification_keywords = {
+            "togaf": ["togaf"],
+            "aws certified": ["aws certified", "aws certification"],
+            "azure certified": ["azure certified"],
+            "gcp certified": ["gcp certified"],
+            "cissp": ["cissp"],
+            "pmp": ["pmp"],
+            "scrum master": ["scrum master", "csm"],
+            "enterprise architect": ["enterprise architect certified"]
+        }
+
+        def extract_matches(keywords_dict):
+            """Extract matching keywords from text."""
+            found = []
+            for name, patterns in keywords_dict.items():
+                if any(pattern in text_lower for pattern in patterns):
+                    found.append(name)
+            return found
+
+        return {
+            "databases": extract_matches(database_keywords),
+            "programming_languages": extract_matches(language_keywords),
+            "companies": extract_matches(company_keywords),
+            "certifications": extract_matches(certification_keywords)
+        }
+
     async def index_cv_data(
         self,
         user_id: str,
@@ -274,6 +357,13 @@ class ElasticsearchService:
 
             logger.info(f"Split CV into {len(chunks)} chunks for user {user_id}")
 
+            # Extract structured fields from full CV text (once for all chunks)
+            structured_fields = self._extract_structured_fields(cv_text)
+            logger.info(f"Extracted structured fields: "
+                       f"databases={len(structured_fields['databases'])}, "
+                       f"languages={len(structured_fields['programming_languages'])}, "
+                       f"companies={len(structured_fields['companies'])}")
+
             # Index each chunk as a separate document
             indexed_count = 0
             skills_str = " ".join(skills) if skills else ""
@@ -290,6 +380,10 @@ class ElasticsearchService:
                     "job_titles": job_titles_str,
                     "homepage_url": homepage_url,
                     "linkedin_url": linkedin_url,
+                    "databases": structured_fields["databases"],
+                    "programming_languages": structured_fields["programming_languages"],
+                    "companies": structured_fields["companies"],
+                    "certifications": structured_fields["certifications"],
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow()
                 }
@@ -980,10 +1074,13 @@ class ElasticsearchService:
                                     "query": query,
                                     "fields": [
                                         "cv_text^1",
-                                        "skills^3",  # Boost skills 3x (NOTE: field is 'skills' not 'skills_extracted')
-                                        # NOTE: experience_years is a 'long' field - fuzzy matching only works on text/keyword!
+                                        "skills^3",
                                         "education_level^1.5",
-                                        "job_titles^2"
+                                        "job_titles^2",
+                                        "databases^5",  # Highest boost for precise database matching
+                                        "programming_languages^4",  # High boost for languages
+                                        "companies^3",  # Medium-high boost for companies
+                                        "certifications^2"  # Medium boost for certifications
                                     ],
                                     "fuzziness": "AUTO",  # Typo tolerance
                                     "operator": "or"
@@ -1005,7 +1102,8 @@ class ElasticsearchService:
                         ]
                     }
                 },
-                "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id"]
+                "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id",
+                           "databases", "programming_languages", "companies", "certifications", "chunk_index"]
             }
 
             # Execute search
@@ -1032,6 +1130,10 @@ class ElasticsearchService:
                         "skills": source.get("skills", ""),
                         "experience": source.get("experience_years"),
                         "job_titles": source.get("job_titles", ""),
+                        "databases": source.get("databases", []),
+                        "programming_languages": source.get("programming_languages", []),
+                        "companies": source.get("companies", []),
+                        "certifications": source.get("certifications", []),
                         "chunk_index": source.get("chunk_index", 0)
                     }
                 })
