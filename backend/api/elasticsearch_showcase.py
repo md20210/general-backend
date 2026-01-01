@@ -2665,28 +2665,41 @@ async def check_enum_values(
 
 @router.post("/fix-enum")
 async def fix_enum_value(
+    db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
     """Emergency fix: Manually add CV_SHOWCASE enum value to database
 
     CRITICAL: ALTER TYPE ADD VALUE cannot run in a transaction block!
-    This endpoint uses AUTOCOMMIT mode to add the enum value.
+    Runs in background thread with autocommit to bypass transaction.
     """
     try:
-        from backend.database import engine
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        from sqlalchemy import create_engine, text
+        from backend.config import settings
 
         logger.info("🔧 Manually adding CV_SHOWCASE enum value to database...")
-        logger.info("⚠️  Using raw asyncpg connection (ADD VALUE cannot run in transactions)")
+        logger.info("⚠️  Using sync engine in thread pool (ADD VALUE cannot run in transactions)")
 
-        # Use raw asyncpg connection to execute outside of transaction
-        # This is required because ALTER TYPE ADD VALUE cannot run in a transaction block
-        # IMPORTANT: Use uppercase 'CV_SHOWCASE' to match existing enum names (PDF, DOCX, etc.)
-        # SQLAlchemy's SQLEnum uses enum NAMES by default, not values!
-        async with await engine.raw_connection() as raw_conn:
-            driver_conn = raw_conn.driver_connection
-            await driver_conn.execute(
-                "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'CV_SHOWCASE'"
+        def add_enum_sync():
+            """Run ALTER TYPE in sync context with autocommit"""
+            # Create temporary sync engine with autocommit
+            sync_engine = create_engine(
+                settings.SQLALCHEMY_DATABASE_URL.replace('+asyncpg', ''),
+                isolation_level="AUTOCOMMIT"
             )
+            with sync_engine.connect() as conn:
+                conn.execute(text(
+                    "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'CV_SHOWCASE'"
+                ))
+                conn.commit()
+            sync_engine.dispose()
+
+        # Run in thread pool to avoid blocking async loop
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            await loop.run_in_executor(executor, add_enum_sync)
 
         logger.info("✅ CV_SHOWCASE enum value added successfully (uppercase to match SQL Enum names)")
 
@@ -2694,7 +2707,7 @@ async def fix_enum_value(
             "success": True,
             "message": "✅ CV_SHOWCASE enum value added successfully (uppercase)",
             "enum_value": "CV_SHOWCASE",
-            "method": "Raw asyncpg connection (outside transaction)",
+            "method": "Sync engine with AUTOCOMMIT in thread pool",
             "note": "Added 'CV_SHOWCASE' (uppercase) to match SQLAlchemy's enum name convention. Restart the application for all connections to see it."
         }
 
