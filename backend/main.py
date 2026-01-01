@@ -40,6 +40,18 @@ async def lifespan(app: FastAPI):
     logger.info("Starting General Backend...")
     await create_db_and_tables()
     logger.info("Database tables created/verified")
+
+    # Run Alembic migrations automatically
+    try:
+        from alembic.config import Config
+        from alembic import command
+        logger.info("Running Alembic migrations...")
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("✅ Alembic migrations completed successfully")
+    except Exception as e:
+        logger.warning(f"⚠️  Alembic migrations failed (non-critical): {e}")
+
     yield
     # Shutdown
     logger.info("Shutting down General Backend...")
