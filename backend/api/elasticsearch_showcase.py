@@ -3151,7 +3151,7 @@ async def get_elasticsearch_aggregations(current_user: dict = Depends(get_curren
         }
 
         # Execute aggregation query
-        response = es_service.es.search(index=index_name, body=agg_query)
+        response = es_service.es.search(index=index_name, **agg_query)
 
         # Format results
         return {
@@ -3292,7 +3292,7 @@ async def faceted_search(
             }
 
         # Execute search
-        response = es_service.es.search(index=index_name, body=search_query)
+        response = es_service.es.search(index=index_name, **search_query)
 
         # Format results
         results = []
@@ -3361,7 +3361,7 @@ async def get_analytics_data(current_user: dict = Depends(get_current_active_use
             "size": 1000,  # Adjust if needed
             "_source": ["content", "databases", "programming_languages", "companies", "skills", "certifications"]
         }
-        all_docs = es_service.es.search(index=index_name, body=all_docs_query)
+        all_docs = es_service.es.search(index=index_name, **all_docs_query)
 
         # Calculate average chunk size
         total_chars = sum(len(doc["_source"].get("content", "")) for doc in all_docs["hits"]["hits"])
@@ -3379,14 +3379,12 @@ async def get_analytics_data(current_user: dict = Depends(get_current_active_use
         # Get top skills aggregation
         skills_agg = es_service.es.search(
             index=index_name,
-            body={
-                "size": 0,
-                "aggs": {
-                    "top_skills": {
-                        "terms": {
-                            "field": "skills.keyword",
-                            "size": 10
-                        }
+            size=0,
+            aggs={
+                "top_skills": {
+                    "terms": {
+                        "field": "skills.keyword",
+                        "size": 10
                     }
                 }
             }
@@ -3399,14 +3397,12 @@ async def get_analytics_data(current_user: dict = Depends(get_current_active_use
         # Get database distribution
         db_agg = es_service.es.search(
             index=index_name,
-            body={
-                "size": 0,
-                "aggs": {
-                    "databases": {
-                        "terms": {
-                            "field": "databases.keyword",
-                            "size": 10
-                        }
+            size=0,
+            aggs={
+                "databases": {
+                    "terms": {
+                        "field": "databases.keyword",
+                        "size": 10
                     }
                 }
             }
@@ -3419,14 +3415,12 @@ async def get_analytics_data(current_user: dict = Depends(get_current_active_use
         # Get programming language distribution
         lang_agg = es_service.es.search(
             index=index_name,
-            body={
-                "size": 0,
-                "aggs": {
-                    "languages": {
-                        "terms": {
-                            "field": "programming_languages.keyword",
-                            "size": 10
-                        }
+            size=0,
+            aggs={
+                "languages": {
+                    "terms": {
+                        "field": "programming_languages.keyword",
+                        "size": 10
                     }
                 }
             }
@@ -3439,14 +3433,12 @@ async def get_analytics_data(current_user: dict = Depends(get_current_active_use
         # Create timeline (company work periods) - simplified for now
         company_agg = es_service.es.search(
             index=index_name,
-            body={
-                "size": 0,
-                "aggs": {
-                    "companies": {
-                        "terms": {
-                            "field": "companies.keyword",
-                            "size": 10
-                        }
+            size=0,
+            aggs={
+                "companies": {
+                    "terms": {
+                        "field": "companies.keyword",
+                        "size": 10
                     }
                 }
             }
