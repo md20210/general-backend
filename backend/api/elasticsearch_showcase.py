@@ -516,11 +516,8 @@ async def create_or_update_profile(
                 logger.info(f"✅ Deleted existing pgvector data for user {user.id}")
         except Exception as e:
             logger.warning(f"⚠️  Failed to delete pgvector data: {e}")
-            # Clear the session error state (profile is already committed, so rollback is safe)
-            try:
-                await db.rollback()
-            except:
-                pass  # Ignore rollback errors
+            # Profile is already committed - just log the error and continue
+            # Don't rollback after commit - it causes async session errors
 
         try:
             # Delete from Elasticsearch
@@ -625,11 +622,8 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
                 logger.warning("⚠️  pgvector not available - skipping vector indexing")
         except Exception as e:
             logger.error(f"❌ pgvector indexing failed (continuing anyway): {e}")
-            # Clear the session error state (profile is already committed, so rollback is safe)
-            try:
-                await db.rollback()
-            except:
-                pass  # Ignore rollback errors
+            # Profile is already committed - just log the error and continue
+            # Don't rollback after commit - it causes async session errors
             # Don't fail the request if pgvector fails - Elasticsearch indexing succeeded
 
         logger.info(f"Profile created/updated for user {user.id}")
