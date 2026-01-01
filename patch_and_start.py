@@ -56,8 +56,10 @@ if __name__ == "__main__":
 
     # Now import and run uvicorn
     import uvicorn
+    port = int(os.getenv("PORT", "8080"))
+    print(f"🚀 Starting server on port {port}...", file=sys.stderr, flush=True)
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",
-        port=8080,
+        port=port,
     )
