@@ -2502,7 +2502,12 @@ async def get_database_stats(
                 documents = result.scalars().all()
                 stats["pgvector"]["count"] = len(documents)
             except Exception as e:
-                logger.error(f"Failed to get pgvector count: {e}")
+                # Silently skip if CV_SHOWCASE enum not in database yet
+                if "CV_SHOWCASE" in str(e) and "enum" in str(e).lower():
+                    logger.warning("⚠️  pgvector CV_SHOWCASE enum not available - count set to 0")
+                else:
+                    logger.error(f"Failed to get pgvector count: {e}")
+                stats["pgvector"]["count"] = 0
 
         # Get Elasticsearch count
         if es_service.is_available():
