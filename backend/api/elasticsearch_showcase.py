@@ -3090,3 +3090,386 @@ Only respond with valid JSON, no other text."""
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
+
+
+@router.get("/aggregations")
+async def get_elasticsearch_aggregations(current_user: dict = Depends(get_current_active_user)):
+    """
+    Get aggregated statistics from Elasticsearch for analytics dashboard.
+    Returns top databases, programming languages, companies, certifications, and skills.
+    """
+    try:
+        user_id = current_user["sub"]
+        index_name = f"cv_showcase_{user_id}"
+
+        # Check if index exists
+        if not es_service.es.indices.exists(index=index_name):
+            return {
+                "databases": [],
+                "programming_languages": [],
+                "companies": [],
+                "certifications": [],
+                "skills": [],
+                "total_chunks": 0
+            }
+
+        # Build aggregation query
+        agg_query = {
+            "size": 0,  # We only want aggregations, not documents
+            "aggs": {
+                "databases": {
+                    "terms": {
+                        "field": "databases.keyword",
+                        "size": 20
+                    }
+                },
+                "programming_languages": {
+                    "terms": {
+                        "field": "programming_languages.keyword",
+                        "size": 20
+                    }
+                },
+                "companies": {
+                    "terms": {
+                        "field": "companies.keyword",
+                        "size": 20
+                    }
+                },
+                "certifications": {
+                    "terms": {
+                        "field": "certifications.keyword",
+                        "size": 20
+                    }
+                },
+                "skills": {
+                    "terms": {
+                        "field": "skills.keyword",
+                        "size": 30
+                    }
+                }
+            }
+        }
+
+        # Execute aggregation query
+        response = es_service.es.search(index=index_name, body=agg_query)
+
+        # Format results
+        return {
+            "databases": [
+                {"name": bucket["key"], "count": bucket["doc_count"]}
+                for bucket in response["aggregations"]["databases"]["buckets"]
+            ],
+            "programming_languages": [
+                {"name": bucket["key"], "count": bucket["doc_count"]}
+                for bucket in response["aggregations"]["programming_languages"]["buckets"]
+            ],
+            "companies": [
+                {"name": bucket["key"], "count": bucket["doc_count"]}
+                for bucket in response["aggregations"]["companies"]["buckets"]
+            ],
+            "certifications": [
+                {"name": bucket["key"], "count": bucket["doc_count"]}
+                for bucket in response["aggregations"]["certifications"]["buckets"]
+            ],
+            "skills": [
+                {"name": bucket["key"], "count": bucket["doc_count"]}
+                for bucket in response["aggregations"]["skills"]["buckets"]
+            ],
+            "total_chunks": response["hits"]["total"]["value"]
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get aggregations: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Aggregation failed: {str(e)}")
+
+
+@router.post("/faceted-search")
+async def faceted_search(
+    query: str = "",
+    databases: List[str] = [],
+    programming_languages: List[str] = [],
+    companies: List[str] = [],
+    certifications: List[str] = [],
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Perform faceted search with filters.
+    Combines Elasticsearch hybrid search with filtering by databases, programming languages, companies, and certifications.
+    """
+    try:
+        user_id = current_user["sub"]
+        index_name = f"cv_showcase_{user_id}"
+
+        # Check if index exists
+        if not es_service.es.indices.exists(index=index_name):
+            return {
+                "results": [],
+                "total": 0,
+                "query": query,
+                "filters": {
+                    "databases": databases,
+                    "programming_languages": programming_languages,
+                    "companies": companies,
+                    "certifications": certifications
+                }
+            }
+
+        # Build filter clauses
+        filter_clauses = []
+
+        if databases:
+            filter_clauses.append({"terms": {"databases.keyword": databases}})
+
+        if programming_languages:
+            filter_clauses.append({"terms": {"programming_languages.keyword": programming_languages}})
+
+        if companies:
+            filter_clauses.append({"terms": {"companies.keyword": companies}})
+
+        if certifications:
+            filter_clauses.append({"terms": {"certifications.keyword": certifications}})
+
+        # Build search query
+        if query:
+            # If there's a search query, use hybrid search
+            # Generate embedding for the query
+            embedding_response = requests.post(
+                "http://localhost:11434/api/embeddings",
+                json={"model": "nomic-embed-text", "prompt": query}
+            )
+            query_embedding = embedding_response.json()["embedding"]
+
+            # Build hybrid search with filters
+            search_query = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "multi_match": {
+                                    "query": query,
+                                    "fields": [
+                                        "content^1",
+                                        "databases^5",
+                                        "programming_languages^4",
+                                        "companies^3",
+                                        "certifications^2",
+                                        "skills^2"
+                                    ],
+                                    "fuzziness": "AUTO"
+                                }
+                            }
+                        ],
+                        "filter": filter_clauses
+                    }
+                },
+                "knn": {
+                    "field": "embedding",
+                    "query_vector": query_embedding,
+                    "k": 10,
+                    "num_candidates": 100,
+                    "filter": {
+                        "bool": {
+                            "filter": filter_clauses
+                        }
+                    } if filter_clauses else None
+                },
+                "size": 20,
+                "rank": {
+                    "rrf": {}
+                }
+            }
+        else:
+            # If no search query, just filter
+            search_query = {
+                "query": {
+                    "bool": {
+                        "filter": filter_clauses if filter_clauses else [{"match_all": {}}]
+                    }
+                },
+                "size": 20
+            }
+
+        # Execute search
+        response = es_service.es.search(index=index_name, body=search_query)
+
+        # Format results
+        results = []
+        for hit in response["hits"]["hits"]:
+            source = hit["_source"]
+            results.append({
+                "content": source.get("content", ""),
+                "databases": source.get("databases", []),
+                "programming_languages": source.get("programming_languages", []),
+                "companies": source.get("companies", []),
+                "certifications": source.get("certifications", []),
+                "skills": source.get("skills", []),
+                "score": hit["_score"]
+            })
+
+        return {
+            "results": results,
+            "total": response["hits"]["total"]["value"],
+            "query": query,
+            "filters": {
+                "databases": databases,
+                "programming_languages": programming_languages,
+                "companies": companies,
+                "certifications": certifications
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Failed faceted search: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Faceted search failed: {str(e)}")
+
+
+@router.get("/analytics")
+async def get_analytics_data(current_user: dict = Depends(get_current_active_user)):
+    """
+    Get analytics data for the dashboard.
+    Returns performance metrics, query distribution, and data insights.
+    """
+    try:
+        user_id = current_user["sub"]
+        index_name = f"cv_showcase_{user_id}"
+
+        # Check if index exists
+        if not es_service.es.indices.exists(index=index_name):
+            return {
+                "total_documents": 0,
+                "index_size_bytes": 0,
+                "avg_chunk_size": 0,
+                "field_coverage": {},
+                "top_skills": [],
+                "timeline": [],
+                "database_distribution": [],
+                "language_distribution": []
+            }
+
+        # Get index stats
+        stats = es_service.es.indices.stats(index=index_name)
+        total_docs = stats["indices"][index_name]["total"]["docs"]["count"]
+        index_size = stats["indices"][index_name]["total"]["store"]["size_in_bytes"]
+
+        # Get all documents to calculate metrics
+        all_docs_query = {
+            "query": {"match_all": {}},
+            "size": 1000,  # Adjust if needed
+            "_source": ["content", "databases", "programming_languages", "companies", "skills", "certifications"]
+        }
+        all_docs = es_service.es.search(index=index_name, body=all_docs_query)
+
+        # Calculate average chunk size
+        total_chars = sum(len(doc["_source"].get("content", "")) for doc in all_docs["hits"]["hits"])
+        avg_chunk_size = total_chars / total_docs if total_docs > 0 else 0
+
+        # Calculate field coverage
+        field_coverage = {
+            "databases": sum(1 for doc in all_docs["hits"]["hits"] if doc["_source"].get("databases")) / total_docs * 100 if total_docs > 0 else 0,
+            "programming_languages": sum(1 for doc in all_docs["hits"]["hits"] if doc["_source"].get("programming_languages")) / total_docs * 100 if total_docs > 0 else 0,
+            "companies": sum(1 for doc in all_docs["hits"]["hits"] if doc["_source"].get("companies")) / total_docs * 100 if total_docs > 0 else 0,
+            "skills": sum(1 for doc in all_docs["hits"]["hits"] if doc["_source"].get("skills")) / total_docs * 100 if total_docs > 0 else 0,
+            "certifications": sum(1 for doc in all_docs["hits"]["hits"] if doc["_source"].get("certifications")) / total_docs * 100 if total_docs > 0 else 0
+        }
+
+        # Get top skills aggregation
+        skills_agg = es_service.es.search(
+            index=index_name,
+            body={
+                "size": 0,
+                "aggs": {
+                    "top_skills": {
+                        "terms": {
+                            "field": "skills.keyword",
+                            "size": 10
+                        }
+                    }
+                }
+            }
+        )
+        top_skills = [
+            {"skill": bucket["key"], "count": bucket["doc_count"]}
+            for bucket in skills_agg["aggregations"]["top_skills"]["buckets"]
+        ]
+
+        # Get database distribution
+        db_agg = es_service.es.search(
+            index=index_name,
+            body={
+                "size": 0,
+                "aggs": {
+                    "databases": {
+                        "terms": {
+                            "field": "databases.keyword",
+                            "size": 10
+                        }
+                    }
+                }
+            }
+        )
+        database_distribution = [
+            {"name": bucket["key"], "value": bucket["doc_count"]}
+            for bucket in db_agg["aggregations"]["databases"]["buckets"]
+        ]
+
+        # Get programming language distribution
+        lang_agg = es_service.es.search(
+            index=index_name,
+            body={
+                "size": 0,
+                "aggs": {
+                    "languages": {
+                        "terms": {
+                            "field": "programming_languages.keyword",
+                            "size": 10
+                        }
+                    }
+                }
+            }
+        )
+        language_distribution = [
+            {"name": bucket["key"], "value": bucket["doc_count"]}
+            for bucket in lang_agg["aggregations"]["languages"]["buckets"]
+        ]
+
+        # Create timeline (company work periods) - simplified for now
+        company_agg = es_service.es.search(
+            index=index_name,
+            body={
+                "size": 0,
+                "aggs": {
+                    "companies": {
+                        "terms": {
+                            "field": "companies.keyword",
+                            "size": 10
+                        }
+                    }
+                }
+            }
+        )
+        timeline = [
+            {"company": bucket["key"], "mentions": bucket["doc_count"]}
+            for bucket in company_agg["aggregations"]["companies"]["buckets"]
+        ]
+
+        return {
+            "total_documents": total_docs,
+            "index_size_bytes": index_size,
+            "index_size_mb": round(index_size / (1024 * 1024), 2),
+            "avg_chunk_size": round(avg_chunk_size, 0),
+            "field_coverage": field_coverage,
+            "top_skills": top_skills,
+            "timeline": timeline,
+            "database_distribution": database_distribution,
+            "language_distribution": language_distribution
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get analytics: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Analytics failed: {str(e)}")
