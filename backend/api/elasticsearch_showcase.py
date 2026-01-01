@@ -700,11 +700,24 @@ Job Titles: {', '.join(job_titles) if job_titles else 'N/A'}
             else:
                 logger.warning("⚠️  Skipping pgvector add_documents (delete failed or unavailable)")
 
-        logger.info(f"Profile created/updated for user {user.id}")
+        # Log success summary with important metrics
+        logger.info(f"✅ Profile import completed for user {user.id}")
+        logger.info(f"📊 Import Summary:")
+        logger.info(f"  - Skills extracted: {len(skills)}")
+        logger.info(f"  - Experience: {experience_years} years" if experience_years else "  - Experience: N/A")
+        logger.info(f"  - Education: {education_level}" if education_level else "  - Education: N/A")
+        logger.info(f"  - Job titles: {len(job_titles)}")
+        logger.info(f"  - CV content: {len(full_cv_content_deduplicated)} chars")
+        logger.info(f"  - Elasticsearch: Indexed")
+        logger.info(f"  - pgvector: {'Indexed' if (pgvector_available and not session_aborted) else 'Skipped'}")
         return profile
 
     except Exception as e:
-        logger.error(f"Error creating/updating profile: {e}")
+        logger.error(f"❌ Error creating/updating profile for user: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
