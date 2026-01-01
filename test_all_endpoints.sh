@@ -345,9 +345,126 @@ fi
 echo ""
 
 # ==========================================
-# 17. Logout
+# 17. Get Elasticsearch Aggregations
 # ==========================================
-echo "17. Testing Logout..."
+echo "17. Testing Elasticsearch Aggregations..."
+RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "$API_URL/elasticsearch/aggregations" \
+  -H "Authorization: Bearer $TOKEN")
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+if [ "$HTTP_CODE" = "200" ]; then
+    test_passed "Elasticsearch aggregations (HTTP 200)"
+    echo "$BODY" | python3 -m json.tool | head -30
+else
+    test_failed "Elasticsearch aggregations (Expected 200, got $HTTP_CODE)" "$BODY"
+fi
+echo ""
+
+# ==========================================
+# 18. Elasticsearch Faceted Search
+# ==========================================
+echo "18. Testing Elasticsearch Faceted Search..."
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/elasticsearch/faceted-search" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "database",
+    "databases": ["PostgreSQL"],
+    "programming_languages": [],
+    "companies": [],
+    "certifications": []
+  }')
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+if [ "$HTTP_CODE" = "200" ]; then
+    test_passed "Elasticsearch faceted search (HTTP 200)"
+    echo "$BODY" | python3 -m json.tool | head -30
+else
+    test_failed "Elasticsearch faceted search (Expected 200, got $HTTP_CODE)" "$BODY"
+fi
+echo ""
+
+# ==========================================
+# 19. Elasticsearch Analytics Dashboard
+# ==========================================
+echo "19. Testing Elasticsearch Analytics Dashboard..."
+RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "$API_URL/elasticsearch/analytics" \
+  -H "Authorization: Bearer $TOKEN")
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+if [ "$HTTP_CODE" = "200" ]; then
+    test_passed "Elasticsearch analytics dashboard (HTTP 200)"
+    echo "$BODY" | python3 -m json.tool | head -30
+else
+    test_failed "Elasticsearch analytics dashboard (Expected 200, got $HTTP_CODE)" "$BODY"
+fi
+echo ""
+
+# ==========================================
+# 20. Elasticsearch Q&A Comparison (pgvector vs Elasticsearch)
+# ==========================================
+echo "20. Testing Elasticsearch Q&A Comparison..."
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/elasticsearch/compare-query?question=What%20experience%20does%20Michael%20have%20with%20databases%3F&provider=grok" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json")
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+if [ "$HTTP_CODE" = "200" ]; then
+    test_passed "Elasticsearch Q&A comparison (HTTP 200)"
+    echo "$BODY" | python3 -m json.tool | head -50
+else
+    test_failed "Elasticsearch Q&A comparison (Expected 200, got $HTTP_CODE)" "$BODY"
+fi
+echo ""
+
+# ==========================================
+# 21. Get Elasticsearch Database Stats
+# ==========================================
+echo "21. Testing Elasticsearch Database Stats..."
+RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "$API_URL/elasticsearch/database-stats" \
+  -H "Authorization: Bearer $TOKEN")
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+if [ "$HTTP_CODE" = "200" ]; then
+    test_passed "Elasticsearch database stats (HTTP 200)"
+    echo "$BODY" | python3 -m json.tool
+else
+    test_failed "Elasticsearch database stats (Expected 200, got $HTTP_CODE)" "$BODY"
+fi
+echo ""
+
+# ==========================================
+# 22. Get Current LLM Model
+# ==========================================
+echo "22. Testing Get Current LLM Model..."
+RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "$API_URL/elasticsearch/current-model" \
+  -H "Authorization: Bearer $TOKEN")
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+if [ "$HTTP_CODE" = "200" ]; then
+    test_passed "Get current LLM model (HTTP 200)"
+    echo "$BODY" | python3 -m json.tool
+else
+    test_failed "Get current LLM model (Expected 200, got $HTTP_CODE)" "$BODY"
+fi
+echo ""
+
+# ==========================================
+# 23. Logout
+# ==========================================
+echo "23. Testing Logout..."
 HTTP_CODE=$(curl -s -w "%{http_code}" -o /dev/null -X POST "$API_URL/auth/logout" \
   -H "Authorization: Bearer $TOKEN")
 
