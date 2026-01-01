@@ -261,32 +261,76 @@ def extract_job_titles(cv_text: str) -> List[str]:
     return found_titles[:5]  # Return max 5 titles
 
 
-async def extract_skills_with_llm(cv_text: str, provider: str = "grok") -> List[str]:
-    """Extract skills from CV using LLM for better accuracy."""
-    prompt = f"""Extract all technical and professional skills from this CV.
-Return ONLY a JSON array of strings, no explanations.
+async def extract_cv_info_with_llm(cv_text: str, provider: str = "grok") -> dict:
+    """
+    Extract ALL CV information using LLM in a single call for better accuracy and efficiency.
+
+    Returns dict with: skills, experience_years, education_level, job_titles
+    Falls back to regex-based extraction if LLM fails.
+    """
+    prompt = f"""Analyze this CV and extract the following information. Return ONLY valid JSON, no explanations.
 
 CV:
-{cv_text[:2000]}
+{cv_text[:4000]}
 
-Return format: ["skill1", "skill2", "skill3", ...]
+Extract:
+1. skills: Array of all technical and professional skills (max 50)
+2. experience_years: Total years of professional experience (integer or null)
+3. education_level: Highest education ("PhD", "Master", "Bachelor", "Associate", or null)
+4. job_titles: Array of job titles mentioned in CV (max 5, most recent/relevant first)
+
+Return EXACTLY this JSON format:
+{{
+  "skills": ["skill1", "skill2", ...],
+  "experience_years": 10,
+  "education_level": "Master",
+  "job_titles": ["Senior Engineer", "Developer", ...]
+}}
 """
 
     try:
-        response_dict = llm_gateway.generate(prompt=prompt, provider=provider)
+        logger.info(f"Extracting CV info with LLM ({provider})...")
+        response_dict = llm_gateway.generate(prompt=prompt, provider=provider, temperature=0.3)
         response = response_dict.get("response", "")
 
         # Extract JSON from response
-        json_match = re.search(r'\[.*\]', response, re.DOTALL)
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
         if json_match:
-            skills = json.loads(json_match.group(0))
-            return skills[:50]  # Max 50 skills
+            cv_info = json.loads(json_match.group(0))
+
+            # Validate and clean data
+            result = {
+                "skills": cv_info.get("skills", [])[:50],
+                "experience_years": cv_info.get("experience_years"),
+                "education_level": cv_info.get("education_level"),
+                "job_titles": cv_info.get("job_titles", [])[:5]
+            }
+
+            logger.info(f"✅ LLM extracted: {len(result['skills'])} skills, "
+                       f"{result['experience_years']} years exp, "
+                       f"{result['education_level']} education")
+            return result
         else:
-            logger.warning("LLM didn't return valid JSON for skills extraction")
-            return extract_skills_from_cv(cv_text)
+            logger.warning("LLM didn't return valid JSON, using fallback")
+            raise ValueError("Invalid JSON response")
     except Exception as e:
-        logger.error(f"Error extracting skills with LLM: {e}")
-        return extract_skills_from_cv(cv_text)
+        logger.error(f"Error extracting CV info with LLM: {e}")
+        logger.info("Falling back to regex-based extraction")
+        return {
+            "skills": extract_skills_from_cv(cv_text),
+            "experience_years": extract_experience_years(cv_text),
+            "education_level": extract_education_level(cv_text),
+            "job_titles": extract_job_titles(cv_text)
+        }
+
+
+async def extract_skills_with_llm(cv_text: str, provider: str = "grok") -> List[str]:
+    """
+    Extract skills from CV using LLM (deprecated - use extract_cv_info_with_llm instead).
+    Kept for backward compatibility.
+    """
+    cv_info = await extract_cv_info_with_llm(cv_text, provider)
+    return cv_info.get("skills", [])
 
 
 async def analyze_job_with_llm(job_description: str, cv_text: str, provider: str = "grok") -> dict:
@@ -462,11 +506,13 @@ async def create_or_update_profile(
     3. Indexes data in Elasticsearch for fast searching
     """
     try:
-        # Extract information from CV using LLM
-        skills = await extract_skills_with_llm(profile_data.cv_text, provider)
-        experience_years = extract_experience_years(profile_data.cv_text)
-        education_level = extract_education_level(profile_data.cv_text)
-        job_titles = extract_job_titles(profile_data.cv_text)
+        # Extract ALL information from CV using LLM (more accurate than regex)
+        logger.info(f"Extracting CV information with LLM provider: {provider}")
+        cv_info = await extract_cv_info_with_llm(profile_data.cv_text, provider)
+        skills = cv_info.get("skills", [])
+        experience_years = cv_info.get("experience_years")
+        education_level = cv_info.get("education_level")
+        job_titles = cv_info.get("job_titles", [])
 
         # Check if profile exists
         statement = select(UserElasticProfile).where(UserElasticProfile.user_id == str(user.id))
