@@ -2582,27 +2582,27 @@ async def fix_enum_value(
     This endpoint uses AUTOCOMMIT mode to add the enum value.
     """
     try:
-        from sqlalchemy import text
         from backend.database import engine
 
         logger.info("🔧 Manually adding CV_SHOWCASE enum value to database...")
-        logger.info("⚠️  Using AUTOCOMMIT mode (ADD VALUE cannot run in transactions)")
+        logger.info("⚠️  Using raw asyncpg connection (ADD VALUE cannot run in transactions)")
 
-        # Use raw connection with AUTOCOMMIT isolation level
-        # This is required because ALTER TYPE ADD VALUE cannot run in a transaction
-        async with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
-            await conn.execute(
-                text("ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'")
+        # Use raw asyncpg connection to execute outside of transaction
+        # This is required because ALTER TYPE ADD VALUE cannot run in a transaction block
+        async with engine.raw_connection() as raw_conn:
+            driver_conn = raw_conn.driver_connection
+            await driver_conn.execute(
+                "ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'cv_showcase'"
             )
 
-        logger.info("✅ CV_SHOWCASE enum value added successfully in AUTOCOMMIT mode")
+        logger.info("✅ CV_SHOWCASE enum value added successfully using raw connection")
 
         return {
             "success": True,
             "message": "✅ CV_SHOWCASE enum value added successfully",
             "enum_value": "cv_showcase",
-            "mode": "AUTOCOMMIT (required for ALTER TYPE ADD VALUE)",
-            "note": "The enum was added outside a transaction. Restart the application for all connections to see it."
+            "method": "Raw asyncpg connection (outside transaction)",
+            "note": "The enum was added directly via asyncpg. Restart the application for all connections to see it."
         }
 
     except Exception as e:
