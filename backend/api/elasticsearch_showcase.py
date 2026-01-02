@@ -1769,17 +1769,29 @@ async def generate_demo_data(
         base_analysis = result.scalars().first()
 
         if not base_analysis:
-            raise HTTPException(
-                status_code=404,
-                detail="No analysis found. Please create an analysis first."
-            )
+            # No existing analysis - create default demo profiles based on common tech stack
+            logger.info(f"No existing analysis found - generating default demo profiles")
 
-        # Convert to dict for variation
-        base_dict = {
-            "job_analysis": base_analysis.job_analysis,
-            "fit_score": base_analysis.fit_score,
-            "success_probability": base_analysis.success_probability,
-        }
+            # Create default base analysis
+            base_dict = {
+                "job_analysis": {
+                    "company": "Tech Corp",
+                    "position": "Senior Software Engineer",
+                    "skills_matched": ["Python", "JavaScript", "React", "PostgreSQL"],
+                    "skills_missing": ["Kubernetes", "AWS"],
+                    "experience_match": True,
+                    "education_match": True
+                },
+                "fit_score": 75,
+                "success_probability": 70,
+            }
+        else:
+            # Convert to dict for variation
+            base_dict = {
+                "job_analysis": base_analysis.job_analysis,
+                "fit_score": base_analysis.fit_score,
+                "success_probability": base_analysis.success_probability,
+            }
 
         # Generate variations
         logger.info(f"Generating {count} demo variations for user {user.id}")
