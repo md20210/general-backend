@@ -3110,52 +3110,110 @@ Answer:"""
         )
         es_answer = es_response.get('response', '')
 
-        # Step 5: RAGAS-based evaluation of answers
-        logger.info(f"⚖️  Evaluating answers with RAGAS (provider={llm_provider})...")
+        # Step 5: Evaluation of answers (RAGAS with fallback to simple LLM judge)
+        logger.info(f"⚖️  Evaluating answers (provider={llm_provider})...")
 
-        # Import RAGAS evaluator (uses same provider as answer generation for DSGVO compliance)
-        from backend.services.ragas_evaluator import get_ragas_evaluator
-        ragas = get_ragas_evaluator(provider=llm_provider)
+        evaluation = None
+        try:
+            # Try RAGAS evaluation first (professional metrics)
+            logger.info("Attempting RAGAS evaluation...")
+            from backend.services.ragas_evaluator import get_ragas_evaluator
+            ragas = get_ragas_evaluator(provider=llm_provider)
 
-        # Extract chunk texts for RAGAS
-        pgvector_chunk_texts = [
-            chunk.get('content', chunk.get('text', ''))
-            for chunk in pgvector_chunks
-        ]
-        es_chunk_texts = [
-            chunk.get('content', chunk.get('text', ''))
-            for chunk in es_chunks
-        ]
+            # Extract chunk texts for RAGAS
+            pgvector_chunk_texts = [
+                chunk.get('content', chunk.get('text', ''))
+                for chunk in pgvector_chunks
+            ]
+            es_chunk_texts = [
+                chunk.get('content', chunk.get('text', ''))
+                for chunk in es_chunks
+            ]
 
-        # Run RAGAS comparison
-        ragas_comparison = ragas.compare_systems(
-            question=question,
-            answer_a=pgvector_answer,
-            answer_b=es_answer,
-            contexts_a=pgvector_chunk_texts,
-            contexts_b=es_chunk_texts,
-            ground_truth=None,  # Can be added later for specific benchmark questions
-            system_a_name="pgvector",
-            system_b_name="elasticsearch"
-        )
+            # Run RAGAS comparison
+            ragas_comparison = ragas.compare_systems(
+                question=question,
+                answer_a=pgvector_answer,
+                answer_b=es_answer,
+                contexts_a=pgvector_chunk_texts,
+                contexts_b=es_chunk_texts,
+                ground_truth=None,
+                system_a_name="pgvector",
+                system_b_name="elasticsearch"
+            )
 
-        # Convert RAGAS scores (0-1) to percentage (0-100)
-        pgvector_score = int(ragas_comparison['pgvector']['overall_score'] * 100)
-        elasticsearch_score = int(ragas_comparison['elasticsearch']['overall_score'] * 100)
+            # Convert RAGAS scores (0-1) to percentage (0-100)
+            pgvector_score = int(ragas_comparison['pgvector']['overall_score'] * 100)
+            elasticsearch_score = int(ragas_comparison['elasticsearch']['overall_score'] * 100)
 
-        # Build evaluation result
-        evaluation = {
-            "winner": ragas_comparison['winner'],
-            "reasoning": ragas_comparison.get('reasoning', ''),
-            "pgvector_score": pgvector_score,
-            "elasticsearch_score": elasticsearch_score,
-            "ragas_metrics": {
-                "pgvector": ragas_comparison['pgvector']['scores'],
-                "elasticsearch": ragas_comparison['elasticsearch']['scores']
-            },
-            "evaluation_method": "ragas_grok",
-            "confidence": ragas_comparison.get('confidence', 'medium')
-        }
+            # Build evaluation result
+            evaluation = {
+                "winner": ragas_comparison['winner'],
+                "reasoning": ragas_comparison.get('reasoning', ''),
+                "pgvector_score": pgvector_score,
+                "elasticsearch_score": elasticsearch_score,
+                "ragas_metrics": {
+                    "pgvector": ragas_comparison['pgvector']['scores'],
+                    "elasticsearch": ragas_comparison['elasticsearch']['scores']
+                },
+                "evaluation_method": "ragas",
+                "confidence": ragas_comparison.get('confidence', 'medium')
+            }
+            logger.info("✅ RAGAS evaluation successful")
+
+        except Exception as ragas_error:
+            # Fallback to simple LLM-based evaluation if RAGAS fails
+            logger.warning(f"RAGAS evaluation failed: {ragas_error}. Falling back to simple LLM judge.")
+
+            evaluation_prompt = f"""Compare these two answers to the question: "{question}"
+
+Answer A (pgvector): {pgvector_answer}
+Answer B (Elasticsearch): {es_answer}
+
+Rate each answer 0-100 based on:
+- Correctness (most important)
+- Relevance
+- Precision
+- Specificity
+
+Respond with JSON:
+{{
+  "pgvector_score": 0-100,
+  "elasticsearch_score": 0-100,
+  "winner": "pgvector" or "elasticsearch" or "tie",
+  "reasoning": "brief explanation"
+}}
+
+Only respond with valid JSON, no other text."""
+
+            evaluation_result = llm_gateway.generate(
+                prompt=evaluation_prompt,
+                provider=llm_provider,
+                temperature=0.1,
+                max_tokens=300
+            )
+            evaluation_response = evaluation_result.get('response', '')
+
+            # Parse LLM evaluation
+            try:
+                import json
+                json_match = re.search(r'\{.*\}', evaluation_response, re.DOTALL)
+                if json_match:
+                    evaluation = json.loads(json_match.group())
+                    evaluation['evaluation_method'] = 'llm_judge_fallback'
+                    evaluation['confidence'] = 'medium'
+                else:
+                    raise ValueError("No JSON found in response")
+            except Exception as parse_err:
+                logger.warning(f"Failed to parse evaluation JSON: {parse_err}")
+                evaluation = {
+                    "winner": "tie",
+                    "reasoning": "Evaluation parsing failed",
+                    "pgvector_score": 50,
+                    "elasticsearch_score": 50,
+                    "evaluation_method": "fallback_failed",
+                    "confidence": "low"
+                }
 
         # Format chunks for response
         pgvector_chunks_formatted = [
