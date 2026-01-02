@@ -3057,7 +3057,13 @@ async def compare_query(
             for i, chunk in enumerate(pgvector_chunks)
         ])
 
-        pgvector_prompt = f"""Answer the following question based on the context provided.
+        pgvector_prompt = f"""Answer the following question based ONLY on the context provided. Be CONCISE and PRECISE.
+
+RULES:
+- Maximum 2-3 sentences
+- Use concrete facts and numbers from the context
+- No filler words or unnecessary explanations
+- If the answer is a list, use bullet points
 
 Question: {question}
 
@@ -3070,7 +3076,7 @@ Answer:"""
             prompt=pgvector_prompt,
             provider=llm_provider,
             temperature=0.3,
-            max_tokens=500
+            max_tokens=150  # Reduced from 500 for concise answers
         )
         pgvector_answer = pgvector_response.get('response', '')
 
@@ -3081,7 +3087,13 @@ Answer:"""
             for i, chunk in enumerate(es_chunks)
         ])
 
-        es_prompt = f"""Answer the following question based on the context provided.
+        es_prompt = f"""Answer the following question based ONLY on the context provided. Be CONCISE and PRECISE.
+
+RULES:
+- Maximum 2-3 sentences
+- Use concrete facts and numbers from the context
+- No filler words or unnecessary explanations
+- If the answer is a list, use bullet points
 
 Question: {question}
 
@@ -3094,7 +3106,7 @@ Answer:"""
             prompt=es_prompt,
             provider=llm_provider,
             temperature=0.3,
-            max_tokens=500
+            max_tokens=150  # Reduced from 500 for concise answers
         )
         es_answer = es_response.get('response', '')
 
