@@ -26,6 +26,7 @@ from backend.services.llm_gateway import LLMGateway
 from backend.services.logstash_service import LogstashService
 from backend.services.demo_data_generator import DemoDataGenerator
 from backend.services.elasticsearch_vector_service import ElasticsearchVectorService
+from backend.services.rag_metrics_logger import get_rag_metrics_logger
 import logging
 import json
 import re
@@ -3200,7 +3201,8 @@ Only respond with valid JSON, no other text."""
 
         logger.info(f"✅ Comparison complete! Winner: {evaluation['winner']}")
 
-        return {
+        # Prepare response
+        response_data = {
             "question": question,
             "pgvector": {
                 "answer": pgvector_answer,
@@ -3223,6 +3225,24 @@ Only respond with valid JSON, no other text."""
             "llm_used": provider,
             "timestamp": datetime.utcnow().isoformat()
         }
+
+        # Log to Elasticsearch for Kibana analytics
+        try:
+            metrics_logger = get_rag_metrics_logger()
+            metrics_logger.log_comparison(
+                query_text=question,
+                pgvector_result=response_data["pgvector"],
+                elasticsearch_result=response_data["elasticsearch"],
+                evaluation=evaluation,
+                llm_provider=llm_provider,
+                user_id=str(current_user.id)
+            )
+            logger.info("📊 Logged comparison metrics to Elasticsearch for Kibana")
+        except Exception as log_err:
+            # Don't fail the request if logging fails
+            logger.warning(f"Failed to log metrics to Elasticsearch: {log_err}")
+
+        return response_data
 
     except Exception as e:
         logger.error(f"Failed to compare query: {e}")
