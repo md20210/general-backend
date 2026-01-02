@@ -1190,49 +1190,93 @@ async def health_check():
 @router.post("/parse-doc")
 async def parse_doc_file(file: UploadFile = File(...)):
     """
-    Parse .doc file and extract text.
+    Parse .doc or .docx file and extract text.
 
-    This endpoint accepts old .doc format files and attempts to extract text.
-    Note: .doc is a legacy binary format - .docx is preferred.
+    This endpoint accepts both old .doc format and modern .docx format files.
     """
     try:
-        import olefile
         import io
 
         # Read file contents
         file_content = await file.read()
+        filename = file.filename.lower() if file.filename else ""
 
-        # Try to parse .doc file using olefile
-        ole = olefile.OleFileIO(io.BytesIO(file_content))
+        # Handle .docx files
+        if filename.endswith('.docx'):
+            try:
+                import docx
+                from io import BytesIO
 
-        # Try to find WordDocument stream
-        if ole.exists('WordDocument'):
-            word_stream = ole.openstream('WordDocument')
-            data = word_stream.read()
+                # Parse DOCX file
+                doc = docx.Document(BytesIO(file_content))
 
-            # Extract text (very basic extraction - .doc format is complex)
-            # This will get some text but may not be perfect
-            text = data.decode('latin-1', errors='ignore')
+                # Extract all text from paragraphs
+                text_parts = []
+                for paragraph in doc.paragraphs:
+                    if paragraph.text.strip():
+                        text_parts.append(paragraph.text)
 
-            # Clean up non-printable characters
-            import string
-            printable = set(string.printable)
-            text = ''.join(filter(lambda x: x in printable, text))
+                # Also extract text from tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            if cell.text.strip():
+                                text_parts.append(cell.text)
 
-            ole.close()
+                text = '\n'.join(text_parts)
 
-            if text and len(text) > 10:
-                return {"text": text, "success": True}
+                if text and len(text) > 10:
+                    logger.info(f"Successfully parsed .docx file: {len(text)} characters")
+                    return {"text": text, "success": True}
+                else:
+                    raise ValueError("Could not extract meaningful text from .docx file")
+
+            except Exception as docx_err:
+                logger.error(f"Error parsing .docx file: {docx_err}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f".docx file parsing failed: {str(docx_err)}. The file may be corrupted. Please try copy/paste instead."
+                )
+
+        # Handle .doc files (legacy format)
+        elif filename.endswith('.doc'):
+            import olefile
+
+            # Try to parse .doc file using olefile
+            ole = olefile.OleFileIO(io.BytesIO(file_content))
+
+            # Try to find WordDocument stream
+            if ole.exists('WordDocument'):
+                word_stream = ole.openstream('WordDocument')
+                data = word_stream.read()
+
+                # Extract text (very basic extraction - .doc format is complex)
+                # This will get some text but may not be perfect
+                text = data.decode('latin-1', errors='ignore')
+
+                # Clean up non-printable characters
+                import string
+                printable = set(string.printable)
+                text = ''.join(filter(lambda x: x in printable, text))
+
+                ole.close()
+
+                if text and len(text) > 10:
+                    return {"text": text, "success": True}
+                else:
+                    raise ValueError("Could not extract meaningful text from .doc file")
             else:
-                raise ValueError("Could not extract meaningful text from .doc file")
+                raise ValueError(".doc file structure not recognized")
         else:
-            raise ValueError(".doc file structure not recognized")
+            raise ValueError(f"Unsupported file type. Expected .doc or .docx, got: {filename}")
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error parsing .doc file: {e}")
+        logger.error(f"Error parsing Word document: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f".doc file parsing failed: {str(e)}. Please save as .docx or copy/paste the text instead."
+            detail=f"Word document parsing failed: {str(e)}. Please save as .txt or copy/paste the text instead."
         )
 
 
