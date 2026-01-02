@@ -637,5 +637,77 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
             "de": "Demo starten",
             "en": "Launch Demo",
             "es": "Iniciar Demo"
+        },
+
+        # Elasticsearch Showcase Translations
+        "elasticsearch_tagline": {
+            "de": "Vergleich von pgvector vs Elasticsearch für semantische Suche",
+            "en": "Comparison of pgvector vs Elasticsearch for semantic search",
+            "es": "Comparación de pgvector vs Elasticsearch para búsqueda semántica"
+        },
+        "elasticsearch_functional_title": {
+            "de": "Was macht diese Anwendung?",
+            "en": "What does this application do?",
+            "es": "¿Qué hace esta aplicación?"
+        },
+        "elasticsearch_functional_desc": {
+            "de": "Eine interaktive Demo zum Vergleich von zwei führenden Vektorsuch-Technologien: pgvector (PostgreSQL) und Elasticsearch. Die Anwendung bewertet automatisch welche Technologie bessere Ergebnisse für CV-Profil-Suchanfragen liefert.",
+            "en": "An interactive demo comparing two leading vector search technologies: pgvector (PostgreSQL) and Elasticsearch. The application automatically evaluates which technology delivers better results for CV profile search queries.",
+            "es": "Una demostración interactiva que compara dos tecnologías líderes de búsqueda vectorial: pgvector (PostgreSQL) y Elasticsearch. La aplicación evalúa automáticamente qué tecnología ofrece mejores resultados para consultas de búsqueda de perfiles CV."
+        },
+        "elasticsearch_feature_1": {
+            "de": "Direkter Vergleich: Führe dieselbe Suchanfrage auf beiden Systemen parallel aus",
+            "en": "Direct Comparison: Run the same search query on both systems in parallel",
+            "es": "Comparación Directa: ejecuta la misma consulta de búsqueda en ambos sistemas en paralelo"
+        },
+        "elasticsearch_feature_2": {
+            "de": "LLM-Bewertung: Nutze Grok oder lokales Llama 3.1 zur objektiven Bewertung der Ergebnisse",
+            "en": "LLM Evaluation: Use Grok or local Llama 3.1 for objective result evaluation",
+            "es": "Evaluación LLM: usa Grok o Llama 3.1 local para evaluación objetiva de resultados"
+        },
+        "elasticsearch_feature_3": {
+            "de": "Analytics Dashboard: Visualisiere Win-Raten, Latenz und Performance-Metriken",
+            "en": "Analytics Dashboard: Visualize win rates, latency and performance metrics",
+            "es": "Panel de Análisis: visualiza tasas de victorias, latencia y métricas de rendimiento"
+        },
+        "elasticsearch_feature_4": {
+            "de": "Daten Import: Lade dein eigenes CV-Profil hoch zur personalisierten Suche",
+            "en": "Data Import: Upload your own CV profile for personalized search",
+            "es": "Importación de Datos: carga tu propio perfil CV para búsqueda personalizada"
+        },
+        "elasticsearch_feature_5": {
+            "de": "Real-time Vergleich: Siehe sofort welche Technologie bessere Antworten liefert",
+            "en": "Real-time Comparison: See instantly which technology delivers better answers",
+            "es": "Comparación en Tiempo Real: ve instantáneamente qué tecnología ofrece mejores respuestas"
+        },
+        "elasticsearch_technical_title": {
+            "de": "Technische Details",
+            "en": "Technical Details",
+            "es": "Detalles Técnicos"
+        },
+        "elasticsearch_technical_desc": {
+            "de": "Diese Anwendung demonstriert moderne RAG-Architekturen mit Fokus auf Vektorsuche und LLM-basierter Evaluation.",
+            "en": "This application demonstrates modern RAG architectures with focus on vector search and LLM-based evaluation.",
+            "es": "Esta aplicación demuestra arquitecturas RAG modernas con enfoque en búsqueda vectorial y evaluación basada en LLM."
+        },
+        "elasticsearch_tech_search": {
+            "de": "Such-Technologien",
+            "en": "Search Technologies",
+            "es": "Tecnologías de Búsqueda"
+        },
+        "elasticsearch_tech_evaluation": {
+            "de": "Bewertungssystem",
+            "en": "Evaluation System",
+            "es": "Sistema de Evaluación"
+        },
+        "elasticsearch_tech_analytics": {
+            "de": "Analytics",
+            "en": "Analytics",
+            "es": "Análisis"
+        },
+        "elasticsearch_tech_infrastructure": {
+            "de": "Infrastruktur",
+            "en": "Infrastructure",
+            "es": "Infraestructura"
         }
 }
