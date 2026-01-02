@@ -43,14 +43,14 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
             "es": "Acerca de mí"
         },
         "about_subtitle": {
-            "de": "AI Consultant, AI Architect & Projekt Manager in Spanien",
-            "en": "AI Consultant, AI Architect & Project Manager in Spain",
-            "es": "Consultor de IA, Arquitecto de IA y Gerente de Proyectos en España"
+            "de": "Generative AI Architect & Projekt Manager in Spanien",
+            "en": "Generative AI Architect & Project Manager in Spain",
+            "es": "Arquitecto de IA Generativa y Gerente de Proyectos en España"
         },
         "about_p1": {
-            "de": "Als leidenschaftlicher AI Consultant, Enterprise Architect und Global Program Director mit über 20 Jahren Erfahrung in internationalen IT-Transformationen bringe ich umfassende Expertise in der Integration moderner AI-Technologien in komplexe Projekte ein. Mit Stationen bei renommierten Unternehmen wie Cognizant, IBM und PwC habe ich globale Programme mit hunderten Mitarbeitern geleitet, digitale Transformationen vorangetrieben und internationale Teams in hochskalierbaren Umgebungen geführt.",
-            "en": "As a passionate AI Consultant, Enterprise Architect, and Global Program Director with over 20 years of experience in international IT transformations, I bring comprehensive expertise in integrating modern AI technologies into complex projects. With stints at renowned companies such as Cognizant, IBM, and PwC, I have led global programs with hundreds of employees, driven digital transformations, and managed international teams in highly scalable environments.",
-            "es": "Como consultor de IA apasionado, arquitecto empresarial y director de programas globales con más de 20 años de experiencia en transformaciones de TI internacionales, aporto una amplia experiencia en la integración de tecnologías de IA modernas en proyectos complejos. Con experiencia en empresas de renombre como Cognizant, IBM y PwC, he liderado programas globales con cientos de empleados, impulsado transformaciones digitales y gestionado equipos internacionales en entornos altamente escalables."
+            "de": "Als leidenschaftlicher Generative AI Architect, Enterprise Architect und Global Program Director mit über 20 Jahren Erfahrung in internationalen IT-Transformationen bringe ich umfassende Expertise in der Integration moderner AI-Technologien in komplexe Projekte ein. Mit Stationen bei renommierten Unternehmen wie Cognizant, IBM und PwC habe ich globale Programme mit hunderten Mitarbeitern geleitet, digitale Transformationen vorangetrieben und internationale Teams in hochskalierbaren Umgebungen geführt.",
+            "en": "As a passionate Generative AI Architect, Enterprise Architect, and Global Program Director with over 20 years of experience in international IT transformations, I bring comprehensive expertise in integrating modern AI technologies into complex projects. With stints at renowned companies such as Cognizant, IBM, and PwC, I have led global programs with hundreds of employees, driven digital transformations, and managed international teams in highly scalable environments.",
+            "es": "Como arquitecto de IA generativa apasionado, arquitecto empresarial y director de programas globales con más de 20 años de experiencia en transformaciones de TI internacionales, aporto una amplia experiencia en la integración de tecnologías de IA modernas en proyectos complejos. Con experiencia en empresas de renombre como Cognizant, IBM y PwC, he liderado programas globales con cientos de empleados, impulsado transformaciones digitales y gestionado equipos internacionales en entornos altamente escalables."
         },
         "about_p2": {
             "de": "Schon als Jugendlicher und Student war ich ein echter Nerd – stundenlang vertieft in Code, Algorithmen und technische Experimente. Diese Leidenschaft führte mich zunächst in die Welt des Managements, wo ich erfolgreich große IT-Projekte und Teams managte. In den letzten drei Jahren hat die explosive Entwicklung von AI mich jedoch zurück zu meinen technischen Wurzeln geführt: Ich entwickle intensiv eigene AI-Projekte und Showcases, nutze eine Vielzahl von Plattformen wie ChatGPT, Grok, Claude Code, Llama-Modelle und RAG-Systeme, um innovative Lösungen zu schaffen, gerade DSGVO Konform – von intelligenten CV-Matching-Tools über private Chat-Assistenten bis hin zu multilingualen Backend-Architekturen.",
@@ -240,9 +240,9 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
 
         # Updated Hero Title
         "hero_title": {
-            "de": "AI Consultant",
-            "en": "AI Consultant",
-            "es": "Consultor de IA"
+            "de": "Generative AI Architect",
+            "en": "Generative AI Architect",
+            "es": "Arquitecto de IA Generativa"
         },
 
         # General Backend - Additional Keys
