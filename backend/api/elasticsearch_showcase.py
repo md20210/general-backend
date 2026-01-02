@@ -3111,11 +3111,11 @@ Answer:"""
         es_answer = es_response.get('response', '')
 
         # Step 5: RAGAS-based evaluation of answers
-        logger.info("⚖️  Evaluating answers with RAGAS (professional RAG metrics)...")
+        logger.info(f"⚖️  Evaluating answers with RAGAS (provider={llm_provider})...")
 
-        # Import RAGAS evaluator
+        # Import RAGAS evaluator (uses same provider as answer generation for DSGVO compliance)
         from backend.services.ragas_evaluator import get_ragas_evaluator
-        ragas = get_ragas_evaluator()
+        ragas = get_ragas_evaluator(provider=llm_provider)
 
         # Extract chunk texts for RAGAS
         pgvector_chunk_texts = [

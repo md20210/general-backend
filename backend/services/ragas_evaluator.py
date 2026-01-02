@@ -30,20 +30,45 @@ logger = logging.getLogger(__name__)
 class RAGASEvaluator:
     """RAGAS-based evaluator for RAG systems using Grok API"""
 
-    def __init__(self):
-        """Initialize RAGAS evaluator with Grok API"""
-        self.grok_api_key = os.getenv("GROK_API_KEY")
-        if not self.grok_api_key:
-            logger.warning("GROK_API_KEY not found, RAGAS evaluation will fail")
+    def __init__(self, provider: str = "grok"):
+        """
+        Initialize RAGAS evaluator with specified LLM provider.
 
-        # Configure Grok as evaluator LLM
-        # Grok uses OpenAI-compatible API
-        self.evaluator_llm = ChatOpenAI(
-            model="grok-beta",
-            openai_api_key=self.grok_api_key,
-            openai_api_base="https://api.x.ai/v1",
-            temperature=0.0,  # Deterministic for evaluation
-        )
+        Args:
+            provider: "ollama" (local, DSGVO-compliant) or "grok" (cloud API)
+        """
+        self.provider = provider
+
+        if provider == "ollama":
+            # Use local Ollama (DSGVO-compliant)
+            from langchain_community.llms import Ollama
+            self.evaluator_llm = Ollama(
+                model="llama3.2:3b",
+                base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+                temperature=0.0,
+            )
+            logger.info("✅ RAGAS Evaluator initialized with LOCAL Ollama (DSGVO-compliant)")
+        else:
+            # Use Grok API (cloud, faster/better but not DSGVO-compliant)
+            self.grok_api_key = os.getenv("GROK_API_KEY")
+            if not self.grok_api_key:
+                logger.warning("GROK_API_KEY not found, falling back to Ollama")
+                from langchain_community.llms import Ollama
+                self.evaluator_llm = Ollama(
+                    model="llama3.2:3b",
+                    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+                    temperature=0.0,
+                )
+                self.provider = "ollama"
+            else:
+                # Grok uses OpenAI-compatible API
+                self.evaluator_llm = ChatOpenAI(
+                    model="grok-beta",
+                    openai_api_key=self.grok_api_key,
+                    openai_api_base="https://api.x.ai/v1",
+                    temperature=0.0,
+                )
+                logger.info("✅ RAGAS Evaluator initialized with Grok API")
 
         # Define metrics to use
         self.metrics = [
@@ -52,8 +77,6 @@ class RAGASEvaluator:
             context_precision,   # Retrieved chunks are relevant
             context_recall,      # All relevant info retrieved
         ]
-
-        logger.info("RAGAS Evaluator initialized with Grok API")
 
     def evaluate_single(
         self,
@@ -220,13 +243,32 @@ class RAGASEvaluator:
         return comparison
 
 
-# Global instance
-_ragas_evaluator = None
+# Global instances (one per provider)
+_ragas_evaluators = {}
 
 
-def get_ragas_evaluator() -> RAGASEvaluator:
-    """Get or create global RAGAS evaluator instance"""
-    global _ragas_evaluator
-    if _ragas_evaluator is None:
-        _ragas_evaluator = RAGASEvaluator()
-    return _ragas_evaluator
+def get_ragas_evaluator(provider: str = "grok") -> RAGASEvaluator:
+    """
+    Get or create RAGAS evaluator instance for specified provider.
+
+    Args:
+        provider: "ollama" (local, DSGVO-compliant) or "grok" (cloud API)
+
+    Returns:
+        RAGASEvaluator instance
+    """
+    global _ragas_evaluators
+
+    # Map frontend provider names to evaluator names
+    provider_mapping = {
+        "local": "ollama",
+        "ollama": "ollama",
+        "grok": "grok",
+        "anthropic": "grok"  # Use Grok for Anthropic (cheaper for evaluation)
+    }
+    evaluator_provider = provider_mapping.get(provider.lower(), "grok")
+
+    if evaluator_provider not in _ragas_evaluators:
+        _ragas_evaluators[evaluator_provider] = RAGASEvaluator(provider=evaluator_provider)
+
+    return _ragas_evaluators[evaluator_provider]
