@@ -1,0 +1,31 @@
+# Kibana Configuration for Railway
+
+# Server settings
+server.host: "0.0.0.0"
+server.port: 5601
+server.name: "kibana-railway"
+
+# Elasticsearch connection
+# Railway will inject ELASTICSEARCH_URL via environment variable
+elasticsearch.hosts: ["${ELASTICSEARCH_URL}"]
+
+# Disable security features for internal Railway network
+# (Elasticsearch is already behind Railway's private network)
+elasticsearch.ssl.verificationMode: none
+
+# Kibana settings
+kibana.index: ".kibana"
+kibana.defaultAppId: "home"
+
+# Logging
+logging.root.level: info
+
+# Disable telemetry
+telemetry.enabled: false
+telemetry.optIn: false
+
+# Performance
+ops.interval: 5000
+
+# Time zone
+i18n.locale: "de"
