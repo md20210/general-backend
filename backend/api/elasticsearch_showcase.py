@@ -1747,101 +1747,153 @@ async def get_elasticsearch_features_overview():
 
 @router.post("/demo/generate")
 async def generate_demo_data(
-    count: int = 100,
+    count: int = 50,
     db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
 ):
     """
-    Generate demo data variations based on user's latest analysis.
+    Generate demo CV profile data for Analytics Dashboard.
 
-    Takes the user's most recent analysis and generates `count` variations
-    with different companies, skills, scores, and performance metrics.
-
-    This creates impressive visualizations showing Elasticsearch advantages.
+    Creates synthetic CV chunks with skills, databases, programming languages,
+    companies, and certifications. Data is indexed in Elasticsearch to populate
+    the Analytics Dashboard visualizations.
     """
     try:
-        # Get user's latest analysis
-        statement = select(ElasticJobAnalysis).where(
-            ElasticJobAnalysis.user_id == str(user.id)
-        ).order_by(ElasticJobAnalysis.created_at.desc()).limit(1)
+        import random
 
-        result = await db.execute(statement)
-        base_analysis = result.scalars().first()
+        logger.info(f"Generating {count} demo CV profiles for user {user.id}")
 
-        if not base_analysis:
-            # No existing analysis - create default demo profiles based on common tech stack
-            logger.info(f"No existing analysis found - generating default demo profiles")
+        # Sample data pools for generating realistic profiles
+        skills_pool = [
+            "Python", "JavaScript", "TypeScript", "React", "Vue.js", "Angular",
+            "Node.js", "Django", "FastAPI", "Flask", "Express.js", "Docker",
+            "Kubernetes", "AWS", "Azure", "GCP", "PostgreSQL", "MongoDB",
+            "Redis", "Elasticsearch", "GraphQL", "REST API", "Git", "CI/CD",
+            "Machine Learning", "Data Analysis", "SQL", "NoSQL", "Microservices",
+            "Agile", "Scrum", "TDD", "Linux", "Bash", "Java", "C++", "Go",
+            "Rust", "Ruby", "PHP", "Swift", "Kotlin"
+        ]
 
-            # Create default base analysis
-            base_dict = {
-                "job_analysis": {
-                    "company": "Tech Corp",
-                    "position": "Senior Software Engineer",
-                    "skills_matched": ["Python", "JavaScript", "React", "PostgreSQL"],
-                    "skills_missing": ["Kubernetes", "AWS"],
-                    "experience_match": True,
-                    "education_match": True
-                },
-                "fit_score": 75,
-                "success_probability": 70,
+        databases_pool = [
+            "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch",
+            "Oracle", "SQL Server", "DynamoDB", "Cassandra", "Neo4j",
+            "MariaDB", "SQLite", "CouchDB", "InfluxDB", "TimescaleDB"
+        ]
+
+        languages_pool = [
+            "Python", "JavaScript", "TypeScript", "Java", "C++", "C#",
+            "Go", "Rust", "Ruby", "PHP", "Swift", "Kotlin", "Scala",
+            "R", "MATLAB", "Perl", "Shell", "PowerShell"
+        ]
+
+        companies_pool = [
+            "Google", "Amazon", "Microsoft", "Meta", "Apple", "Netflix",
+            "Tesla", "SpaceX", "IBM", "Oracle", "SAP", "Salesforce",
+            "Adobe", "Intel", "NVIDIA", "Uber", "Airbnb", "Stripe",
+            "Shopify", "Spotify", "Twitter", "LinkedIn", "GitHub",
+            "Atlassian", "Dropbox", "Zoom", "Slack", "DocuSign"
+        ]
+
+        certifications_pool = [
+            "AWS Certified Solutions Architect", "Azure Administrator",
+            "Google Cloud Professional", "Kubernetes Administrator (CKA)",
+            "Docker Certified Associate", "Certified Scrum Master",
+            "PMP", "CISSP", "CompTIA Security+", "Oracle Certified Professional"
+        ]
+
+        user_id = str(user.id)
+        index_name = f"cv_showcase_{user_id}"
+
+        # Ensure index exists
+        if not es_service.client.indices.exists(index=index_name):
+            logger.info(f"Creating index {index_name}")
+            es_service.client.indices.create(
+                index=index_name,
+                body={
+                    "mappings": {
+                        "properties": {
+                            "content": {"type": "text"},
+                            "chunk_id": {"type": "integer"},
+                            "embedding": {"type": "dense_vector", "dims": 384},
+                            "skills": {"type": "keyword"},
+                            "databases": {"type": "keyword"},
+                            "programming_languages": {"type": "keyword"},
+                            "companies": {"type": "keyword"},
+                            "certifications": {"type": "keyword"}
+                        }
+                    }
+                }
+            )
+
+        # Generate and index demo chunks
+        profiles_created = 0
+        for i in range(count):
+            # Random selection of skills, databases, etc.
+            num_skills = random.randint(5, 15)
+            num_dbs = random.randint(2, 6)
+            num_langs = random.randint(2, 5)
+            num_companies = random.randint(1, 4)
+            num_certs = random.randint(0, 3)
+
+            selected_skills = random.sample(skills_pool, num_skills)
+            selected_dbs = random.sample(databases_pool, num_dbs)
+            selected_langs = random.sample(languages_pool, num_langs)
+            selected_companies = random.sample(companies_pool, num_companies)
+            selected_certs = random.sample(certifications_pool, num_certs) if num_certs > 0 else []
+
+            # Generate realistic CV text chunk
+            experience_years = random.randint(1, 15)
+            content = f"Senior developer with {experience_years} years of experience. "
+            content += f"Worked at {', '.join(selected_companies[:2])}. "
+            content += f"Expert in {', '.join(selected_skills[:5])}. "
+            content += f"Proficient with {', '.join(selected_dbs[:3])} databases. "
+            content += f"Programming languages: {', '.join(selected_langs)}. "
+            if selected_certs:
+                content += f"Certifications: {', '.join(selected_certs)}."
+
+            # Create document for Elasticsearch
+            doc = {
+                "content": content,
+                "chunk_id": i,
+                "embedding": [random.random() for _ in range(384)],  # Dummy embedding
+                "skills": selected_skills,
+                "databases": selected_dbs,
+                "programming_languages": selected_langs,
+                "companies": selected_companies,
+                "certifications": selected_certs
             }
-        else:
-            # Convert to dict for variation
-            base_dict = {
-                "job_analysis": base_analysis.job_analysis,
-                "fit_score": base_analysis.fit_score,
-                "success_probability": base_analysis.success_probability,
-            }
 
-        # Generate variations
-        logger.info(f"Generating {count} demo variations for user {user.id}")
-        variations = demo_generator.generate_variations(
-            base_analysis=base_dict,
-            count=count,
-            user_id=str(user.id)
-        )
+            # Index document
+            es_service.client.index(
+                index=index_name,
+                id=f"demo_{i}",
+                body=doc
+            )
+            profiles_created += 1
 
-        # Save to database
-        saved_count = 0
-        for variation in variations:
-            demo_analysis = ElasticJobAnalysis(**variation)
-            db.add(demo_analysis)
-            saved_count += 1
+            if profiles_created % 10 == 0:
+                logger.info(f"Indexed {profiles_created}/{count} demo profiles")
 
-            # Commit in batches of 20 for performance
-            if saved_count % 20 == 0:
-                await db.commit()
-                logger.info(f"Saved {saved_count}/{count} demo analyses")
+        # Refresh index to make data searchable
+        es_service.client.indices.refresh(index=index_name)
 
-        # Final commit
-        await db.commit()
+        logger.info(f"Successfully generated {profiles_created} demo profiles")
 
         return {
             "status": "success",
-            "message": f"Generated {count} demo analyses",
-            "variations_created": count,
-            "base_analysis_id": base_analysis.id,
-            "variations_include": [
-                "Different companies and locations",
-                "Varied skill combinations",
-                "Different experience levels",
-                "Range of fit scores (0-100)",
-                "Different success probabilities",
-                "Performance comparisons (ChromaDB vs Elasticsearch)",
-                "Fuzzy match and synonym examples"
-            ],
+            "message": f"Generated {profiles_created} demo CV profiles",
+            "profiles_created": profiles_created,
+            "index_name": index_name,
             "next_steps": [
-                "View analyses at /elasticsearch/comparisons",
-                "Get statistics at /elasticsearch/demo/stats",
-                "Use for frontend visualizations"
+                "View Analytics Dashboard to see visualizations",
+                "Data includes skills, databases, programming languages, companies, and certifications"
             ]
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error generating demo data: {e}")
-        await db.rollback()
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
