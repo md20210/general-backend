@@ -73,3 +73,36 @@ class ElasticJobAnalysis(Base):
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     provider: Mapped[str | None] = mapped_column(String, default="grok", nullable=True)
+
+
+class ComparisonResult(Base):
+    """Stores RAG comparison results with LLM judge evaluation."""
+
+    __tablename__ = "rag_comparison_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+
+    # Query Information
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # pgvector Results
+    pgvector_answer: Mapped[str] = mapped_column(Text, nullable=False)
+    pgvector_sources: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    pgvector_latency_ms: Mapped[float] = mapped_column(Float, nullable=False)
+
+    # Elasticsearch Results
+    elasticsearch_answer: Mapped[str] = mapped_column(Text, nullable=False)
+    elasticsearch_sources: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    elasticsearch_latency_ms: Mapped[float] = mapped_column(Float, nullable=False)
+
+    # LLM Judge Evaluation
+    llm_evaluation: Mapped[dict] = mapped_column(JSONB, nullable=False)  # Full evaluation response
+    pgvector_score: Mapped[float] = mapped_column(Float, nullable=False)
+    elasticsearch_score: Mapped[float] = mapped_column(Float, nullable=False)
+    winner: Mapped[str] = mapped_column(String, nullable=False)  # "pgvector", "elasticsearch", or "tie"
+    reasoning: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    provider: Mapped[str] = mapped_column(String, default="grok", nullable=False)

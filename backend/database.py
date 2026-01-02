@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 from backend.models.user import User  # noqa: F401
 from backend.models.project import Project  # noqa: F401
 from backend.models.jobassistant import JobApplication  # noqa: F401
-from backend.models.elasticsearch_showcase import UserElasticProfile, ElasticJobAnalysis  # noqa: F401
+from backend.models.elasticsearch_showcase import UserElasticProfile, ElasticJobAnalysis, ComparisonResult  # noqa: F401
 
 async def create_db_and_tables():
     """Create all database tables and enable pgvector extension with retry logic."""

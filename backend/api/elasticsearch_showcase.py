@@ -3242,6 +3242,38 @@ Only respond with valid JSON, no other text."""
             # Don't fail the request if logging fails
             logger.warning(f"Failed to log metrics to Elasticsearch: {log_err}")
 
+        # Save comparison result to database
+        try:
+            from backend.models.elasticsearch_showcase import ComparisonResult
+
+            comparison_record = ComparisonResult(
+                user_id=str(current_user.id),
+                question=question,
+                pgvector_answer=pgvector_answer,
+                pgvector_sources=pgvector_chunks_formatted,
+                pgvector_latency_ms=pgvector_time,
+                elasticsearch_answer=es_answer,
+                elasticsearch_sources=es_chunks_formatted,
+                elasticsearch_latency_ms=es_time,
+                llm_evaluation=evaluation,
+                pgvector_score=float(evaluation["pgvector_score"]),
+                elasticsearch_score=float(evaluation["elasticsearch_score"]),
+                winner=evaluation["winner"],
+                reasoning=evaluation["reasoning"],
+                provider=llm_provider
+            )
+            db.add(comparison_record)
+            await db.commit()
+            await db.refresh(comparison_record)
+
+            # Add ID to response
+            response_data["id"] = comparison_record.id
+            logger.info(f"💾 Saved comparison result to database (ID: {comparison_record.id})")
+        except Exception as save_err:
+            logger.warning(f"Failed to save comparison to database: {save_err}")
+            # Don't fail the request if saving fails
+            await db.rollback()
+
         return response_data
 
     except Exception as e:
@@ -3249,6 +3281,100 @@ Only respond with valid JSON, no other text."""
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
+
+
+@router.get("/comparison-results")
+async def get_comparison_results(
+    limit: int = Query(50, ge=1, le=100, description="Maximum number of results to return"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user),
+):
+    """Get all saved comparison results for the current user.
+
+    Returns comparison history with pagination support.
+    Used by the frontend to load previous comparisons from the database.
+    """
+    try:
+        from backend.models.elasticsearch_showcase import ComparisonResult
+        from sqlalchemy import select
+
+        # Query user's comparison results, ordered by most recent first
+        statement = select(ComparisonResult).where(
+            ComparisonResult.user_id == str(current_user.id)
+        ).order_by(ComparisonResult.created_at.desc()).limit(limit).offset(offset)
+
+        result = await db.execute(statement)
+        comparisons = result.scalars().all()
+
+        # Format response
+        results = []
+        for comp in comparisons:
+            results.append({
+                "id": comp.id,
+                "question": comp.question,
+                "pgvector": {
+                    "answer": comp.pgvector_answer,
+                    "chunks": comp.pgvector_sources,
+                    "retrieval_time_ms": comp.pgvector_latency_ms,
+                    "score": comp.pgvector_score
+                },
+                "elasticsearch": {
+                    "answer": comp.elasticsearch_answer,
+                    "chunks": comp.elasticsearch_sources,
+                    "retrieval_time_ms": comp.elasticsearch_latency_ms,
+                    "score": comp.elasticsearch_score
+                },
+                "evaluation": {
+                    "winner": comp.winner,
+                    "reasoning": comp.reasoning,
+                    "pgvector_score": comp.pgvector_score,
+                    "elasticsearch_score": comp.elasticsearch_score
+                },
+                "llm_used": comp.provider,
+                "timestamp": comp.created_at.isoformat()
+            })
+
+        logger.info(f"📚 Retrieved {len(results)} comparison results for user {current_user.id}")
+        return {"results": results, "total": len(results), "limit": limit, "offset": offset}
+
+    except Exception as e:
+        logger.error(f"Failed to get comparison results: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve comparisons: {str(e)}")
+
+
+@router.delete("/comparison-results")
+async def delete_all_comparison_results(
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user),
+):
+    """Delete all comparison results for the current user.
+
+    This is called when the user clicks 'Clear All' in the frontend.
+    """
+    try:
+        from backend.models.elasticsearch_showcase import ComparisonResult
+        from sqlalchemy import delete
+
+        # Delete all comparisons for this user
+        statement = delete(ComparisonResult).where(
+            ComparisonResult.user_id == str(current_user.id)
+        )
+
+        result = await db.execute(statement)
+        await db.commit()
+
+        deleted_count = result.rowcount
+        logger.info(f"🗑️  Deleted {deleted_count} comparison results for user {current_user.id}")
+
+        return {"message": f"Successfully deleted {deleted_count} comparison results", "deleted_count": deleted_count}
+
+    except Exception as e:
+        logger.error(f"Failed to delete comparison results: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete comparisons: {str(e)}")
 
 
 @router.get("/aggregations")
