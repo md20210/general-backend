@@ -3624,3 +3624,71 @@ async def get_analytics_data(current_user: User = Depends(current_active_user)):
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Analytics failed: {str(e)}")
+
+
+@router.get("/rag-analytics")
+async def get_rag_analytics(current_user: User = Depends(current_active_user)):
+    """
+    Get RAG comparison analytics for dashboard.
+    Returns aggregated metrics from cv_rag_logs index.
+    """
+    try:
+        from backend.services.rag_metrics_logger import get_rag_metrics_logger
+
+        # Get aggregations from RAG metrics logger
+        metrics_logger = get_rag_metrics_logger()
+        aggregations = metrics_logger.get_aggregations()
+
+        # Also get recent queries for the table
+        recent_queries_result = es_service.client.search(
+            index="cv_rag_logs",
+            size=20,
+            sort=[{"timestamp": {"order": "desc"}}],
+            _source=["query_text", "timestamp", "evaluation", "pgvector.retrieval_time_ms",
+                    "elasticsearch.retrieval_time_ms", "llm_provider"]
+        )
+
+        recent_queries = [
+            {
+                "query": hit["_source"]["query_text"],
+                "timestamp": hit["_source"]["timestamp"],
+                "winner": hit["_source"]["evaluation"]["winner"],
+                "pgvector_score": hit["_source"]["evaluation"]["pgvector_score"],
+                "elasticsearch_score": hit["_source"]["evaluation"]["elasticsearch_score"],
+                "pgvector_latency": hit["_source"]["pgvector"]["retrieval_time_ms"],
+                "elasticsearch_latency": hit["_source"]["elasticsearch"]["retrieval_time_ms"],
+                "llm_provider": hit["_source"]["llm_provider"]
+            }
+            for hit in recent_queries_result["hits"]["hits"]
+        ]
+
+        # Calculate total queries
+        count_result = es_service.client.count(index="cv_rag_logs")
+        total_queries = count_result["count"]
+
+        return {
+            "total_queries": total_queries,
+            "avg_pgvector_score": aggregations.get("avg_pgvector_score", 0),
+            "avg_elasticsearch_score": aggregations.get("avg_elasticsearch_score", 0),
+            "avg_pgvector_latency": aggregations.get("avg_pgvector_latency", 0),
+            "avg_elasticsearch_latency": aggregations.get("avg_elasticsearch_latency", 0),
+            "winner_distribution": aggregations.get("winner_distribution", []),
+            "score_trends": aggregations.get("score_trends", []),
+            "recent_queries": recent_queries
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get RAG analytics: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # Return empty data instead of error
+        return {
+            "total_queries": 0,
+            "avg_pgvector_score": 0,
+            "avg_elasticsearch_score": 0,
+            "avg_pgvector_latency": 0,
+            "avg_elasticsearch_latency": 0,
+            "winner_distribution": [],
+            "score_trends": [],
+            "recent_queries": []
+        }
