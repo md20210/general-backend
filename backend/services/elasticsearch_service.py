@@ -1059,21 +1059,143 @@ class ElasticsearchService:
             })
         return grouped
 
-    async def hybrid_search(self, query: str, user_id: str, top_k: int = 3) -> list:
+    def _expand_query(self, query: str) -> str:
+        """
+        Expand query with semantic synonyms for better retrieval.
+
+        This is a rule-based query expansion that adds relevant terms
+        based on common patterns in CV/resume questions.
+
+        Args:
+            query: Original search query
+
+        Returns:
+            Expanded query with additional semantic terms
+        """
+        query_lower = query.lower()
+        expansions = []
+
+        # Pattern 1: "gerettet" / "kritisch" → add success indicators
+        if any(term in query_lower for term in ["gerettet", "kritisch", "krise", "turnaround", "saniert"]):
+            expansions.extend(["erfolgreich", "go-live", "phase 2", "umsatzsteigerung", "abgeschlossen"])
+
+        # Pattern 2: "messbare erfolge" → add KPI terms
+        if any(term in query_lower for term in ["messbar", "erfolg", "kpi", "kennzahl", "ergebnis"]):
+            expansions.extend(["kostensenkung", "effizienzsteigerung", "umsatzsteigerung", "prozent", "%"])
+
+        # Pattern 3: "team" / "führung" → add leadership terms
+        if any(term in query_lower for term in ["team", "führung", "leitung", "mitarbeiter", "disziplinarisch"]):
+            expansions.extend(["programmatisch", "verantwortlich", "skalierung", "mitarbeiter", "personen"])
+
+        # Pattern 4: "projekt" / "branchen" → add industry/project terms
+        if any(term in query_lower for term in ["projekt", "branche", "industrie", "kunde", "unternehmen"]):
+            expansions.extend(["telekommunikation", "pharma", "automotive", "banking", "retail"])
+
+        # Pattern 5: "stationen" / "karriere" / "laufbahn" → add career terms
+        if any(term in query_lower for term in ["station", "karriere", "laufbahn", "werdegang", "position"]):
+            expansions.extend(["architect", "director", "manager", "consultant", "specialist"])
+
+        # Build expanded query
+        if expansions:
+            # Remove duplicates and join
+            unique_expansions = list(set(expansions))
+            expanded = f"{query} {' '.join(unique_expansions)}"
+            return expanded
+
+        return query
+
+    def _rerank_results(self, query: str, candidates: list, top_k: int) -> list:
+        """
+        Re-rank search results based on query-specific relevance.
+
+        This is a lightweight re-ranking layer that uses simple heuristics
+        to boost or penalize results based on query intent.
+
+        Args:
+            query: Original search query
+            candidates: List of candidate results with scores
+            top_k: Number of top results to return
+
+        Returns:
+            Re-ranked results (top_k)
+        """
+        query_lower = query.lower()
+
+        # Create a copy with rerank scores
+        reranked = []
+
+        for candidate in candidates:
+            doc_text = candidate['doc']['_source'].get('cv_text', '').lower()
+            base_score = candidate['score']
+
+            # Start with base score
+            rerank_score = base_score
+
+            # Boost 1: Query keywords in text (exact match boost)
+            query_words = set(query_lower.split())
+            doc_words = set(doc_text.split())
+            keyword_overlap = len(query_words & doc_words) / max(len(query_words), 1)
+            rerank_score += keyword_overlap * 0.2  # Up to +0.2 boost
+
+            # Boost 2: Specific patterns based on query type
+            if "gerettet" in query_lower or "kritisch" in query_lower:
+                # Boost documents with success indicators
+                if any(term in doc_text for term in ["go-live", "phase 2", "erfolgreich abgeschlossen", "umsatzsteigerung"]):
+                    rerank_score += 0.15
+
+            if "messbar" in query_lower or "erfolg" in query_lower:
+                # Boost documents with numbers and percentages
+                if any(term in doc_text for term in ["%", "prozent", "€", "millionen", "reduzierung", "steigerung"]):
+                    rerank_score += 0.15
+
+            if "team" in query_lower or "groß" in query_lower:
+                # Boost documents with team size numbers
+                if any(term in doc_text for term in ["mitarbeiter", "personen", "team", "disziplinarisch", "programmatisch"]):
+                    rerank_score += 0.1
+
+            if "branche" in query_lower or "projekt" in query_lower:
+                # Boost documents with industry/company names
+                if any(term in doc_text for term in ["telekom", "merck", "pharma", "automotive", "deutsche post"]):
+                    rerank_score += 0.1
+
+            # Penalty: Very short chunks (likely incomplete context)
+            if len(doc_text) < 500:  # Less than 500 chars
+                rerank_score -= 0.1
+
+            reranked.append({
+                'score': rerank_score,
+                'original_score': base_score,
+                'vector_score': candidate.get('vector_score', 0),
+                'bm25_score': candidate.get('bm25_score', 0),
+                'doc': candidate['doc']
+            })
+
+        # Sort by rerank score
+        reranked.sort(key=lambda x: x['score'], reverse=True)
+
+        # Log re-ranking changes
+        logger.info(f"🔄 Re-ranking top-3 score changes:")
+        for i, r in enumerate(reranked[:3]):
+            logger.info(f"  #{i+1}: {r['original_score']:.3f} → {r['score']:.3f} (Δ{r['score']-r['original_score']:+.3f})")
+
+        return reranked[:top_k]
+
+    async def hybrid_search(self, query: str, user_id: str, top_k: int = 5) -> list:
         """
         Optimized hybrid search with weighted Vector (70%) + BM25 (30%) combination.
 
         This method demonstrates advanced Elasticsearch capabilities:
-        1. Semantic Vector Search (kNN) - 70% weight (dominant for natural language)
-        2. BM25 keyword search - 30% weight (precision for exact terms)
-        3. Separate BM25 and Vector queries with manual score normalization
-        4. Field boosting optimized for CV data
-        5. Reduced BM25 noise through focused field selection
+        1. Query expansion for better semantic understanding
+        2. Semantic Vector Search (kNN) - 70% weight (dominant for natural language)
+        3. BM25 keyword search - 30% weight (precision for exact terms)
+        4. Separate BM25 and Vector queries with manual score normalization
+        5. Field boosting optimized for CV data
+        6. Reduced BM25 noise through focused field selection
 
         Args:
             query: Search query
             user_id: User ID to filter documents
-            top_k: Number of top results to return
+            top_k: Number of top results to return (default 5 for better context)
 
         Returns:
             List of search results with text, source, and weighted combined score
@@ -1083,7 +1205,11 @@ class ElasticsearchService:
                 logger.warning("Elasticsearch not available for hybrid search")
                 return []
 
-            # Generate query embedding for kNN search
+            # Query Expansion: Enhance query with semantic synonyms for better retrieval
+            expanded_query = self._expand_query(query)
+            logger.info(f"Original query: '{query}' | Expanded: '{expanded_query}'")
+
+            # Generate query embedding for kNN search (use original query for embedding)
             try:
                 query_embedding = self.llm_gateway.embed(query, model="nomic-embed-text")
                 logger.info(f"Generated query embedding, dims: {len(query_embedding)}")
@@ -1141,8 +1267,8 @@ class ElasticsearchService:
                                "databases", "programming_languages", "companies", "certifications", "chunk_index"]
                 }
 
-                # Step 2: BM25 Search - Focused fields to reduce noise
-                logger.info(f"🔍 Running BM25 Search (30% weight)...")
+                # Step 2: BM25 Search - Focused fields to reduce noise, using expanded query
+                logger.info(f"🔍 Running BM25 Search (30% weight) with expanded query...")
                 bm25_search = {
                     "size": top_k * 5,
                     "query": {
@@ -1151,7 +1277,7 @@ class ElasticsearchService:
                                 # Focused on important structured fields only
                                 {
                                     "multi_match": {
-                                        "query": query,
+                                        "query": expanded_query,  # Use expanded query for better semantic coverage
                                         "fields": [
                                             "skills^5",        # Increased from 3 to 5
                                             "databases^6",      # Increased from 4 to 6 - Highest for database names
@@ -1167,7 +1293,7 @@ class ElasticsearchService:
                                 {
                                     "match": {
                                         "cv_text": {
-                                            "query": query,
+                                            "query": expanded_query,  # Use expanded query
                                             "boost": 0.3  # Reduced from 0.5 to 0.3 to avoid overwhelming structured fields
                                         }
                                     }
@@ -1231,23 +1357,34 @@ class ElasticsearchService:
                         'doc': doc
                     }
 
-                # Sort by combined score and take top_k
+                # Sort by combined score and take top candidates for re-ranking
+                # Get more candidates (top_k * 3) for re-ranking stage
+                rerank_candidates = min(top_k * 3, 15)  # Max 15 candidates for re-ranking
                 sorted_results = sorted(
                     combined_results.values(),
                     key=lambda x: x['score'],
                     reverse=True
-                )[:top_k]
+                )[:rerank_candidates]
+
+                logger.info(f"📊 Hybrid Search: Vector={len(vector_results)}, BM25={len(bm25_results)}, Pre-Rerank={len(sorted_results)}")
+                logger.info(f"💡 Weights: {VECTOR_WEIGHT*100}% Vector + {BM25_WEIGHT*100}% BM25")
+
+                # Stage 2: Re-ranking with query-specific relevance scoring
+                if len(sorted_results) > top_k:
+                    logger.info(f"🎯 Re-ranking {len(sorted_results)} candidates to top-{top_k}...")
+                    reranked_results = self._rerank_results(query, sorted_results, top_k)
+                else:
+                    reranked_results = sorted_results
 
                 # Reconstruct response in Elasticsearch format
                 response = {
                     'hits': {
-                        'total': {'value': len(sorted_results)},
-                        'hits': [r['doc'] for r in sorted_results]
+                        'total': {'value': len(reranked_results)},
+                        'hits': [r['doc'] for r in reranked_results]
                     }
                 }
 
-                logger.info(f"📊 Hybrid Search: Vector={len(vector_results)}, BM25={len(bm25_results)}, Combined={len(sorted_results)}")
-                logger.info(f"💡 Weights: {VECTOR_WEIGHT*100}% Vector + {BM25_WEIGHT*100}% BM25")
+                logger.info(f"✅ Final results after re-ranking: {len(reranked_results)}")
 
             # Parse results
             results = []
