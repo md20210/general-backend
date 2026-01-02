@@ -1061,14 +1061,14 @@ class ElasticsearchService:
 
     async def hybrid_search(self, query: str, user_id: str, top_k: int = 3) -> list:
         """
-        Hybrid search combining BM25 (keyword) and kNN (semantic vector search).
+        Optimized hybrid search with weighted Vector (70%) + BM25 (30%) combination.
 
-        This method demonstrates Elasticsearch's power by:
-        1. BM25 full-text search with fuzzy matching
-        2. kNN vector similarity search
-        3. Combined scoring (0.5 * BM25 + 0.5 * kNN)
-        4. Field boosting (experience: 2x, skills: 3x)
-        5. Synonym expansion
+        This method demonstrates advanced Elasticsearch capabilities:
+        1. Semantic Vector Search (kNN) - 70% weight (dominant for natural language)
+        2. BM25 keyword search - 30% weight (precision for exact terms)
+        3. Separate BM25 and Vector queries with manual score normalization
+        4. Field boosting optimized for CV data
+        5. Reduced BM25 noise through focused field selection
 
         Args:
             query: Search query
@@ -1076,7 +1076,7 @@ class ElasticsearchService:
             top_k: Number of top results to return
 
         Returns:
-            List of search results with text, source, and score
+            List of search results with text, source, and weighted combined score
         """
         try:
             if not self.is_available():
@@ -1092,71 +1092,162 @@ class ElasticsearchService:
                 # Fall back to BM25-only if embedding fails
                 query_embedding = None
 
-            # Construct RRF hybrid search query combining kNN + BM25
-            search_body = {
-                "size": top_k,
-                "query": {
-                    "bool": {
-                        "should": [
-                            # BM25 full-text search with fuzzy matching
-                            {
-                                "multi_match": {
-                                    "query": query,
-                                    "fields": [
-                                        "cv_text^1",
-                                        "skills^3",
-                                        "education_level^1.5",
-                                        "job_titles^2",
-                                        "databases^5",  # Highest boost for precise database matching
-                                        "programming_languages^4",  # High boost for languages
-                                        "companies^3",  # Medium-high boost for companies
-                                        "certifications^2"  # Medium boost for certifications
-                                    ],
-                                    "fuzziness": "AUTO",  # Typo tolerance
-                                    "operator": "or"
-                                }
-                            },
-                            # Fuzzy match for important fields
-                            {
-                                "match": {
-                                    "cv_text": {
+            if not query_embedding:
+                # BM25-only fallback
+                logger.info(f"🔍 Elasticsearch BM25-only search (kNN unavailable): user_id={user_id}, query='{query}'")
+                search_body = {
+                    "size": top_k,
+                    "query": {
+                        "bool": {
+                            "must": [
+                                {
+                                    "multi_match": {
                                         "query": query,
-                                        "fuzziness": 2,
-                                        "boost": 0.5
+                                        "fields": [
+                                            "cv_text",
+                                            "skills^2",
+                                            "databases^3",
+                                            "programming_languages^2",
+                                            "companies^1.5"
+                                        ],
+                                        "fuzziness": "AUTO"
                                     }
                                 }
-                            }
-                        ],
-                        "filter": [
-                            {"term": {"user_id": user_id}}
-                        ]
-                    }
-                },
-                "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id",
-                           "databases", "programming_languages", "companies", "certifications", "chunk_index"]
-            }
-
-            # Add kNN search if embedding was generated
-            if query_embedding:
-                search_body["knn"] = {
-                    "field": "embedding",
-                    "query_vector": query_embedding,
-                    "k": top_k,
-                    "num_candidates": top_k * 10,  # Consider 10x candidates for much better results
-                    "filter": [
-                        {"term": {"user_id": user_id}}
-                    ]
+                            ],
+                            "filter": [{"term": {"user_id": user_id}}]
+                        }
+                    },
+                    "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id",
+                               "databases", "programming_languages", "companies", "certifications", "chunk_index"]
                 }
-                logger.info(f"🔍 Elasticsearch RRF hybrid search (kNN + BM25): user_id={user_id}, query='{query}'")
+                response = self.client.search(index=self.cv_index, body=search_body)
+                logger.info(f"📊 BM25-only returned {response['hits']['total']['value']} hits")
             else:
-                logger.info(f"🔍 Elasticsearch BM25-only search (kNN unavailable): user_id={user_id}, query='{query}'")
+                # OPTIMIZED HYBRID: 70% Vector + 30% BM25
+                # Strategy: Run both searches separately, then combine with weights
 
-            # Execute search
-            response = self.client.search(
-                index=self.cv_index,
-                body=search_body
-            )
-            logger.info(f"📊 Elasticsearch returned {response['hits']['total']['value']} hits")
+                # Step 1: Vector Search (kNN) - Higher candidate pool for better recall
+                logger.info(f"🔍 Running Vector Search (70% weight)...")
+                vector_search = {
+                    "size": top_k * 5,  # Get more candidates for merging
+                    "knn": {
+                        "field": "embedding",
+                        "query_vector": query_embedding,
+                        "k": top_k * 5,
+                        "num_candidates": 100,  # Large candidate pool for precision
+                        "filter": [{"term": {"user_id": user_id}}]
+                    },
+                    "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id",
+                               "databases", "programming_languages", "companies", "certifications", "chunk_index"]
+                }
+
+                # Step 2: BM25 Search - Focused fields to reduce noise
+                logger.info(f"🔍 Running BM25 Search (30% weight)...")
+                bm25_search = {
+                    "size": top_k * 5,
+                    "query": {
+                        "bool": {
+                            "should": [
+                                # Focused on important structured fields only
+                                {
+                                    "multi_match": {
+                                        "query": query,
+                                        "fields": [
+                                            "skills^3",        # High boost for exact skill matches
+                                            "databases^4",      # Highest for database names
+                                            "programming_languages^3",
+                                            "companies^2",
+                                            "job_titles^2"
+                                        ],
+                                        "type": "best_fields",  # Best field wins (less noise than cross_fields)
+                                        "fuzziness": "AUTO"
+                                    }
+                                },
+                                # Secondary: cv_text for general context
+                                {
+                                    "match": {
+                                        "cv_text": {
+                                            "query": query,
+                                            "boost": 0.5  # Lower boost to avoid overwhelming structured fields
+                                        }
+                                    }
+                                }
+                            ],
+                            "filter": [{"term": {"user_id": user_id}}]
+                        }
+                    },
+                    "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id",
+                               "databases", "programming_languages", "companies", "certifications", "chunk_index"]
+                }
+
+                # Execute both searches
+                vector_response = self.client.search(index=self.cv_index, body=vector_search)
+                bm25_response = self.client.search(index=self.cv_index, body=bm25_search)
+
+                # Step 3: Merge results with weighted scoring (70% Vector + 30% BM25)
+                vector_results = {}
+                bm25_results = {}
+
+                # Normalize vector scores
+                max_vector_score = max([hit['_score'] for hit in vector_response['hits']['hits']], default=1.0)
+                for hit in vector_response['hits']['hits']:
+                    doc_id = hit['_id']
+                    normalized_score = hit['_score'] / max_vector_score if max_vector_score > 0 else 0
+                    vector_results[doc_id] = {
+                        'score': normalized_score,
+                        'doc': hit
+                    }
+
+                # Normalize BM25 scores
+                max_bm25_score = max([hit['_score'] for hit in bm25_response['hits']['hits']], default=1.0)
+                for hit in bm25_response['hits']['hits']:
+                    doc_id = hit['_id']
+                    normalized_score = hit['_score'] / max_bm25_score if max_bm25_score > 0 else 0
+                    bm25_results[doc_id] = {
+                        'score': normalized_score,
+                        'doc': hit
+                    }
+
+                # Combine with weights: 70% Vector + 30% BM25
+                VECTOR_WEIGHT = 0.7
+                BM25_WEIGHT = 0.3
+
+                combined_results = {}
+                all_doc_ids = set(vector_results.keys()) | set(bm25_results.keys())
+
+                for doc_id in all_doc_ids:
+                    vector_score = vector_results.get(doc_id, {}).get('score', 0.0)
+                    bm25_score = bm25_results.get(doc_id, {}).get('score', 0.0)
+
+                    combined_score = (VECTOR_WEIGHT * vector_score) + (BM25_WEIGHT * bm25_score)
+
+                    # Get the document (prefer vector result if both exist)
+                    doc = vector_results.get(doc_id, bm25_results.get(doc_id))['doc']
+
+                    combined_results[doc_id] = {
+                        'score': combined_score,
+                        'vector_score': vector_score,
+                        'bm25_score': bm25_score,
+                        'doc': doc
+                    }
+
+                # Sort by combined score and take top_k
+                sorted_results = sorted(
+                    combined_results.values(),
+                    key=lambda x: x['score'],
+                    reverse=True
+                )[:top_k]
+
+                # Reconstruct response in Elasticsearch format
+                response = {
+                    'hits': {
+                        'total': {'value': len(sorted_results)},
+                        'hits': [r['doc'] for r in sorted_results]
+                    }
+                }
+
+                logger.info(f"📊 Hybrid Search: Vector={len(vector_results)}, BM25={len(bm25_results)}, Combined={len(sorted_results)}")
+                logger.info(f"💡 Weights: {VECTOR_WEIGHT*100}% Vector + {BM25_WEIGHT*100}% BM25")
 
             # Parse results
             results = []
