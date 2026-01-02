@@ -494,6 +494,7 @@ Return ONLY valid JSON in this exact format:
 async def create_or_update_profile(
     profile_data: UserProfileRequest,
     provider: str = Query("grok", description="LLM provider for skill extraction (ollama, grok, anthropic)"),
+    skip_processing: bool = Query(False, description="Skip LLM processing and text deduplication (URLs still crawled)"),
     db: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
 ):
@@ -502,8 +503,14 @@ async def create_or_update_profile(
 
     This endpoint:
     1. Stores CV, cover letter, and URLs in PostgreSQL
-    2. Extracts skills, experience, education using LLM
-    3. Indexes data in Elasticsearch for fast searching
+    2. Optionally extracts skills, experience, education using LLM (skip_processing=False)
+    3. Crawls URLs for additional content (always performed)
+    4. Optionally deduplicates text content (skip_processing=False)
+    5. Indexes data in Elasticsearch for fast searching
+
+    Args:
+        skip_processing: If True, skips LLM analysis and text deduplication.
+                        URLs are still crawled but content is not AI-processed.
     """
     try:
         # Store user_id early to avoid lazy loading after rollback
@@ -515,14 +522,23 @@ async def create_or_update_profile(
         homepage_crawled = False
         linkedin_crawled = False
 
-        logger.info(f"🚀 Starting CV import for user {user_id}")
-        logger.info(f"📋 Step 1/7: Extracting CV information with LLM provider: {provider}")
-        # Extract ALL information from CV using LLM (more accurate than regex)
-        cv_info = await extract_cv_info_with_llm(profile_data.cv_text, provider)
-        skills = cv_info.get("skills", [])
-        experience_years = cv_info.get("experience_years")
-        education_level = cv_info.get("education_level")
-        job_titles = cv_info.get("job_titles", [])
+        logger.info(f"🚀 Starting CV import for user {user_id} (skip_processing={skip_processing})")
+
+        # Conditionally extract CV info with LLM
+        if skip_processing:
+            logger.info(f"📋 Step 1/7: Skipping LLM extraction (raw import mode)")
+            skills = []
+            experience_years = None
+            education_level = None
+            job_titles = []
+        else:
+            logger.info(f"📋 Step 1/7: Extracting CV information with LLM provider: {provider}")
+            # Extract ALL information from CV using LLM (more accurate than regex)
+            cv_info = await extract_cv_info_with_llm(profile_data.cv_text, provider)
+            skills = cv_info.get("skills", [])
+            experience_years = cv_info.get("experience_years")
+            education_level = cv_info.get("education_level")
+            job_titles = cv_info.get("job_titles", [])
 
         logger.info(f"📋 Step 2/7: Saving profile to database...")
         # Check if profile exists
@@ -622,12 +638,16 @@ async def create_or_update_profile(
         if additional_content:
             full_cv_content += additional_content
 
-        # Deduplicate content to avoid redundant information
+        # Deduplicate content to avoid redundant information (only if not skipping processing)
         # (e.g., "Cognizant" appears in CV, Homepage, AND LinkedIn)
-        logger.info(f"Original content length: {len(full_cv_content)} chars")
-        full_cv_content_deduplicated = deduplicate_text_content(full_cv_content, similarity_threshold=0.75)
-        logger.info(f"Deduplicated content length: {len(full_cv_content_deduplicated)} chars")
-        logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
+        if skip_processing:
+            logger.info(f"Skipping deduplication (raw import mode) - content length: {len(full_cv_content)} chars")
+            full_cv_content_deduplicated = full_cv_content
+        else:
+            logger.info(f"Original content length: {len(full_cv_content)} chars")
+            full_cv_content_deduplicated = deduplicate_text_content(full_cv_content, similarity_threshold=0.75)
+            logger.info(f"Deduplicated content length: {len(full_cv_content_deduplicated)} chars")
+            logger.info(f"Removed {len(full_cv_content) - len(full_cv_content_deduplicated)} chars of duplicate content")
 
         logger.info(f"📋 Step 5/7: Indexing in Elasticsearch...")
         # Index in Elasticsearch FIRST (before profile update)
