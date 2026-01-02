@@ -3692,3 +3692,31 @@ async def get_rag_analytics(current_user: User = Depends(current_active_user)):
             "score_trends": [],
             "recent_queries": []
         }
+
+
+@router.delete("/clear-analytics")
+async def clear_analytics(current_user: User = Depends(current_active_user)):
+    """
+    Clear all analytics data from cv_rag_logs index.
+    """
+    try:
+        # Delete all documents from cv_rag_logs index
+        result = es_service.client.delete_by_query(
+            index="cv_rag_logs",
+            body={
+                "query": {
+                    "match_all": {}
+                }
+            }
+        )
+
+        deleted_count = result.get("deleted", 0)
+        logger.info(f"🗑️ Cleared {deleted_count} analytics records from cv_rag_logs index")
+
+        return {
+            "message": f"Successfully deleted {deleted_count} analytics records",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear analytics: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear analytics: {str(e)}")
