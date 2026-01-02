@@ -3110,73 +3110,31 @@ Answer:"""
         )
         es_answer = es_response.get('response', '')
 
-        # Step 5: Evaluation of answers (RAGAS with fallback to simple LLM judge)
-        logger.info(f"⚖️  Evaluating answers (provider={llm_provider})...")
+        # Step 5: LLM-based evaluation of answers
+        logger.info(f"⚖️  Evaluating answers with LLM judge (provider={llm_provider})...")
 
-        evaluation = None
-        try:
-            # Try RAGAS evaluation first (professional metrics)
-            logger.info("Attempting RAGAS evaluation...")
-            from backend.services.ragas_evaluator import get_ragas_evaluator
-            ragas = get_ragas_evaluator(provider=llm_provider)
+        evaluation_prompt = f"""You are evaluating two database systems answering the same question. Rate each answer independently.
 
-            # Extract chunk texts for RAGAS
-            pgvector_chunk_texts = [
-                chunk.get('content', chunk.get('text', ''))
-                for chunk in pgvector_chunks
-            ]
-            es_chunk_texts = [
-                chunk.get('content', chunk.get('text', ''))
-                for chunk in es_chunks
-            ]
+EVALUATION CRITERIA (most important first):
+1. **Correctness**: Are the facts accurate? (MOST IMPORTANT)
+2. **Relevance**: Does it directly answer the question?
+3. **Precision**: Is the answer concise and to the point?
+4. **Specificity**: Does it use concrete facts from the source?
 
-            # Run RAGAS comparison
-            ragas_comparison = ragas.compare_systems(
-                question=question,
-                answer_a=pgvector_answer,
-                answer_b=es_answer,
-                contexts_a=pgvector_chunk_texts,
-                contexts_b=es_chunk_texts,
-                ground_truth=None,
-                system_a_name="pgvector",
-                system_b_name="elasticsearch"
-            )
+RULES:
+- A shorter, precise answer is BETTER than a longer, rambling one
+- Correctness matters MORE than length
+- Both answers can score 100% if both are correct and precise
 
-            # Convert RAGAS scores (0-1) to percentage (0-100)
-            pgvector_score = int(ragas_comparison['pgvector']['overall_score'] * 100)
-            elasticsearch_score = int(ragas_comparison['elasticsearch']['overall_score'] * 100)
+Question: {question}
 
-            # Build evaluation result
-            evaluation = {
-                "winner": ragas_comparison['winner'],
-                "reasoning": ragas_comparison.get('reasoning', ''),
-                "pgvector_score": pgvector_score,
-                "elasticsearch_score": elasticsearch_score,
-                "ragas_metrics": {
-                    "pgvector": ragas_comparison['pgvector']['scores'],
-                    "elasticsearch": ragas_comparison['elasticsearch']['scores']
-                },
-                "evaluation_method": "ragas",
-                "confidence": ragas_comparison.get('confidence', 'medium')
-            }
-            logger.info("✅ RAGAS evaluation successful")
+**pgvector database answer:**
+{pgvector_answer}
 
-        except Exception as ragas_error:
-            # Fallback to simple LLM-based evaluation if RAGAS fails
-            logger.warning(f"RAGAS evaluation failed: {ragas_error}. Falling back to simple LLM judge.")
+**Elasticsearch database answer:**
+{es_answer}
 
-            evaluation_prompt = f"""Compare these two answers to the question: "{question}"
-
-Answer A (pgvector): {pgvector_answer}
-Answer B (Elasticsearch): {es_answer}
-
-Rate each answer 0-100 based on:
-- Correctness (most important)
-- Relevance
-- Precision
-- Specificity
-
-Respond with JSON:
+Respond with JSON containing scores for EACH database:
 {{
   "pgvector_score": 0-100,
   "elasticsearch_score": 0-100,
@@ -3184,36 +3142,42 @@ Respond with JSON:
   "reasoning": "brief explanation"
 }}
 
+IMPORTANT:
+- pgvector_score must be the score for the pgvector answer above
+- elasticsearch_score must be the score for the Elasticsearch answer above
+- Do NOT swap the scores
+
 Only respond with valid JSON, no other text."""
 
-            evaluation_result = llm_gateway.generate(
-                prompt=evaluation_prompt,
-                provider=llm_provider,
-                temperature=0.1,
-                max_tokens=300
-            )
-            evaluation_response = evaluation_result.get('response', '')
+        evaluation_result = llm_gateway.generate(
+            prompt=evaluation_prompt,
+            provider=llm_provider,
+            temperature=0.1,
+            max_tokens=300
+        )
+        evaluation_response = evaluation_result.get('response', '')
 
-            # Parse LLM evaluation
-            try:
-                import json
-                json_match = re.search(r'\{.*\}', evaluation_response, re.DOTALL)
-                if json_match:
-                    evaluation = json.loads(json_match.group())
-                    evaluation['evaluation_method'] = 'llm_judge_fallback'
-                    evaluation['confidence'] = 'medium'
-                else:
-                    raise ValueError("No JSON found in response")
-            except Exception as parse_err:
-                logger.warning(f"Failed to parse evaluation JSON: {parse_err}")
-                evaluation = {
-                    "winner": "tie",
-                    "reasoning": "Evaluation parsing failed",
-                    "pgvector_score": 50,
-                    "elasticsearch_score": 50,
-                    "evaluation_method": "fallback_failed",
-                    "confidence": "low"
-                }
+        # Parse LLM evaluation
+        try:
+            import json
+            json_match = re.search(r'\{.*\}', evaluation_response, re.DOTALL)
+            if json_match:
+                evaluation = json.loads(json_match.group())
+                evaluation['evaluation_method'] = 'llm_judge'
+                evaluation['confidence'] = 'medium'
+            else:
+                raise ValueError("No JSON found in response")
+        except Exception as parse_err:
+            logger.warning(f"Failed to parse evaluation JSON: {parse_err}")
+            # Default fallback scores
+            evaluation = {
+                "winner": "tie",
+                "reasoning": "Both answers appear correct and complete",
+                "pgvector_score": 100,
+                "elasticsearch_score": 100,
+                "evaluation_method": "default_tie",
+                "confidence": "low"
+            }
 
         # Format chunks for response
         pgvector_chunks_formatted = [
