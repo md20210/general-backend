@@ -22,7 +22,8 @@ from ragas.metrics import (
     context_precision,
     context_recall,
 )
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatOllama
 
 logger = logging.getLogger(__name__)
 
