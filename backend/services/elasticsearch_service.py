@@ -334,8 +334,8 @@ class ElasticsearchService:
                 logger.warning(f"No existing chunks to delete for user {user_id}: {del_err}")
 
             # Chunk the CV text into smaller pieces (similar to pgvector)
-            chunk_size = 800  # characters per chunk (increased for better semantic context)
-            overlap = 150     # overlap between chunks for context continuity
+            chunk_size = 3000  # characters per chunk (~500 words, matching pgvector context size)
+            overlap = 300     # overlap between chunks for context continuity
 
             chunks = []
             start = 0
@@ -1134,7 +1134,7 @@ class ElasticsearchService:
                         "field": "embedding",
                         "query_vector": query_embedding,
                         "k": top_k * 5,
-                        "num_candidates": 100,  # Large candidate pool for precision
+                        "num_candidates": 150,  # Increased from 100 to 150 for better recall
                         "filter": [{"term": {"user_id": user_id}}]
                     },
                     "_source": ["cv_text", "skills", "experience_years", "job_titles", "user_id",
@@ -1153,11 +1153,11 @@ class ElasticsearchService:
                                     "multi_match": {
                                         "query": query,
                                         "fields": [
-                                            "skills^3",        # High boost for exact skill matches
-                                            "databases^4",      # Highest for database names
-                                            "programming_languages^3",
-                                            "companies^2",
-                                            "job_titles^2"
+                                            "skills^5",        # Increased from 3 to 5
+                                            "databases^6",      # Increased from 4 to 6 - Highest for database names
+                                            "programming_languages^5",  # Increased from 3 to 5
+                                            "companies^3",      # Increased from 2 to 3
+                                            "job_titles^3"     # Increased from 2 to 3
                                         ],
                                         "type": "best_fields",  # Best field wins (less noise than cross_fields)
                                         "fuzziness": "AUTO"
@@ -1168,7 +1168,7 @@ class ElasticsearchService:
                                     "match": {
                                         "cv_text": {
                                             "query": query,
-                                            "boost": 0.5  # Lower boost to avoid overwhelming structured fields
+                                            "boost": 0.3  # Reduced from 0.5 to 0.3 to avoid overwhelming structured fields
                                         }
                                     }
                                 }
