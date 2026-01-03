@@ -27,6 +27,7 @@ from backend.api.demo_auth import router as demo_auth_router
 from backend.api.jobassistant import router as jobassistant_router
 from backend.api.migration_helper import router as migration_router
 from backend.api.elasticsearch_showcase import router as elasticsearch_router
+from backend.api.cv_optimization import router as cv_optimization_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -114,6 +115,7 @@ app.include_router(demo_auth_router)
 app.include_router(jobassistant_router)
 app.include_router(migration_router)
 app.include_router(elasticsearch_router)
+app.include_router(cv_optimization_router)
 
 # Mount static files for uploads (LifeChronicle photos, etc.)
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads"))
