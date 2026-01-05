@@ -1,7 +1,7 @@
 """Add klassentreffen_participants table
 
 Revision ID: 20260105_klassentreffen
-Revises: 20260101_fix_cv_showcase_enum
+Revises: fix_cv_showcase_002
 Create Date: 2026-01-05
 
 """
@@ -11,7 +11,7 @@ from datetime import datetime
 
 # revision identifiers
 revision = '20260105_klassentreffen'
-down_revision = '20260101_fix_cv_showcase_enum'
+down_revision = 'fix_cv_showcase_002'
 branch_labels = None
 depends_on = None
 
