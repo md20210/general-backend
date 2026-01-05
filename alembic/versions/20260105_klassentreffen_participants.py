@@ -24,6 +24,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('email', sa.String(), nullable=True),
+        sa.Column('consent', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('registered_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
         sa.PrimaryKeyConstraint('id'),
