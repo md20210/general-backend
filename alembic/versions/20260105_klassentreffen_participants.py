@@ -18,20 +18,36 @@ depends_on = None
 
 def upgrade() -> None:
     """Create klassentreffen_participants table and populate with names."""
-    # Create table
-    op.create_table(
-        'klassentreffen_participants',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('name', sa.String(), nullable=False),
-        sa.Column('email', sa.String(), nullable=True),
-        sa.Column('consent', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('registered_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('name')
-    )
-    op.create_index(op.f('ix_klassentreffen_participants_id'), 'klassentreffen_participants', ['id'], unique=False)
-    op.create_index(op.f('ix_klassentreffen_participants_name'), 'klassentreffen_participants', ['name'], unique=True)
+    from sqlalchemy import inspect
+
+    # Get connection
+    conn = op.get_bind()
+    inspector = inspect(conn)
+
+    # Check if table exists
+    table_exists = 'klassentreffen_participants' in inspector.get_table_names()
+
+    if not table_exists:
+        # Create table
+        op.create_table(
+            'klassentreffen_participants',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('name', sa.String(), nullable=False),
+            sa.Column('email', sa.String(), nullable=True),
+            sa.Column('consent', sa.Boolean(), nullable=False, server_default='false'),
+            sa.Column('registered_at', sa.DateTime(timezone=True), nullable=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('name')
+        )
+        op.create_index(op.f('ix_klassentreffen_participants_id'), 'klassentreffen_participants', ['id'], unique=False)
+        op.create_index(op.f('ix_klassentreffen_participants_name'), 'klassentreffen_participants', ['name'], unique=True)
+    else:
+        # Table exists, check if consent column exists
+        columns = [col['name'] for col in inspector.get_columns('klassentreffen_participants')]
+        if 'consent' not in columns:
+            op.add_column('klassentreffen_participants',
+                         sa.Column('consent', sa.Boolean(), nullable=False, server_default='false'))
 
     # Insert all 133 names
     names = [
