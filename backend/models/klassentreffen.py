@@ -1,5 +1,5 @@
 """Klassentreffen database models."""
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from backend.database import Base
 
@@ -12,5 +12,6 @@ class Participant(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False, index=True)
     email = Column(String, nullable=True)
+    consent = Column(Boolean, default=False, nullable=False)
     registered_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

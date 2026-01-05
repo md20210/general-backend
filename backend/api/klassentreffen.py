@@ -15,6 +15,7 @@ class EmailRegistration(BaseModel):
     """Email registration model."""
     name: str
     email: EmailStr
+    consent: bool = True
 
 
 class ParticipantResponse(BaseModel):
@@ -38,11 +39,15 @@ async def register_email(
     session: AsyncSession = Depends(get_async_session)
 ):
     """Register or update email address for a participant."""
-    # Update participant email
+    # Update participant email and consent
     stmt = (
         update(Participant)
         .where(Participant.name == registration.name)
-        .values(email=registration.email, registered_at=datetime.utcnow())
+        .values(
+            email=registration.email,
+            consent=registration.consent,
+            registered_at=datetime.utcnow()
+        )
         .returning(Participant)
     )
 
