@@ -22,6 +22,7 @@ class ParticipantResponse(BaseModel):
     """Participant response model."""
     name: str
     email: Optional[str] = None
+    consent: Optional[bool] = False
     registered_at: Optional[datetime] = None
 
     class Config:
