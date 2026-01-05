@@ -101,6 +101,34 @@ async def get_registered(session: AsyncSession = Depends(get_async_session)):
     return [ParticipantResponse.from_orm(p) for p in participants]
 
 
+@router.delete("/admin/delete/{name}")
+async def delete_participant_email(
+    name: str,
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Admin endpoint to delete a participant's email (reset to null)."""
+    # Update participant to remove email and consent
+    stmt = (
+        update(Participant)
+        .where(Participant.name == name)
+        .values(email=None, consent=False, registered_at=None)
+        .returning(Participant)
+    )
+
+    result = await session.execute(stmt)
+    await session.commit()
+    participant = result.scalar_one_or_none()
+
+    if not participant:
+        raise HTTPException(status_code=404, detail="Name nicht gefunden")
+
+    return {
+        "success": True,
+        "message": "E-Mail-Adresse gelöscht",
+        "name": participant.name
+    }
+
+
 @router.post("/admin/populate")
 async def populate_participants(session: AsyncSession = Depends(get_async_session)):
     """Admin endpoint to populate participants (one-time use)."""
