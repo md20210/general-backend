@@ -99,3 +99,62 @@ async def get_registered(session: AsyncSession = Depends(get_async_session)):
     participants = result.scalars().all()
 
     return [ParticipantResponse.from_orm(p) for p in participants]
+
+
+@router.post("/admin/populate")
+async def populate_participants(session: AsyncSession = Depends(get_async_session)):
+    """Admin endpoint to populate participants (one-time use)."""
+    # Check if already populated
+    stmt = select(Participant)
+    result = await session.execute(stmt)
+    existing = result.scalars().all()
+
+    if len(existing) > 0:
+        return {"message": f"Already populated with {len(existing)} participants"}
+
+    # All 133 names
+    names = [
+        "Carsten Dobschall", "Michael Dütting", "Ansgar Ellermann", "Irene Etmann (jetzt: Bils)",
+        "Klaus Gunnemann", "Stefan Hille", "Peter Hoppe", "Martina Höptner (jetzt: Hecker)",
+        "Stephan Horstmann", "Ralf Huihsen", "Stephan Kappen", "Klaus Klöker",
+        "Bernd Kottmann", "Klaus Loskant", "Sabine Lünnemann (jetzt: Vortkamp)", "Andreas Menke",
+        "Stephan Quiel", "Roland Rietkoetter", "Olaf Saphörster", "Annette Schwarte",
+        "Andre Sickmann", "Thomas Siebert", "Eike Silvester Wiemann", "Magnus Wolke",
+        "Heinz Wöstmann", "Gernot Becker", "Christiane Buck (jetzt: Schmidt)", "Michael Dabrock",
+        "Jochen Dahm", "Melanie Dörholt", "Birgit Dohmen (jetzt: Decker)", "Patric Droste zu Senden",
+        "Roman Feil", "Georg Fels", "Andreas Golf", "Klaus Günther",
+        "Volker Hahn", "Karin Harnisch", "Frank Kloppenburg", "Dirk Köwener",
+        "Harald Kröger", "Peter Lahrkamp", "Bernd Lehmann", "Katrin Lumma",
+        "Mechthild Lütke Kleimann", "Silke Mersmann (jetzt: Born)", "Dirk Neufelder", "Ursula Neumann",
+        "Josef Niehoff", "Stefan Niggemeyer", "Gerhard Nowak", "Madueke Okegwo",
+        "Renate Ostermeyer", "Bettina Otto", "Mechthild Rickert", "Axel Ritter",
+        "Eva Sandhage (jetzt: Wehmeyer-Sandhage)", "Ralf Schupp", "Bettina Seidensticker", "Martin Sommermeyer",
+        "Peter Sperling", "Wolfgang Spille", "Benedikt Sudbrock", "Thomas Terrahe",
+        "Volker Welp", "Susanne Wettwer", "Uwe Wilme", "Reinhold Albrecht",
+        "Peter Alt-Epping", "Konstanze Bader", "Michael Beneke", "Marc Böddecker",
+        "Georg Bratke", "Carsten Brüning", "Andreas Döpp", "Jürgen Dorgeist",
+        "Oliver Dütschke", "Dirk Eberhardt", "Reinhild Erling", "Marie-Luise Ernst (jetzt: Terrahe)",
+        "Mathias Eßing", "Karsten Evers", "Christian Fischer", "Sabine Gädeke",
+        "Veronica Gohl", "Anne Grewe (jetzt: Vetter)", "Monika Haye (jetzt: Gaedeke)", "Jörg Hecker",
+        "Andrea Heller", "Ingo Hentschel", "Jörg Hesselink", "Annegret Hobbeling",
+        "Markus Hock", "Thomas Hörnemann", "Bettina Horstmann", "Volker Hund",
+        "Marcus Janotta", "Stephan Kehr", "Renate Kellers (jetzt:? Herzog)", "Martin Kintrup",
+        "Annette Knirim", "Bernd Korves", "Michael Laermann", "Petra Lindner (jetzt: Hubeny-Lindner)",
+        "Dominik Löer", "Friedrich Lührmann", "Arno Lutz", "David Lützenkirchen",
+        "Henning Meißner", "Frank Mense", "Thomas Mertens", "Matthias Michalczyk",
+        "Oliver Müllmann", "Anja Neumann-Wedekindt", "Jürgen Proch", "David Rehmann",
+        "Katrin Richter", "Barbara Sauer", "Fabian Sauerwald", "Tobias Sauerwald",
+        "Klaus Schaphorn", "Thomas Schleicher", "Anne Schlummer", "Frank Schulte",
+        "Ludger Schwarte", "Harald Siegmund", "Andreas Südbeck", "Helmut Südmersen",
+        "Wolfgang Thomas", "Clarus von der Horst", "Kai Wengler", "Melanie Wessels",
+        "Roland Wilmes"
+    ]
+
+    # Insert all participants
+    for name in names:
+        participant = Participant(name=name, consent=False)
+        session.add(participant)
+
+    await session.commit()
+
+    return {"message": f"Successfully populated {len(names)} participants"}
