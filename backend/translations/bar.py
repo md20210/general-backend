@@ -477,6 +477,13 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Admin-Anmeldung",
         "fr": "Connexion administrateur"
     },
+    "admin_panel": {
+        "ca": "Tauler d'administració",
+        "es": "Panel de administración",
+        "en": "Admin Panel",
+        "de": "Admin-Panel",
+        "fr": "Panneau d'administration"
+    },
     "admin_username": {
         "ca": "Nom d'usuari",
         "es": "Nombre de usuario",
@@ -504,6 +511,34 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Logout",
         "de": "Abmelden",
         "fr": "Se déconnecter"
+    },
+    "admin_settings": {
+        "ca": "Configuració",
+        "es": "Configuración",
+        "en": "Settings",
+        "de": "Einstellungen",
+        "fr": "Paramètres"
+    },
+    "admin_menu_management": {
+        "ca": "Gestió de menús",
+        "es": "Gestión de menús",
+        "en": "Menu Management",
+        "de": "Menü-Verwaltung",
+        "fr": "Gestion des menus"
+    },
+    "admin_featured_items": {
+        "ca": "Plats destacats",
+        "es": "Platos destacados",
+        "en": "Featured Items",
+        "de": "Empfohlene Gerichte",
+        "fr": "Plats vedettes"
+    },
+    "admin_news_management": {
+        "ca": "Gestió de notícies",
+        "es": "Gestión de noticias",
+        "en": "News Management",
+        "de": "Nachrichten-Verwaltung",
+        "fr": "Gestion des actualités"
     },
     "admin_llm_select": {
         "ca": "Selecciona el proveïdor LLM",
@@ -567,6 +602,76 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Save",
         "de": "Speichern",
         "fr": "Enregistrer"
+    },
+    "admin_save_settings": {
+        "ca": "Desar configuració",
+        "es": "Guardar configuración",
+        "en": "Save Settings",
+        "de": "Einstellungen speichern",
+        "fr": "Enregistrer les paramètres"
+    },
+    "admin_settings_saved": {
+        "ca": "Configuració desada!",
+        "es": "¡Configuración guardada!",
+        "en": "Settings saved!",
+        "de": "Einstellungen gespeichert!",
+        "fr": "Paramètres enregistrés!"
+    },
+    "admin_menu_upload": {
+        "ca": "Carregar arxiu de menú",
+        "es": "Cargar archivo de menú",
+        "en": "Upload Menu File",
+        "de": "Menü-Datei hochladen",
+        "fr": "Télécharger le fichier de menu"
+    },
+    "admin_menu_title": {
+        "ca": "Títol del menú",
+        "es": "Título del menú",
+        "en": "Menu Title",
+        "de": "Menütitel",
+        "fr": "Titre du menu"
+    },
+    "admin_menu_type": {
+        "ca": "Tipus de menú",
+        "es": "Tipo de menú",
+        "en": "Menu Type",
+        "de": "Menütyp",
+        "fr": "Type de menu"
+    },
+    "admin_menu_description": {
+        "ca": "Descripció",
+        "es": "Descripción",
+        "en": "Description",
+        "de": "Beschreibung",
+        "fr": "Description"
+    },
+    "admin_choose_file": {
+        "ca": "Triar arxiu",
+        "es": "Elegir archivo",
+        "en": "Choose File",
+        "de": "Datei auswählen",
+        "fr": "Choisir un fichier"
+    },
+    "admin_upload": {
+        "ca": "Carregar",
+        "es": "Cargar",
+        "en": "Upload",
+        "de": "Hochladen",
+        "fr": "Télécharger"
+    },
+    "admin_upload_success": {
+        "ca": "Menú carregat amb èxit!",
+        "es": "¡Menú cargado con éxito!",
+        "en": "Menu uploaded successfully!",
+        "de": "Menü erfolgreich hochgeladen!",
+        "fr": "Menu téléchargé avec succès!"
+    },
+    "admin_invalid_credentials": {
+        "ca": "Credencials no vàlides",
+        "es": "Credenciales no válidas",
+        "en": "Invalid credentials",
+        "de": "Ungültige Anmeldedaten",
+        "fr": "Identifiants invalides"
     },
 
     # Days of week
