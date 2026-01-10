@@ -54,9 +54,9 @@ class BarService:
             address="Carrer d'Amadeu Torner, 20, 08902 L'Hospitalet de Llobregat, Barcelona, Spain",
             phone="+34 933 36 50 43",
             opening_hours={
-                "Mo-Fr": "07:00-20:00",
-                "Sa": "08:00-16:00",
-                "So": "Geschlossen"
+                "monday_friday": "07:00-20:00",
+                "saturday": "08:00-16:00",
+                "sunday": "closed"
             },
             cuisine="Spanisch, Tapas, Mediterran",
             price_range="€-€€",

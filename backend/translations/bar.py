@@ -533,6 +533,27 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Geschlossen",
         "fr": "Fermé"
     },
+    "monday_friday": {
+        "ca": "Dilluns-Divendres",
+        "es": "Lunes-Viernes",
+        "en": "Monday-Friday",
+        "de": "Montag-Freitag",
+        "fr": "Lundi-Vendredi"
+    },
+    "saturday": {
+        "ca": "Dissabte",
+        "es": "Sábado",
+        "en": "Saturday",
+        "de": "Samstag",
+        "fr": "Samedi"
+    },
+    "sunday": {
+        "ca": "Diumenge",
+        "es": "Domingo",
+        "en": "Sunday",
+        "de": "Sonntag",
+        "fr": "Dimanche"
+    },
 
     # Common
     "loading": {
