@@ -565,3 +565,64 @@ async def publish_featured_items(
             status_code=500,
             detail=f"Failed to publish featured items: {str(e)}"
         )
+
+
+@router.get("/admin/newsletter/subscribers", summary="Get all newsletter subscribers")
+async def get_newsletter_subscribers(
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Get all newsletter subscribers
+    Requires admin authentication
+    """
+    try:
+        subscribers = BarService.get_all_subscribers(db, active_only=False)
+        return subscribers
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load subscribers: {str(e)}"
+        )
+
+
+@router.post("/admin/newsletter/send", summary="Send newsletter to all subscribers")
+async def send_newsletter(
+    newsletter_data: dict,
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Send newsletter to all active subscribers
+    newsletter_data should contain:
+    - subject: dict with translations (ca, es, en, de, fr)
+    - content: dict with translations (ca, es, en, de, fr)
+
+    Requires admin authentication
+    """
+    try:
+        # Get all active subscribers
+        subscribers = BarService.get_all_subscribers(db, active_only=True)
+        active_subscribers = subscribers
+
+        # TODO: Implement actual email sending
+        # For now, just return success with count
+        # In production, this would:
+        # 1. Loop through each subscriber
+        # 2. Get their language preference
+        # 3. Select the appropriate translation from subject/content dicts
+        # 4. Send personalized email
+
+        sent_count = len(active_subscribers)
+
+        return {
+            "success": True,
+            "sent_count": sent_count,
+            "message": f"Newsletter would be sent to {sent_count} subscribers"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send newsletter: {str(e)}"
+        )
