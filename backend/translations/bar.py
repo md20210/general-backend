@@ -673,6 +673,41 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Ungültige Anmeldedaten",
         "fr": "Identifiants invalides"
     },
+    "admin_chatbot_settings": {
+        "ca": "Configuració del xatbot",
+        "es": "Configuración del chatbot",
+        "en": "Chatbot Settings",
+        "de": "Chatbot-Einstellungen",
+        "fr": "Paramètres du chatbot"
+    },
+    "admin_auto_speak_default": {
+        "ca": "Activar lectura automàtica per defecte",
+        "es": "Activar lectura automática por defecto",
+        "en": "Enable auto-speak by default",
+        "de": "Automatische Sprachausgabe standardmäßig aktivieren",
+        "fr": "Activer la lecture automatique par défaut"
+    },
+    "admin_contact_email": {
+        "ca": "Correu electrònic de contacte (per a enviaments de formularis)",
+        "es": "Correo electrónico de contacto (para envíos de formularios)",
+        "en": "Contact Email (for form submissions)",
+        "de": "Kontakt-E-Mail (für Formulareinreichungen)",
+        "fr": "E-mail de contact (pour les soumissions de formulaires)"
+    },
+    "admin_menu_description_optional": {
+        "ca": "Descripció (Opcional)",
+        "es": "Descripción (Opcional)",
+        "en": "Description (Optional)",
+        "de": "Beschreibung (Optional)",
+        "fr": "Description (Optionnel)"
+    },
+    "admin_menu_description_placeholder": {
+        "ca": "Descripció d'aquest menú...",
+        "es": "Descripción de este menú...",
+        "en": "Description of this menu...",
+        "de": "Beschreibung dieses Menüs...",
+        "fr": "Description de ce menu..."
+    },
 
     # Days of week
     "monday": {
