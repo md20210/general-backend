@@ -2,15 +2,16 @@
 Pydantic schemas for Bar API
 """
 from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 
 
 class FeaturedItemSchema(BaseModel):
     """Featured menu item"""
     name: str
-    description: Optional[str] = None
+    description: Optional[Union[str, Dict[str, str]]] = None
     price: Optional[str] = None
+    image: Optional[str] = None
 
 
 class ReviewSchema(BaseModel):
@@ -24,7 +25,7 @@ class BarInfoResponse(BaseModel):
     """Response schema for bar general information"""
     id: int
     name: str
-    description: Optional[str] = None
+    description: Optional[Union[str, Dict[str, str]]] = None
     address: Optional[str] = None
     phone: Optional[str] = None
     opening_hours: Optional[Dict[str, str]] = None
@@ -43,7 +44,7 @@ class BarInfoResponse(BaseModel):
 
 class BarInfoUpdate(BaseModel):
     """Schema for updating bar information"""
-    description: Optional[str] = None
+    description: Optional[Union[str, Dict[str, str]]] = None
     address: Optional[str] = None
     phone: Optional[str] = None
     opening_hours: Optional[Dict[str, str]] = None
