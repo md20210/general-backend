@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import JSON
 
 # revision identifiers, used by Alembic.
 revision = '20260110_barnews_multilingual'
-down_revision = '20260110_add_bar_settings'
+down_revision = '20260110_update_bar'
 branch_labels = None
 depends_on = None
 
