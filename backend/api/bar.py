@@ -187,6 +187,19 @@ async def update_bar_info(
     return BarService.create_or_update_bar_info(db, bar_data)
 
 
+@router.post("/admin/reinitialize-data", response_model=BarInfoResponse, summary="Reinitialize bar data with defaults")
+async def reinitialize_bar_data(
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Reinitialize bar data with default multilingual values
+    This will reset bar info including reviews to the default structure
+    Requires admin authentication
+    """
+    return BarService.initialize_bar_data(db, force=True)
+
+
 @router.post("/admin/upload-menu", response_model=BarMenuResponse, summary="Upload menu document", status_code=status.HTTP_201_CREATED)
 async def upload_menu(
     title: str = Form(...),

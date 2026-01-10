@@ -43,10 +43,15 @@ class BarService:
         return bar_info
 
     @staticmethod
-    def initialize_bar_data(db: Session):
-        """Initialize bar data with default values from prompt"""
+    def initialize_bar_data(db: Session, force: bool = False):
+        """Initialize bar data with default values from prompt
+
+        Args:
+            db: Database session
+            force: If True, will reinitialize even if data already exists
+        """
         bar_info = db.query(BarInfo).first()
-        if bar_info:
+        if bar_info and not force:
             return bar_info  # Already initialized
 
         bar_data = BarInfoUpdate(
