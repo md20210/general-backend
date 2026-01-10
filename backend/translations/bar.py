@@ -108,7 +108,7 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "fr": "Gamme de prix"
     },
     "rating": {
-        "ca": "Valoració",
+        "ca": "Puntuació",
         "es": "Valoración",
         "en": "Rating",
         "de": "Bewertung",

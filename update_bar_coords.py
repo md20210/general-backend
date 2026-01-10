@@ -15,9 +15,10 @@ def update_coordinates():
     db = SessionLocal()
     try:
         # Update coordinates to correct location
-        # 41°21'40.7"N 2°06'59.0"E = 41.36130555555556, 2.116388888888889
+        # Carrer d'Amadeu Torner, 20, 08902 L'Hospitalet de Llobregat
+        # From OpenStreetMap: 41.3591070, 2.1243076
         result = db.execute(
-            text("UPDATE bar_info SET latitude = 41.36130555555556, longitude = 2.116388888888889 WHERE id = 1")
+            text("UPDATE bar_info SET latitude = 41.3591070, longitude = 2.1243076 WHERE id = 1")
         )
         db.commit()
 
