@@ -77,7 +77,8 @@ class BarService:
                         "en": "Traditional Catalan seafood noodle dish",
                         "de": "Traditionelles katalanisches Nudelgericht mit Meeresfrüchten",
                         "fr": "Plat traditionnel catalan de nouilles aux fruits de mer"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-1.jpg"
                 },
                 {
                     "name": "Vermut",
@@ -87,7 +88,8 @@ class BarService:
                         "en": "Traditional Spanish vermouth",
                         "de": "Traditioneller spanischer Wermut",
                         "fr": "Vermouth espagnol traditionnel"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-2.jpg"
                 },
                 {
                     "name": "Vino",
@@ -97,7 +99,8 @@ class BarService:
                         "en": "Local wines",
                         "de": "Lokale Weine",
                         "fr": "Vins locaux"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-3.jpg"
                 },
                 {
                     "name": "Ensalada Con Queso de Cabra",
@@ -107,7 +110,8 @@ class BarService:
                         "en": "Salad with goat cheese",
                         "de": "Salat mit Ziegenkäse",
                         "fr": "Salade au fromage de chèvre"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-4.jpg"
                 },
                 {
                     "name": "Huevos Con Bacon",
@@ -117,7 +121,8 @@ class BarService:
                         "en": "Eggs with bacon",
                         "de": "Eier mit Speck",
                         "fr": "Œufs au bacon"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-5.jpg"
                 },
                 {
                     "name": "Puding",
@@ -127,7 +132,8 @@ class BarService:
                         "en": "Homemade pudding",
                         "de": "Hausgemachter Pudding",
                         "fr": "Pudding fait maison"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-6.jpg"
                 },
                 {
                     "name": "Cafe Con Leche",
@@ -137,7 +143,8 @@ class BarService:
                         "en": "Coffee with milk",
                         "de": "Kaffee mit Milch",
                         "fr": "Café au lait"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-7.jpg"
                 },
                 {
                     "name": "Tarta de Queso",
@@ -147,7 +154,8 @@ class BarService:
                         "en": "Cheesecake",
                         "de": "Käsekuchen",
                         "fr": "Gâteau au fromage"
-                    }
+                    },
+                    "image": "/morningbar/uploads/6896-albums-8.jpg"
                 }
             ],
             reviews=[
