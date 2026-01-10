@@ -145,6 +145,85 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "fr": "Nos Plats"
     },
 
+    # Chat
+    "chat_welcome": {
+        "ca": "Benvingut al xat de Bar Ca l'Elena!",
+        "es": "¡Bienvenido al chat del Bar Ca l'Elena!",
+        "en": "Welcome to Bar Ca l'Elena Chat!",
+        "de": "Willkommen beim Bar Ca l'Elena Chat!",
+        "fr": "Bienvenue au chat du Bar Ca l'Elena!"
+    },
+    "chat_help": {
+        "ca": "Pregunta'm sobre el menú, horaris, ubicació o qualsevol altra cosa!",
+        "es": "¡Pregúntame sobre el menú, horarios, ubicación o cualquier otra cosa!",
+        "en": "Ask me about our menu, opening hours, location, or anything else!",
+        "de": "Frag mich nach unserer Speisekarte, Öffnungszeiten, Standort oder allem anderen!",
+        "fr": "Demandez-moi des informations sur notre menu, les horaires, l'emplacement ou autre chose!"
+    },
+    "chat_placeholder": {
+        "ca": "Escriu el teu missatge...",
+        "es": "Escribe tu mensaje...",
+        "en": "Type your message...",
+        "de": "Gib deine Nachricht ein...",
+        "fr": "Tapez votre message..."
+    },
+    "chat_error": {
+        "ca": "Ho sento, hi ha hagut un error processant el missatge.",
+        "es": "Lo siento, hubo un error procesando el mensaje.",
+        "en": "Sorry, there was an error processing your message.",
+        "de": "Entschuldigung, es gab einen Fehler beim Verarbeiten Ihrer Nachricht.",
+        "fr": "Désolé, il y a eu une erreur lors du traitement de votre message."
+    },
+    "auto_speak": {
+        "ca": "Lectura automàtica de respostes",
+        "es": "Lectura automática de respuestas",
+        "en": "Auto-speak responses",
+        "de": "Automatische Sprachausgabe",
+        "fr": "Lecture automatique des réponses"
+    },
+    "chat_language": {
+        "ca": "Idioma del xat",
+        "es": "Idioma del chat",
+        "en": "Chat language",
+        "de": "Chat-Sprache",
+        "fr": "Langue du chat"
+    },
+    "speak": {
+        "ca": "Parlar",
+        "es": "Hablar",
+        "en": "Speak",
+        "de": "Sprechen",
+        "fr": "Parler"
+    },
+    "send": {
+        "ca": "Enviar",
+        "es": "Enviar",
+        "en": "Send",
+        "de": "Senden",
+        "fr": "Envoyer"
+    },
+    "sending": {
+        "ca": "Enviant...",
+        "es": "Enviando...",
+        "en": "Sending...",
+        "de": "Senden...",
+        "fr": "Envoi en cours..."
+    },
+    "voice_input": {
+        "ca": "Entrada de veu disponible",
+        "es": "Entrada de voz disponible",
+        "en": "Voice input available",
+        "de": "Spracheingabe verfügbar",
+        "fr": "Entrée vocale disponible"
+    },
+    "voice_output": {
+        "ca": "Sortida de veu disponible",
+        "es": "Salida de voz disponible",
+        "en": "Voice output available",
+        "de": "Sprachausgabe verfügbar",
+        "fr": "Sortie vocale disponible"
+    },
+
     # Menu Page
     "menu_title": {
         "ca": "El Nostre Menú",
