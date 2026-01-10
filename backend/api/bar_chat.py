@@ -201,3 +201,47 @@ async def search_bar_info(query: str, language: str = "en", limit: int = 5):
     except Exception as e:
         logger.error(f"❌ Search error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class TranslateRequest(BaseModel):
+    """Translation request model"""
+    text: str
+    target_language: str = "en"  # ca, es, en, de, fr
+
+
+class TranslateResponse(BaseModel):
+    """Translation response model"""
+    translation: str
+    target_language: str
+    llm_provider: str
+    success: bool
+    error: Optional[str] = None
+
+
+@router.post("/translate", response_model=TranslateResponse)
+async def translate_text(request: TranslateRequest, db: Session = Depends(get_db)):
+    """
+    Translate German text to target language
+
+    Simple translation without RAG context - just translate the input text.
+
+    - **text**: German text to translate
+    - **target_language**: Target language code (ca, es, en, de, fr)
+
+    Note: LLM provider is automatically selected from admin settings
+    """
+    try:
+        # Get LLM provider from admin settings
+        settings = BarService.get_settings(db)
+        llm_provider = settings.llm_provider if settings else "ollama"
+
+        result = await bar_chat_service.translate(
+            text=request.text,
+            target_language=request.target_language,
+            llm_provider=llm_provider
+        )
+        return TranslateResponse(**result)
+
+    except Exception as e:
+        logger.error(f"❌ Translation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

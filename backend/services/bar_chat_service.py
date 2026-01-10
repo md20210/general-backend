@@ -221,6 +221,63 @@ Instructions IMPORTANTES:
             logger.error(f"Grok chat error: {e}")
             raise
 
+    async def translate(
+        self,
+        text: str,
+        target_language: str = "en",
+        llm_provider: str = "ollama"
+    ) -> Dict[str, Any]:
+        """
+        Translate text to target language (simple translation without RAG)
+
+        Args:
+            text: Text to translate (assumed to be in German)
+            target_language: Target language code (ca, es, en, de, fr)
+            llm_provider: "ollama" or "grok"
+
+        Returns:
+            Dict with translation and metadata
+        """
+        try:
+            # Build translation system prompt
+            language_names = {
+                "ca": "Catalan",
+                "es": "Spanish",
+                "en": "English",
+                "de": "German",
+                "fr": "French"
+            }
+
+            target_lang_name = language_names.get(target_language, "English")
+
+            system_prompt = f"""You are a professional translator.
+Translate the following German text to {target_lang_name}.
+Only provide the translation, nothing else.
+Keep the same tone and style as the original text."""
+
+            # Get translation
+            if llm_provider == "grok" and self.grok_api_key:
+                translation = await self._chat_with_grok(text, system_prompt, None)
+            else:
+                translation = await self._chat_with_ollama(text, system_prompt, None)
+
+            return {
+                "translation": translation,
+                "target_language": target_language,
+                "llm_provider": llm_provider,
+                "success": True
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Error in translation: {e}")
+            return {
+                "translation": self._get_error_message(target_language),
+                "target_language": target_language,
+                "llm_provider": llm_provider,
+                "success": False,
+                "error": str(e)
+            }
+
     def _get_error_message(self, language: str) -> str:
         """Get error message in appropriate language"""
         messages = {
