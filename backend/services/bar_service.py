@@ -3,7 +3,7 @@ Bar Service for Ca l'Elena
 Handles business logic for bar information, menus, news, reservations
 """
 from sqlalchemy.orm import Session
-from backend.models.bar import BarInfo, BarMenu, BarNews, BarReservation, BarNewsletter
+from backend.models.bar import BarInfo, BarMenu, BarNews, BarReservation, BarNewsletter, BarSettings
 from backend.schemas.bar import (
     BarInfoUpdate, BarMenuCreate, BarNewsCreate,
     BarReservationCreate, BarNewsletterCreate
@@ -322,3 +322,9 @@ class BarService:
             db.commit()
             return True
         return False
+
+    # Settings operations
+    @staticmethod
+    def get_settings(db: Session) -> Optional[BarSettings]:
+        """Get bar settings"""
+        return db.query(BarSettings).first()
