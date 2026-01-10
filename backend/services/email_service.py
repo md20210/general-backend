@@ -6,9 +6,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, List
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 class EmailService:
