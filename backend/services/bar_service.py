@@ -64,8 +64,8 @@ class BarService:
             },
             address="Carrer d'Amadeu Torner, 20, 08902 L'Hospitalet de Llobregat, Barcelona, Spain",
             phone="+34 933 36 50 43",
-            location_lat=41.359269,
-            location_lng=2.124402,
+            location_lat=41.361306,
+            location_lng=2.116389,
             opening_hours={
                 "monday_friday": "07:00-20:00",
                 "saturday": "08:00-16:00",

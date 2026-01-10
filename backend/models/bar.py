@@ -21,8 +21,8 @@ class BarInfo(Base):
     cuisine = Column(String(255))
     price_range = Column(String(50))
     rating = Column(String(100))
-    location_lat = Column(String(50), default="41.35931")
-    location_lng = Column(String(50), default="2.12432")
+    location_lat = Column(String(50), default="41.361306")
+    location_lng = Column(String(50), default="2.116389")
     facebook_url = Column(String(500))
 
     # Store featured menu items as JSON array
