@@ -124,6 +124,22 @@ async def create_db_and_tables():
                     END $$;
                 """))
 
+                # Add language_flags column to bar_info if it doesn't exist
+                await conn.execute(text("""
+                    DO $$
+                    BEGIN
+                        -- Add language_flags column if it doesn't exist
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'bar_info'
+                            AND column_name = 'language_flags'
+                        ) THEN
+                            ALTER TABLE bar_info
+                            ADD COLUMN language_flags JSONB;
+                        END IF;
+                    END $$;
+                """))
+
                 # Add missing LLM analysis columns if they don't exist
                 await conn.execute(text("""
                     DO $$

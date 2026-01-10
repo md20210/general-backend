@@ -26,10 +26,13 @@ class BarInfo(Base):
     facebook_url = Column(String(500))
 
     # Store featured menu items as JSON array
-    featured_items = Column(JSON)  # [{"name": "Fideua", "description": "...", ...}]
+    featured_items = Column(JSON)  # [{"name": "Fideua", "description": "...", "image": "data:image/jpeg;base64,..."}]
 
     # Store reviews as JSON array
     reviews = Column(JSON)  # [{"author": "Alan Wiley", "text": "...", "rating": 4}]
+
+    # Store language flag images as base64
+    language_flags = Column(JSON)  # {"ca": "data:image/jpeg;base64,...", "es": "...", ...}
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
