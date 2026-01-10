@@ -93,6 +93,20 @@ async def get_news(db: Session = Depends(get_db)):
     return BarService.get_all_news(db, published_only=True)
 
 
+@router.get("/settings/public", summary="Get public settings")
+async def get_public_settings(db: Session = Depends(get_db)):
+    """
+    Get public-facing settings (auto-speak enabled)
+    Public endpoint - no authentication required
+    """
+    settings = BarService.get_settings(db)
+    if not settings:
+        return {"auto_speak_enabled": True}
+    return {
+        "auto_speak_enabled": settings.auto_speak_enabled
+    }
+
+
 @router.post("/reservations", response_model=BarReservationResponse, summary="Create reservation", status_code=status.HTTP_201_CREATED)
 async def create_reservation(
     reservation: BarReservationCreate,

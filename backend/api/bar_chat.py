@@ -21,7 +21,6 @@ class ChatMessage(BaseModel):
     """Chat message model"""
     message: str
     language: str = "en"  # ca, es, en, de, fr
-    llm_provider: str = "ollama"  # ollama or grok
     conversation_history: Optional[List[Dict[str, str]]] = None
 
 
@@ -43,7 +42,7 @@ class IndexStatus(BaseModel):
 
 
 @router.post("/message", response_model=ChatResponse)
-async def send_message(chat_msg: ChatMessage):
+async def send_message(chat_msg: ChatMessage, db: Session = Depends(get_db)):
     """
     Send a message to the chatbot and get a response
 
@@ -52,14 +51,19 @@ async def send_message(chat_msg: ChatMessage):
 
     - **message**: User's question or message
     - **language**: Language code (ca, es, en, de, fr)
-    - **llm_provider**: LLM to use (ollama or grok)
     - **conversation_history**: Previous messages for context (optional)
+
+    Note: LLM provider is automatically selected from admin settings
     """
     try:
+        # Get LLM provider from admin settings
+        settings = BarService.get_settings(db)
+        llm_provider = settings.llm_provider if settings else "ollama"
+
         result = await bar_chat_service.chat(
             message=chat_msg.message,
             language=chat_msg.language,
-            llm_provider=chat_msg.llm_provider,
+            llm_provider=llm_provider,
             conversation_history=chat_msg.conversation_history
         )
         return ChatResponse(**result)
