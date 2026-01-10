@@ -51,6 +51,8 @@ class BarInfoUpdate(BaseModel):
     cuisine: Optional[str] = None
     price_range: Optional[str] = None
     rating: Optional[str] = None
+    location_lat: Optional[str] = None
+    location_lng: Optional[str] = None
     facebook_url: Optional[str] = None
     featured_items: Optional[List[Dict[str, Any]]] = None
     reviews: Optional[List[Dict[str, Any]]] = None
