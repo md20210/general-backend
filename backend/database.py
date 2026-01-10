@@ -124,43 +124,6 @@ async def create_db_and_tables():
                     END $$;
                 """))
 
-                # Create Bar Ca l'Elena tables if they don't exist
-                await conn.execute(text("""
-                    -- Bar info table
-                    CREATE TABLE IF NOT EXISTS bar_info (
-                        id SERIAL PRIMARY KEY,
-                        name VARCHAR(255) NOT NULL,
-                        phone VARCHAR(50),
-                        address VARCHAR(255),
-                        city VARCHAR(100),
-                        postal_code VARCHAR(20),
-                        latitude DOUBLE PRECISION,
-                        longitude DOUBLE PRECISION,
-                        google_maps_url TEXT,
-                        description JSON,
-                        price_range VARCHAR(50),
-                        rating VARCHAR(10),
-                        opening_hours JSON,
-                        created_at TIMESTAMP DEFAULT NOW(),
-                        updated_at TIMESTAMP DEFAULT NOW()
-                    );
-
-                    -- Bar newsletter table
-                    CREATE TABLE IF NOT EXISTS bar_newsletter (
-                        id SERIAL PRIMARY KEY,
-                        email VARCHAR(255) NOT NULL UNIQUE,
-                        name VARCHAR(255),
-                        language VARCHAR(5) DEFAULT 'ca',
-                        is_active BOOLEAN DEFAULT TRUE,
-                        subscribed_at TIMESTAMP DEFAULT NOW(),
-                        unsubscribed_at TIMESTAMP
-                    );
-
-                    -- Create indexes
-                    CREATE INDEX IF NOT EXISTS idx_bar_newsletter_email ON bar_newsletter(email);
-                    CREATE INDEX IF NOT EXISTS idx_bar_newsletter_active ON bar_newsletter(is_active);
-                """))
-
             logger.info("✅ Database tables created/verified and pgvector enabled")
             return  # Erfolg → raus aus der Funktion
 
