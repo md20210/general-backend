@@ -163,12 +163,24 @@ class BarService:
             reviews=[
                 {
                     "author": "Alan Wiley",
-                    "text": "Guter Wert und freundliches Personal.",
+                    "text": {
+                        "ca": "Bona relació qualitat-preu i personal amable.",
+                        "es": "Buena relación calidad-precio y personal amable.",
+                        "en": "Good value and friendly staff.",
+                        "de": "Guter Wert und freundliches Personal.",
+                        "fr": "Bon rapport qualité-prix et personnel amical."
+                    },
                     "rating": 4
                 },
                 {
                     "author": "Pedro Rojas",
-                    "text": "Gute hausgemachte Essen zu guten Preisen.",
+                    "text": {
+                        "ca": "Bon menjar casolà a bons preus.",
+                        "es": "Buena comida casera a buenos precios.",
+                        "en": "Good homemade food at good prices.",
+                        "de": "Gute hausgemachte Essen zu guten Preisen.",
+                        "fr": "Bonne cuisine maison à bon prix."
+                    },
                     "rating": 4
                 }
             ]
