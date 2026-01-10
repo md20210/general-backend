@@ -96,3 +96,17 @@ class BarNewsletter(Base):
     is_active = Column(Boolean, default=True)
     subscribed_at = Column(DateTime, default=datetime.utcnow)
     unsubscribed_at = Column(DateTime, nullable=True)
+
+
+class BarSettings(Base):
+    """Admin settings for bar chatbot"""
+    __tablename__ = "bar_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    llm_provider = Column(String(50), default="ollama")  # "ollama" or "grok"
+    grok_api_key = Column(String(500), nullable=True)
+    ollama_model = Column(String(100), default="llama3.2:3b")
+    auto_speak_enabled = Column(Boolean, default=True)
+    contact_email = Column(String(255), nullable=True)  # Email for contact form submissions
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

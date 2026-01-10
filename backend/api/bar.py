@@ -13,7 +13,7 @@ from backend.schemas.bar import (
     BarInfoResponse, BarInfoUpdate, BarMenuResponse, BarMenuCreate,
     BarNewsResponse, BarNewsCreate, BarReservationResponse, BarReservationCreate,
     BarNewsletterResponse, BarNewsletterCreate, AdminLoginRequest, AdminLoginResponse,
-    LLMSelectRequest, LLMSelectResponse
+    LLMSelectRequest, LLMSelectResponse, BarSettingsResponse, BarSettingsUpdate
 )
 from typing import List
 import os
@@ -22,9 +22,9 @@ from jose import jwt, JWTError
 
 router = APIRouter(prefix="/bar", tags=["bar"])
 
-# Simple admin credentials (as per prompt)
+# Simple admin credentials
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "securepwd"
+ADMIN_PASSWORD = "senior"
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "bar-ca-l-elena-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
@@ -317,3 +317,115 @@ async def get_newsletter_subscribers(
     Requires admin authentication
     """
     return BarService.get_all_subscribers(db)
+
+
+# ===== Bar Settings Endpoints =====
+
+@router.get("/admin/settings", summary="Get bar settings")
+async def get_bar_settings(
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Get current bar settings (LLM provider, contact email, etc.)
+    Requires admin authentication
+    """
+    from backend.models.bar import BarSettings
+    settings = db.query(BarSettings).first()
+    if not settings:
+        # Create default settings
+        settings = BarSettings(
+            llm_provider="ollama",
+            ollama_model="llama3.2:3b",
+            auto_speak_enabled=True
+        )
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+
+@router.put("/admin/settings", summary="Update bar settings")
+async def update_bar_settings(
+    llm_provider: str = Form(None, regex="^(ollama|grok)$"),
+    grok_api_key: str = Form(None),
+    ollama_model: str = Form(None),
+    auto_speak_enabled: bool = Form(None),
+    contact_email: str = Form(None),
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Update bar settings
+    Requires admin authentication
+    """
+    from backend.models.bar import BarSettings
+    from datetime import datetime
+    
+    settings = db.query(BarSettings).first()
+    if not settings:
+        settings = BarSettings()
+        db.add(settings)
+    
+    if llm_provider:
+        settings.llm_provider = llm_provider
+    if grok_api_key is not None:
+        settings.grok_api_key = grok_api_key
+    if ollama_model:
+        settings.ollama_model = ollama_model
+    if auto_speak_enabled is not None:
+        settings.auto_speak_enabled = auto_speak_enabled
+    if contact_email:
+        settings.contact_email = contact_email
+    
+    settings.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(settings)
+    
+    return {"message": "Settings updated successfully", "settings": settings}
+
+
+@router.post("/admin/menus/upload", summary="Upload menu PDF")
+async def upload_menu(
+    title: str = Form(...),
+    menu_type: str = Form(..., regex="^(lunch|food|drinks|other)$"),
+    description: str = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Upload menu PDF/image file
+    Requires admin authentication
+    """
+    # Create uploads directory if not exists
+    UPLOAD_DIR = "uploads/menus"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    # Save file
+    file_extension = os.path.splitext(file.filename)[1]
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{menu_type}_{timestamp}{file_extension}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    
+    # Create menu entry
+    from backend.schemas.bar import BarMenuCreate
+    menu_data = BarMenuCreate(
+        title=title,
+        description=description,
+        menu_type=menu_type,
+        document_url=f"/uploads/menus/{filename}",
+        display_order=0
+    )
+    
+    menu = BarService.create_menu(db, menu_data)
+    
+    return {
+        "message": "Menu uploaded successfully",
+        "menu": menu,
+        "file_url": f"/uploads/menus/{filename}"
+    }

@@ -171,3 +171,25 @@ class LLMSelectResponse(BaseModel):
     """LLM selection response"""
     llm_provider: str
     message: str
+
+
+class BarSettingsResponse(BaseModel):
+    """Bar settings response"""
+    id: int
+    llm_provider: str
+    grok_api_key: Optional[str] = None
+    ollama_model: str
+    auto_speak_enabled: bool
+    contact_email: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class BarSettingsUpdate(BaseModel):
+    """Schema for updating bar settings"""
+    llm_provider: Optional[str] = Field(None, pattern="^(ollama|grok)$")
+    grok_api_key: Optional[str] = None
+    ollama_model: Optional[str] = None
+    auto_speak_enabled: Optional[bool] = None
+    contact_email: Optional[EmailStr] = None
