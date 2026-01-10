@@ -83,17 +83,6 @@ async def create_db_and_tables():
     for attempt in range(1, max_attempts + 1):
         try:
             async with engine.begin() as conn:
-                # Clean up orphaned alembic_version entries first
-                logger.info("🧹 Cleaning up orphaned Alembic entries...")
-                try:
-                    await conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '%klassentreffen%';"))
-                    await conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '2026%';"))
-                    await conn.execute(text("DELETE FROM alembic_version WHERE version_num = 'add_cv_showcase_001';"))
-                    await conn.commit()
-                    logger.info("✅ Alembic cleanup completed")
-                except Exception as cleanup_error:
-                    logger.warning(f"Alembic cleanup warning (may not exist yet): {cleanup_error}")
-
                 # Enable pgvector extension
                 await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 # Create tables

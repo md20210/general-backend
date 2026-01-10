@@ -45,6 +45,21 @@ async def lifespan(app: FastAPI):
     await create_db_and_tables()
     logger.info("Database tables created/verified")
 
+    # Clean up orphaned Alembic entries BEFORE running migrations
+    try:
+        from sqlalchemy import text
+        from backend.database import sync_engine
+
+        logger.info("🧹 Cleaning up orphaned Alembic entries...")
+        with sync_engine.connect() as conn:
+            conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '%klassentreffen%';"))
+            conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '2026%';"))
+            conn.execute(text("DELETE FROM alembic_version WHERE version_num = 'add_cv_showcase_001';"))
+            conn.commit()
+        logger.info("✅ Alembic cleanup completed")
+    except Exception as cleanup_error:
+        logger.warning(f"Alembic cleanup warning: {cleanup_error}")
+
     # Run Alembic migrations automatically in a thread pool to avoid event loop conflicts
     try:
         import asyncio
