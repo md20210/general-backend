@@ -652,6 +652,13 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Datei auswählen",
         "fr": "Choisir un fichier"
     },
+    "admin_change_image": {
+        "ca": "Canviar imatge",
+        "es": "Cambiar imagen",
+        "en": "Change Image",
+        "de": "Bild ändern",
+        "fr": "Changer l'image"
+    },
     "admin_upload": {
         "ca": "Carregar",
         "es": "Cargar",
