@@ -108,6 +108,22 @@ async def create_db_and_tables():
                     CREATE INDEX IF NOT EXISTS idx_bar_newsletter_active ON bar_newsletter(is_active);
                 """))
 
+                # Add missing columns to bar_newsletter if they don't exist
+                await conn.execute(text("""
+                    DO $$
+                    BEGIN
+                        -- Add language column if it doesn't exist
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'bar_newsletter'
+                            AND column_name = 'language'
+                        ) THEN
+                            ALTER TABLE bar_newsletter
+                            ADD COLUMN language VARCHAR(5) DEFAULT 'ca';
+                        END IF;
+                    END $$;
+                """))
+
                 # Add missing LLM analysis columns if they don't exist
                 await conn.execute(text("""
                     DO $$
