@@ -138,6 +138,7 @@ class BarNewsletterResponse(BaseModel):
     id: int
     email: str
     name: Optional[str] = None
+    language: str = "ca"
     is_active: bool
     subscribed_at: datetime
 
@@ -149,6 +150,7 @@ class BarNewsletterCreate(BaseModel):
     """Schema for newsletter subscription"""
     email: EmailStr
     name: Optional[str] = Field(None, max_length=255)
+    language: str = Field("ca", pattern="^(ca|es|en|de|fr)$")
 
 
 class AdminLoginRequest(BaseModel):

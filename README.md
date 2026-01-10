@@ -2,7 +2,7 @@
 
 ## 🎯 Überblick
 
-Ein zentrales, wiederverwendbares Backend auf Railway, das alle Showcases (CV Matcher, PrivateGPT, TellMeLife) mit einem gemeinsamen Backend unterstützt.
+Ein zentrales, wiederverwendbares Backend auf Railway, das alle Showcases (CV Matcher, PrivateGPT, TellMeLife, Bar Ca l'Elena) mit einem gemeinsamen Backend unterstützt.
 
 **Hauptfeatures:**
 - 🔐 Benutzerverwaltung (Admin + reguläre User)
@@ -10,7 +10,10 @@ Ein zentrales, wiederverwendbares Backend auf Railway, das alle Showcases (CV Ma
 - 📚 Vector Store (ChromaDB + pgvector)
 - 🗄️ PostgreSQL Database
 - 👨‍💼 Admin Panel auf www.dabrock.info
-- 🚀 Railway Deployment
+- 🚀 Railway Deployment (Auto-deploy from GitHub)
+- 🌍 Multi-language Support (5 languages: CA, ES, EN, DE, FR)
+- 📰 Newsletter Management with automatic translation
+- 🍽️ Restaurant/Bar Management System
 
 ## 📚 Dokumentation
 
@@ -122,10 +125,49 @@ railway up
 
 ## 📊 Status
 
-**Aktuell:** Planning Phase
-**Nächster Schritt:** Phase 1 - Core Backend Setup
+**Aktuell:** Production - Multiple Live Projects
+
+### Live Projects:
+1. **Bar Ca l'Elena** - ✅ Fully Deployed and Live
+   - Frontend: https://www.dabrock.info/morningbar/
+   - Backend: Railway (auto-deploy from main branch)
+   - Database: PostgreSQL on Render
+   - Features: Multi-language, RAG chat, newsletter, admin panel
+
+2. **CV Matcher** - 🚧 In Development
+3. **PrivateGPT** - 🚧 In Development
+4. **TellMeLife** - ⏳ Planned
 
 Siehe [ARCHITECTURE.md](./ARCHITECTURE.md) für detaillierten Roadmap.
+
+## 🆕 Recent Updates (2026-01-10)
+
+### Bar Ca l'Elena Module
+- ✅ Implemented comprehensive Newsletter Management system
+- ✅ Added 170+ multilingual translation keys
+- ✅ Fixed GPS coordinates (41.359276, 2.124410)
+- ✅ Made all admin UI components fully multilingual
+- ✅ Upgraded to Grok 3 model
+- ✅ Implemented automatic translation for:
+  - Featured items
+  - News/events
+  - Newsletters
+  - Customer reviews
+
+### Database Schema
+- ✅ Added `language` column to `bar_newsletter` table
+- ✅ Migration: `20260110_newsletter_language.py`
+
+### API Endpoints
+See `/docs` for full API documentation:
+- Public Bar API: `/bar/*`
+- Admin Bar API: `/bar/admin/*`
+- Translation API: `/translations/{lang}`
+
+### Deployment
+- Backend: Automatic deployment via Railway on push to `main`
+- Frontend: Manual deployment via SFTP to Strato
+- Database: PostgreSQL on Render with automatic backups
 
 ## 🤝 Entwicklung mit Aider
 
@@ -146,6 +188,33 @@ Siehe [ARCHITECTURE.md - Phase 1-10](./ARCHITECTURE.md#-implementation-roadmap) 
 ### TellMeLife
 - Endpoints: `/stories/*` (TBD)
 - Frontend nutzt zentrales Backend via API
+
+### Bar Ca l'Elena
+- **Status**: ✅ Fully Implemented and Live
+- **Frontend**: https://www.dabrock.info/morningbar/
+- **Endpoints**: `/bar/*`, `/bar/admin/*`
+- **Features**:
+  - Multi-language website (CA, ES, EN, DE, FR)
+  - RAG Chatbot with bar information (Ollama/Grok)
+  - Menu management (PDF, JPG, PNG uploads)
+  - News & Events with automatic translation
+  - Featured items with images and multilingual descriptions
+  - Online reservations
+  - Newsletter management:
+    - Email subscription with language selection
+    - Admin panel to create and send newsletters
+    - Automatic translation to all 5 languages
+    - Language-specific delivery
+  - Customer reviews (multilingual)
+  - Google Maps integration
+  - GDPR compliant (default to Ollama)
+
+**Admin Panel**: `/admin` tab on https://www.dabrock.info/morningbar/
+- Settings (LLM provider, auto-speak, contact email)
+- Menu Upload
+- Featured Items Management
+- News Management
+- Newsletter Management
 
 ## 🔐 Admin Panel
 

@@ -93,6 +93,7 @@ class BarNewsletter(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True)
     name = Column(String(255), nullable=True)
+    language = Column(String(5), default="ca")  # ca, es, en, de, fr
     is_active = Column(Boolean, default=True)
     subscribed_at = Column(DateTime, default=datetime.utcnow)
     unsubscribed_at = Column(DateTime, nullable=True)
