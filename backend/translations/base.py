@@ -4,7 +4,7 @@ Merges translations from all modules
 """
 from typing import Dict, Optional, Literal
 
-Language = Literal["de", "en", "es"]
+Language = Literal["de", "en", "es", "ca", "fr"]
 
 # Import translation dictionaries from modules
 from backend.translations.cv_matcher import CV_MATCHER_TRANSLATIONS
@@ -12,6 +12,7 @@ from backend.translations.homepage import HOMEPAGE_TRANSLATIONS
 from backend.translations.privategxt import PRIVATEGXT_TRANSLATIONS
 from backend.translations.lifechonicle import LIFECHONICLE_TRANSLATIONS
 from backend.translations.prompts import LLM_PROMPTS
+from backend.translations.bar import BAR_TRANSLATIONS
 
 
 class TranslationService:
@@ -33,6 +34,7 @@ class TranslationService:
         self.UI_TRANSLATIONS.update(HOMEPAGE_TRANSLATIONS)
         self.UI_TRANSLATIONS.update(PRIVATEGXT_TRANSLATIONS)
         self.UI_TRANSLATIONS.update(LIFECHONICLE_TRANSLATIONS)
+        self.UI_TRANSLATIONS.update(BAR_TRANSLATIONS)
 
         # LLM Prompts (separate from UI translations)
         self.LLM_PROMPTS: Dict[str, Dict[Language, str]] = LLM_PROMPTS
@@ -108,7 +110,7 @@ class TranslationService:
         Returns:
             List of language codes
         """
-        return ["de", "en", "es"]
+        return ["de", "en", "es", "ca", "fr"]
 
 
 # Singleton instance

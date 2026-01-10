@@ -29,6 +29,7 @@ from backend.api.migration_helper import router as migration_router
 from backend.api.elasticsearch_showcase import router as elasticsearch_router
 from backend.api.cv_optimization import router as cv_optimization_router
 from backend.api.klassentreffen import router as klassentreffen_router
+from backend.api.bar import router as bar_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -118,6 +119,7 @@ app.include_router(migration_router)
 app.include_router(elasticsearch_router)
 app.include_router(cv_optimization_router)
 app.include_router(klassentreffen_router)
+app.include_router(bar_router)
 
 # Mount static files for uploads (LifeChronicle photos, etc.)
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads"))

@@ -6,5 +6,10 @@ from backend.models.chat import Chat, ChatRole
 from backend.models.match import Match
 from backend.models.lifechronicle import LifeChronicleEntry
 from backend.models.jobassistant import JobApplication, UserProfile
+from backend.models.bar import BarInfo, BarMenu, BarNews, BarReservation, BarNewsletter
 
-__all__ = ["User", "Project", "ProjectType", "Document", "DocumentType", "Chat", "ChatRole", "Match", "LifeChronicleEntry", "JobApplication", "UserProfile"]
+__all__ = [
+    "User", "Project", "ProjectType", "Document", "DocumentType",
+    "Chat", "ChatRole", "Match", "LifeChronicleEntry", "JobApplication",
+    "UserProfile", "BarInfo", "BarMenu", "BarNews", "BarReservation", "BarNewsletter"
+]

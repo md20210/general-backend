@@ -76,6 +76,8 @@ Retrieves all UI translations for the specified language.
 - `de`: German (Deutsch)
 - `en`: English
 - `es`: Spanish (Español)
+- `ca`: Catalan (Català)
+- `fr`: French (Français)
 
 **Usage:**
 Frontend applications should call this endpoint once per language switch
@@ -83,8 +85,8 @@ and cache the results in application state (e.g., React Context).
 
 **Performance:**
 - Response time: <10ms
-- Response size: ~15KB
-- Total keys: ~70
+- Response size: ~20KB
+- Total keys: ~100+
 
 **Example Frontend Usage:**
 ```typescript
@@ -111,14 +113,14 @@ const { translations } = await response.json();
             }
         },
         422: {
-            "description": "Invalid language code (must be de/en/es)"
+            "description": "Invalid language code (must be de/en/es/ca/fr)"
         }
     }
 )
 async def get_translations(
-    language: Literal["de", "en", "es"] = Path(
+    language: Literal["de", "en", "es", "ca", "fr"] = Path(
         ...,
-        description="Language code: 'de' (German), 'en' (English), or 'es' (Spanish)",
+        description="Language code: 'de' (German), 'en' (English), 'es' (Spanish), 'ca' (Catalan), 'fr' (French)",
         example="en"
     )
 ):
@@ -190,7 +192,7 @@ async def get_translation_key(
         description="Translation key to retrieve",
         example="match_button"
     ),
-    language: Literal["de", "en", "es"] = Query(
+    language: Literal["de", "en", "es", "ca", "fr"] = Query(
         "de",
         description="Language code (defaults to German)",
         example="en"
@@ -231,6 +233,8 @@ Returns metadata about all supported languages.
 1. **German (de)**: Deutsch 🇩🇪
 2. **English (en)**: English 🇬🇧
 3. **Spanish (es)**: Español 🇪🇸
+4. **Catalan (ca)**: Català 🏴
+5. **French (fr)**: Français 🇫🇷
 
 **Example Frontend Usage:**
 ```typescript
@@ -240,9 +244,6 @@ languages.forEach(lang => {
   console.log(`${lang.flag} ${lang.name} (${lang.code})`);
 });
 ```
-
-**Future Languages:**
-Planned support for French (fr), Italian (it), Portuguese (pt).
     """,
     responses={
         200: {
@@ -276,6 +277,8 @@ async def get_supported_languages():
         "languages": [
             {"code": "de", "name": "Deutsch", "flag": "🇩🇪"},
             {"code": "en", "name": "English", "flag": "🇬🇧"},
-            {"code": "es", "name": "Español", "flag": "🇪🇸"}
+            {"code": "es", "name": "Español", "flag": "🇪🇸"},
+            {"code": "ca", "name": "Català", "flag": "🏴"},
+            {"code": "fr", "name": "Français", "flag": "🇫🇷"}
         ]
     }
