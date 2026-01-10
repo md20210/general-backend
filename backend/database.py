@@ -36,6 +36,34 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
 
+
+# Synchronous session for compatibility with older endpoints
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from typing import Generator
+
+# Create synchronous engine
+sync_engine = create_engine(
+    settings.DATABASE_URL.replace("postgresql://", "postgresql://"),
+    echo=True if settings.LOG_LEVEL == "DEBUG" else False,
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+)
+
+# Synchronous session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+
+
+def get_db() -> Generator[Session, None, None]:
+    """Dependency to get synchronous database session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 import asyncio
 import logging
 
