@@ -1154,5 +1154,175 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Confirm",
         "de": "Bestätigen",
         "fr": "Confirmer"
+    },
+
+    # Newsletter Management
+    "admin_newsletter_management": {
+        "ca": "Gestió del butlletí",
+        "es": "Gestión del boletín",
+        "en": "Newsletter Management",
+        "de": "Newsletter-Verwaltung",
+        "fr": "Gestion de la newsletter"
+    },
+    "admin_subscribers": {
+        "ca": "Subscriptors",
+        "es": "Suscriptores",
+        "en": "Subscribers",
+        "de": "Abonnenten",
+        "fr": "Abonnés"
+    },
+    "admin_name": {
+        "ca": "Nom",
+        "es": "Nombre",
+        "en": "Name",
+        "de": "Name",
+        "fr": "Nom"
+    },
+    "admin_language": {
+        "ca": "Idioma",
+        "es": "Idioma",
+        "en": "Language",
+        "de": "Sprache",
+        "fr": "Langue"
+    },
+    "admin_status": {
+        "ca": "Estat",
+        "es": "Estado",
+        "en": "Status",
+        "de": "Status",
+        "fr": "Statut"
+    },
+    "admin_subscribed": {
+        "ca": "Subscrit",
+        "es": "Suscrito",
+        "en": "Subscribed",
+        "de": "Abonniert",
+        "fr": "Abonné"
+    },
+    "admin_active": {
+        "ca": "Actiu",
+        "es": "Activo",
+        "en": "Active",
+        "de": "Aktiv",
+        "fr": "Actif"
+    },
+    "admin_inactive": {
+        "ca": "Inactiu",
+        "es": "Inactivo",
+        "en": "Inactive",
+        "de": "Inaktiv",
+        "fr": "Inactif"
+    },
+    "admin_create_newsletter": {
+        "ca": "Crear butlletí",
+        "es": "Crear boletín",
+        "en": "Create Newsletter",
+        "de": "Newsletter erstellen",
+        "fr": "Créer une newsletter"
+    },
+    "admin_newsletter_draft": {
+        "ca": "Esborrany del butlletí",
+        "es": "Borrador del boletín",
+        "en": "Newsletter Draft",
+        "de": "Newsletter-Entwurf",
+        "fr": "Brouillon de newsletter"
+    },
+    "admin_subject": {
+        "ca": "Assumpte",
+        "es": "Asunto",
+        "en": "Subject",
+        "de": "Betreff",
+        "fr": "Objet"
+    },
+    "admin_subject_placeholder": {
+        "ca": "Introdueix l'assumpte del butlletí...",
+        "es": "Introduce el asunto del boletín...",
+        "en": "Enter newsletter subject...",
+        "de": "Newsletter-Betreff eingeben...",
+        "fr": "Entrez l'objet de la newsletter..."
+    },
+    "admin_content": {
+        "ca": "Contingut",
+        "es": "Contenido",
+        "en": "Content",
+        "de": "Inhalt",
+        "fr": "Contenu"
+    },
+    "admin_content_placeholder": {
+        "ca": "Introdueix el contingut del butlletí...",
+        "es": "Introduce el contenido del boletín...",
+        "en": "Enter newsletter content...",
+        "de": "Newsletter-Inhalt eingeben...",
+        "fr": "Entrez le contenu de la newsletter..."
+    },
+    "admin_send_newsletter": {
+        "ca": "Enviar butlletí",
+        "es": "Enviar boletín",
+        "en": "Send Newsletter",
+        "de": "Newsletter senden",
+        "fr": "Envoyer la newsletter"
+    },
+    "admin_send_newsletter_confirm": {
+        "ca": "Estàs segur que vols enviar aquest butlletí a tots els subscriptors?",
+        "es": "¿Estás seguro de que quieres enviar este boletín a todos los suscriptores?",
+        "en": "Are you sure you want to send this newsletter to all subscribers?",
+        "de": "Sind Sie sicher, dass Sie diesen Newsletter an alle Abonnenten senden möchten?",
+        "fr": "Êtes-vous sûr de vouloir envoyer cette newsletter à tous les abonnés?"
+    },
+    "admin_newsletter_sent": {
+        "ca": "✅ Butlletí enviat a {count} subscriptors!",
+        "es": "✅ ¡Boletín enviado a {count} suscriptores!",
+        "en": "✅ Newsletter sent to {count} subscribers!",
+        "de": "✅ Newsletter an {count} Abonnenten gesendet!",
+        "fr": "✅ Newsletter envoyée à {count} abonnés!"
+    },
+    "admin_newsletter_send_failed": {
+        "ca": "❌ Error en enviar el butlletí",
+        "es": "❌ Error al enviar el boletín",
+        "en": "❌ Failed to send newsletter",
+        "de": "❌ Fehler beim Senden des Newsletters",
+        "fr": "❌ Échec de l'envoi de la newsletter"
+    },
+    "admin_enter_title_content": {
+        "ca": "Si us plau, introdueix l'assumpte i el contingut",
+        "es": "Por favor, introduce el asunto y el contenido",
+        "en": "Please enter subject and content",
+        "de": "Bitte geben Sie Betreff und Inhalt ein",
+        "fr": "Veuillez entrer l'objet et le contenu"
+    },
+    "admin_complete_translations": {
+        "ca": "Si us plau, completa primer les traduccions",
+        "es": "Por favor, completa primero las traducciones",
+        "en": "Please complete translations first",
+        "de": "Bitte schließen Sie zuerst die Übersetzungen ab",
+        "fr": "Veuillez d'abord compléter les traductions"
+    },
+    "admin_translations_complete": {
+        "ca": "✅ Traduccions completades!",
+        "es": "✅ ¡Traducciones completadas!",
+        "en": "✅ Translations complete!",
+        "de": "✅ Übersetzungen abgeschlossen!",
+        "fr": "✅ Traductions terminées!"
+    },
+    "admin_translation_failed": {
+        "ca": "❌ Error en la traducció",
+        "es": "❌ Error en la traducción",
+        "en": "❌ Translation failed",
+        "de": "❌ Übersetzung fehlgeschlagen",
+        "fr": "❌ Échec de la traduction"
+    },
+    "admin_failed_load": {
+        "ca": "Error en carregar les dades",
+        "es": "Error al cargar los datos",
+        "en": "Failed to load data",
+        "de": "Fehler beim Laden der Daten",
+        "fr": "Échec du chargement des données"
+    },
+    "admin_content_preview": {
+        "ca": "Previsualització del contingut",
+        "es": "Vista previa del contenido",
+        "en": "Content Preview",
+        "de": "Inhaltsvorschau",
+        "fr": "Aperçu du contenu"
     }
 }
