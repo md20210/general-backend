@@ -52,13 +52,25 @@ async def lifespan(app: FastAPI):
 
         logger.info("🧹 Cleaning up orphaned Alembic entries...")
         with sync_engine.connect() as conn:
-            conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '%klassentreffen%';"))
-            conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '2026%';"))
-            conn.execute(text("DELETE FROM alembic_version WHERE version_num = 'add_cv_showcase_001';"))
-            conn.commit()
-        logger.info("✅ Alembic cleanup completed")
+            # Check if alembic_version table exists first
+            result = conn.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'alembic_version'
+                );
+            """))
+            table_exists = result.scalar()
+
+            if table_exists:
+                conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '%klassentreffen%';"))
+                conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '2026%';"))
+                conn.execute(text("DELETE FROM alembic_version WHERE version_num = 'add_cv_showcase_001';"))
+                conn.commit()
+                logger.info("✅ Alembic cleanup completed")
+            else:
+                logger.info("ℹ️  alembic_version table doesn't exist yet - skipping cleanup")
     except Exception as cleanup_error:
-        logger.warning(f"Alembic cleanup warning: {cleanup_error}")
+        logger.warning(f"⚠️  Alembic cleanup skipped: {cleanup_error}")
 
     # Run Alembic migrations automatically in a thread pool to avoid event loop conflicts
     try:
