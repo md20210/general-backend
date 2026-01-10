@@ -708,6 +708,314 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Beschreibung dieses Menüs...",
         "fr": "Description de ce menu..."
     },
+    "admin_featured_items_title": {
+        "ca": "Gestió d'elements destacats",
+        "es": "Gestión de elementos destacados",
+        "en": "Featured Items Management",
+        "de": "Verwaltung der vorgestellten Artikel",
+        "fr": "Gestion des éléments en vedette"
+    },
+    "admin_featured_items_description": {
+        "ca": "Afegeix fins a 8 plats destacats. Introdueix el nom en el teu idioma preferit, puja una imatge (JPG/PNG), després fes clic a \"Traduir\" per a traduccions multilingües automàtiques. Finalment, fes clic a \"Publicar tot\" per actualitzar el lloc web.",
+        "es": "Añade hasta 8 platos destacados. Introduce el nombre en tu idioma preferido, sube una imagen (JPG/PNG), después haz clic en \"Traducir\" para traducciones multilingües automáticas. Finalmente, haz clic en \"Publicar todo\" para actualizar el sitio web.",
+        "en": "Add up to 8 featured dishes. Enter the name in your preferred language, upload an image (JPG/PNG), then click \"Translate\" for automatic multilingual translations. Finally, click \"Publish All\" to update the website.",
+        "de": "Fügen Sie bis zu 8 vorgestellte Gerichte hinzu. Geben Sie den Namen in Ihrer bevorzugten Sprache ein, laden Sie ein Bild hoch (JPG/PNG) und klicken Sie dann auf \"Übersetzen\" für automatische mehrsprachige Übersetzungen. Klicken Sie abschließend auf \"Alle veröffentlichen\", um die Website zu aktualisieren.",
+        "fr": "Ajoutez jusqu'à 8 plats en vedette. Entrez le nom dans votre langue préférée, téléchargez une image (JPG/PNG), puis cliquez sur \"Traduire\" pour les traductions multilingues automatiques. Enfin, cliquez sur \"Tout publier\" pour mettre à jour le site web."
+    },
+    "admin_item_number": {
+        "ca": "Element {number}",
+        "es": "Elemento {number}",
+        "en": "Item {number}",
+        "de": "Artikel {number}",
+        "fr": "Élément {number}"
+    },
+    "admin_dish_name": {
+        "ca": "Nom del plat",
+        "es": "Nombre del plato",
+        "en": "Dish Name",
+        "de": "Gericht Name",
+        "fr": "Nom du plat"
+    },
+    "admin_dish_name_placeholder": {
+        "ca": "p. ex., Paella, Fideuà, Truita",
+        "es": "p. ej., Paella, Fideuà, Tortilla",
+        "en": "e.g., Paella, Fideua, Tortilla",
+        "de": "z.B. Paella, Fideuà, Tortilla",
+        "fr": "p. ex., Paella, Fideuà, Tortilla"
+    },
+    "admin_source_language": {
+        "ca": "Idioma d'origen",
+        "es": "Idioma de origen",
+        "en": "Source Language",
+        "de": "Ausgangssprache",
+        "fr": "Langue source"
+    },
+    "admin_image_upload": {
+        "ca": "Imatge (JPG/PNG)",
+        "es": "Imagen (JPG/PNG)",
+        "en": "Image (JPG/PNG)",
+        "de": "Bild (JPG/PNG)",
+        "fr": "Image (JPG/PNG)"
+    },
+    "admin_translate_button": {
+        "ca": "🌐 Traduir",
+        "es": "🌐 Traducir",
+        "en": "🌐 Translate",
+        "de": "🌐 Übersetzen",
+        "fr": "🌐 Traduire"
+    },
+    "admin_translations_label": {
+        "ca": "Traduccions:",
+        "es": "Traducciones:",
+        "en": "Translations:",
+        "de": "Übersetzungen:",
+        "fr": "Traductions:"
+    },
+    "admin_translate_all": {
+        "ca": "🌐 Traduir tot",
+        "es": "🌐 Traducir todo",
+        "en": "🌐 Translate All",
+        "de": "🌐 Alle übersetzen",
+        "fr": "🌐 Tout traduire"
+    },
+    "admin_publish_all": {
+        "ca": "🚀 Publicar tot",
+        "es": "🚀 Publicar todo",
+        "en": "🚀 Publish All",
+        "de": "🚀 Alle veröffentlichen",
+        "fr": "🚀 Tout publier"
+    },
+    "admin_image_uploaded": {
+        "ca": "Imatge pujada per a l'element {number}",
+        "es": "Imagen subida para el elemento {number}",
+        "en": "Image uploaded for item {number}",
+        "de": "Bild für Artikel {number} hochgeladen",
+        "fr": "Image téléchargée pour l'élément {number}"
+    },
+    "admin_image_upload_failed": {
+        "ca": "Error en pujar la imatge",
+        "es": "Error al subir la imagen",
+        "en": "Image upload failed",
+        "de": "Bild-Upload fehlgeschlagen",
+        "fr": "Échec du téléchargement de l'image"
+    },
+    "admin_enter_dish_name": {
+        "ca": "Si us plau, introdueix primer el nom del plat",
+        "es": "Por favor, introduce primero el nombre del plato",
+        "en": "Please enter a dish name first",
+        "de": "Bitte geben Sie zuerst einen Gerichtnamen ein",
+        "fr": "Veuillez d'abord entrer un nom de plat"
+    },
+    "admin_translated": {
+        "ca": "Traduït: {name}",
+        "es": "Traducido: {name}",
+        "en": "Translated: {name}",
+        "de": "Übersetzt: {name}",
+        "fr": "Traduit: {name}"
+    },
+    "admin_translation_failed": {
+        "ca": "Error en la traducció",
+        "es": "Error en la traducción",
+        "en": "Translation failed",
+        "de": "Übersetzung fehlgeschlagen",
+        "fr": "Échec de la traduction"
+    },
+    "admin_translating_all": {
+        "ca": "Traduint tots els elements...",
+        "es": "Traduciendo todos los elementos...",
+        "en": "Translating all items...",
+        "de": "Alle Artikel werden übersetzt...",
+        "fr": "Traduction de tous les éléments..."
+    },
+    "admin_all_translations_complete": {
+        "ca": "Totes les traduccions completades!",
+        "es": "¡Todas las traducciones completadas!",
+        "en": "All translations complete!",
+        "de": "Alle Übersetzungen abgeschlossen!",
+        "fr": "Toutes les traductions terminées!"
+    },
+    "admin_publishing": {
+        "ca": "Publicant...",
+        "es": "Publicando...",
+        "en": "Publishing...",
+        "de": "Veröffentlichen...",
+        "fr": "Publication en cours..."
+    },
+    "admin_add_complete_item": {
+        "ca": "Si us plau, afegeix almenys un element complet (nom, traduccions, imatge)",
+        "es": "Por favor, añade al menos un elemento completo (nombre, traducciones, imagen)",
+        "en": "Please add at least one complete item (name, translations, image)",
+        "de": "Bitte fügen Sie mindestens einen vollständigen Artikel hinzu (Name, Übersetzungen, Bild)",
+        "fr": "Veuillez ajouter au moins un élément complet (nom, traductions, image)"
+    },
+    "admin_published_items": {
+        "ca": "✅ {count} elements destacats publicats!",
+        "es": "✅ ¡{count} elementos destacados publicados!",
+        "en": "✅ Published {count} featured items!",
+        "de": "✅ {count} vorgestellte Artikel veröffentlicht!",
+        "fr": "✅ {count} éléments en vedette publiés!"
+    },
+    "admin_publishing_failed": {
+        "ca": "❌ Error en la publicació",
+        "es": "❌ Error en la publicación",
+        "en": "❌ Publishing failed",
+        "de": "❌ Veröffentlichung fehlgeschlagen",
+        "fr": "❌ Échec de la publication"
+    },
+    "admin_news_title": {
+        "ca": "Gestió de notícies",
+        "es": "Gestión de noticias",
+        "en": "News Management",
+        "de": "Nachrichtenverwaltung",
+        "fr": "Gestion des actualités"
+    },
+    "admin_news_description": {
+        "ca": "Gestiona notícies i anuncis. Introdueix el títol i el contingut en el teu idioma preferit, puja una imatge (JPG/PNG), després fes clic a \"Traduir\" per a traduccions multilingües automàtiques. Finalment, fes clic a \"Guardar\" per publicar cada notícia individualment.",
+        "es": "Gestiona noticias y anuncios. Introduce el título y el contenido en tu idioma preferido, sube una imagen (JPG/PNG), después haz clic en \"Traducir\" para traducciones multilingües automáticas. Finalmente, haz clic en \"Guardar\" para publicar cada noticia individualmente.",
+        "en": "Manage news and announcements. Enter the title and content in your preferred language, upload an image (JPG/PNG), then click \"Translate\" for automatic multilingual translations. Finally, click \"Save\" to publish each news item individually.",
+        "de": "Verwalten Sie Nachrichten und Ankündigungen. Geben Sie Titel und Inhalt in Ihrer bevorzugten Sprache ein, laden Sie ein Bild hoch (JPG/PNG) und klicken Sie dann auf \"Übersetzen\" für automatische mehrsprachige Übersetzungen. Klicken Sie abschließend auf \"Speichern\", um jeden Nachrichteneintrag einzeln zu veröffentlichen.",
+        "fr": "Gérez les actualités et les annonces. Entrez le titre et le contenu dans votre langue préférée, téléchargez une image (JPG/PNG), puis cliquez sur \"Traduire\" pour les traductions multilingues automatiques. Enfin, cliquez sur \"Enregistrer\" pour publier chaque actualité individuellement."
+    },
+    "admin_news_item": {
+        "ca": "Notícia {number}",
+        "es": "Noticia {number}",
+        "en": "News Item {number}",
+        "de": "Nachricht {number}",
+        "fr": "Actualité {number}"
+    },
+    "admin_delete": {
+        "ca": "Eliminar",
+        "es": "Eliminar",
+        "en": "Delete",
+        "de": "Löschen",
+        "fr": "Supprimer"
+    },
+    "admin_title": {
+        "ca": "Títol",
+        "es": "Título",
+        "en": "Title",
+        "de": "Titel",
+        "fr": "Titre"
+    },
+    "admin_title_placeholder": {
+        "ca": "p. ex., Celebració d'Any Nou 2026",
+        "es": "p. ej., Celebración de Año Nuevo 2026",
+        "en": "e.g., New Year 2026 Celebration",
+        "de": "z.B. Neujahrsfeier 2026",
+        "fr": "p. ex., Célébration du Nouvel An 2026"
+    },
+    "admin_content": {
+        "ca": "Contingut",
+        "es": "Contenido",
+        "en": "Content",
+        "de": "Inhalt",
+        "fr": "Contenu"
+    },
+    "admin_content_placeholder": {
+        "ca": "Contingut complet de la notícia...",
+        "es": "Contenido completo de la noticia...",
+        "en": "Full news content...",
+        "de": "Vollständiger Nachrichteninhalt...",
+        "fr": "Contenu complet de l'actualité..."
+    },
+    "admin_is_event": {
+        "ca": "És un esdeveniment",
+        "es": "Es un evento",
+        "en": "Is Event",
+        "de": "Ist ein Event",
+        "fr": "Est un événement"
+    },
+    "admin_save": {
+        "ca": "💾 Guardar",
+        "es": "💾 Guardar",
+        "en": "💾 Save",
+        "de": "💾 Speichern",
+        "fr": "💾 Enregistrer"
+    },
+    "admin_add_news": {
+        "ca": "➕ Afegir nova notícia",
+        "es": "➕ Añadir nueva noticia",
+        "en": "➕ Add New News Item",
+        "de": "➕ Neue Nachricht hinzufügen",
+        "fr": "➕ Ajouter une nouvelle actualité"
+    },
+    "admin_enter_title_content": {
+        "ca": "Si us plau, introdueix tant el títol com el contingut primer",
+        "es": "Por favor, introduce tanto el título como el contenido primero",
+        "en": "Please enter both title and content first",
+        "de": "Bitte geben Sie zuerst sowohl Titel als auch Inhalt ein",
+        "fr": "Veuillez d'abord entrer le titre et le contenu"
+    },
+    "admin_news_translated": {
+        "ca": "Notícia {number} traduïda",
+        "es": "Noticia {number} traducida",
+        "en": "Translated news item {number}",
+        "de": "Nachricht {number} übersetzt",
+        "fr": "Actualité {number} traduite"
+    },
+    "admin_complete_translations": {
+        "ca": "Si us plau, completa les traduccions abans de guardar",
+        "es": "Por favor, completa las traducciones antes de guardar",
+        "en": "Please complete translations before saving",
+        "de": "Bitte vervollständigen Sie die Übersetzungen vor dem Speichern",
+        "fr": "Veuillez compléter les traductions avant d'enregistrer"
+    },
+    "admin_news_updated": {
+        "ca": "Notícia {number} actualitzada amb èxit",
+        "es": "Noticia {number} actualizada con éxito",
+        "en": "News item {number} updated successfully",
+        "de": "Nachricht {number} erfolgreich aktualisiert",
+        "fr": "Actualité {number} mise à jour avec succès"
+    },
+    "admin_news_created": {
+        "ca": "Notícia {number} creada amb èxit",
+        "es": "Noticia {number} creada con éxito",
+        "en": "News item {number} created successfully",
+        "de": "Nachricht {number} erfolgreich erstellt",
+        "fr": "Actualité {number} créée avec succès"
+    },
+    "admin_failed_save": {
+        "ca": "Error en guardar la notícia",
+        "es": "Error al guardar la noticia",
+        "en": "Failed to save news item",
+        "de": "Fehler beim Speichern der Nachricht",
+        "fr": "Échec de l'enregistrement de l'actualité"
+    },
+    "admin_delete_confirm": {
+        "ca": "Estàs segur que vols eliminar aquesta notícia?",
+        "es": "¿Estás seguro de que quieres eliminar esta noticia?",
+        "en": "Are you sure you want to delete this news item?",
+        "de": "Sind Sie sicher, dass Sie diese Nachricht löschen möchten?",
+        "fr": "Êtes-vous sûr de vouloir supprimer cette actualité?"
+    },
+    "admin_news_deleted": {
+        "ca": "Notícia eliminada amb èxit",
+        "es": "Noticia eliminada con éxito",
+        "en": "News item deleted successfully",
+        "de": "Nachricht erfolgreich gelöscht",
+        "fr": "Actualité supprimée avec succès"
+    },
+    "admin_failed_delete": {
+        "ca": "Error en eliminar la notícia",
+        "es": "Error al eliminar la noticia",
+        "en": "Failed to delete news item",
+        "de": "Fehler beim Löschen der Nachricht",
+        "fr": "Échec de la suppression de l'actualité"
+    },
+    "admin_failed_load_news": {
+        "ca": "Error en carregar les notícies existents",
+        "es": "Error al cargar las noticias existentes",
+        "en": "Failed to load existing news",
+        "de": "Fehler beim Laden vorhandener Nachrichten",
+        "fr": "Échec du chargement des actualités existantes"
+    },
+    "admin_content_preview": {
+        "ca": "Vista prèvia del contingut ({lang}):",
+        "es": "Vista previa del contenido ({lang}):",
+        "en": "Content Preview ({lang}):",
+        "de": "Inhaltsvorschau ({lang}):",
+        "fr": "Aperçu du contenu ({lang}):"
+    },
 
     # Days of week
     "monday": {
