@@ -555,6 +555,22 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "fr": "Dimanche"
     },
 
+    # Slogan
+    "bar_slogan": {
+        "ca": "També parlem anglès!",
+        "es": "¡También hablamos inglés!",
+        "en": "We also speak English!",
+        "de": "Wir sprechen auch Englisch!",
+        "fr": "Nous parlons aussi anglais!"
+    },
+    "all_rights_reserved": {
+        "ca": "Tots els drets reservats",
+        "es": "Todos los derechos reservados",
+        "en": "All rights reserved",
+        "de": "Alle Rechte vorbehalten",
+        "fr": "Tous droits réservés"
+    },
+
     # Common
     "loading": {
         "ca": "Carregant...",
