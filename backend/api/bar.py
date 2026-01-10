@@ -9,6 +9,7 @@ from backend.database import get_db
 from backend.services.bar_service import BarService
 from backend.services.document_summary_service import DocumentSummaryService
 from backend.services.vector_service import VectorService
+from backend.services.llm_translation_service import LLMTranslationService
 from backend.schemas.bar import (
     BarInfoResponse, BarInfoUpdate, BarMenuResponse, BarMenuCreate,
     BarNewsResponse, BarNewsCreate, BarReservationResponse, BarReservationCreate,
@@ -429,3 +430,111 @@ async def upload_menu(
         "menu": menu,
         "file_url": f"/uploads/menus/{filename}"
     }
+
+
+# ==========================================
+# FEATURED ITEMS MANAGEMENT
+# ==========================================
+
+@router.post("/admin/featured-items/translate", summary="Translate dish name to all languages")
+async def translate_dish_name(
+    dish_name: str = Form(...),
+    source_language: str = Form(..., regex="^(ca|es|en|de|fr)$"),
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Translate a dish name from source language to all supported languages using LLM
+    Requires admin authentication
+    """
+    try:
+        translations = await LLMTranslationService.translate_dish_name(
+            db, dish_name, source_language
+        )
+        return {
+            "success": True,
+            "translations": translations
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Translation failed: {str(e)}"
+        )
+
+
+@router.post("/admin/featured-items/upload-image", summary="Upload featured item image")
+async def upload_featured_item_image(
+    file: UploadFile = File(...),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Upload an image for a featured item
+    Requires admin authentication
+    Returns the URL of the uploaded image
+    """
+    try:
+        # Validate file type
+        if not file.content_type in ['image/jpeg', 'image/png', 'image/jpg']:
+            raise HTTPException(
+                status_code=400,
+                detail="Only JPG and PNG images are allowed"
+            )
+
+        # Create uploads directory if it doesn't exist
+        upload_dir = "uploads/featured_items"
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_extension = file.filename.split('.')[-1]
+        filename = f"featured_{timestamp}.{file_extension}"
+        file_path = os.path.join(upload_dir, filename)
+
+        # Save file
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        # Return URL
+        image_url = f"/morningbar/uploads/featured_items/{filename}"
+
+        return {
+            "success": True,
+            "image_url": image_url,
+            "filename": filename
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image upload failed: {str(e)}"
+        )
+
+
+@router.put("/admin/featured-items/publish", summary="Publish featured items with translations")
+async def publish_featured_items(
+    featured_items: List[dict],
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Publish featured items to bar_info
+    Each item should have: name (dict), description (dict), image (str)
+    Requires admin authentication
+    """
+    try:
+        # Update bar_info with new featured items
+        bar_data = BarInfoUpdate(featured_items=featured_items)
+        updated_bar = BarService.create_or_update_bar_info(db, bar_data)
+
+        return {
+            "success": True,
+            "message": f"Published {len(featured_items)} featured items",
+            "featured_items": updated_bar.featured_items
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to publish featured items: {str(e)}"
+        )
