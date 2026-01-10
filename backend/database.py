@@ -89,6 +89,25 @@ async def create_db_and_tables():
                 # Create tables
                 await conn.run_sync(Base.metadata.create_all)
 
+                # Create bar_newsletter table if it doesn't exist
+                await conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS bar_newsletter (
+                        id SERIAL PRIMARY KEY,
+                        email VARCHAR(255) NOT NULL UNIQUE,
+                        name VARCHAR(255),
+                        language VARCHAR(5) DEFAULT 'ca',
+                        is_active BOOLEAN DEFAULT TRUE,
+                        subscribed_at TIMESTAMP DEFAULT NOW(),
+                        unsubscribed_at TIMESTAMP
+                    );
+                """))
+                await conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_bar_newsletter_email ON bar_newsletter(email);
+                """))
+                await conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_bar_newsletter_active ON bar_newsletter(is_active);
+                """))
+
                 # Add missing LLM analysis columns if they don't exist
                 await conn.execute(text("""
                     DO $$
