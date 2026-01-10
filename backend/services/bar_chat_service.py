@@ -20,6 +20,37 @@ class BarChatService:
         self.ollama_model = settings.OLLAMA_MODEL
         self.grok_api_key = settings.GROK_API_KEY
 
+    def _detect_language(self, message: str) -> str:
+        """
+        Detect language from message using simple keyword matching
+
+        Returns detected language code or 'en' as default
+        """
+        message_lower = message.lower()
+
+        # Common words for each language
+        language_indicators = {
+            'ca': ['què', 'quin', 'quina', 'com', 'és', 'són', 'estic', 'està', 'tinc', 'tenim', 'vull', 'voldria', 'gràcies', 'hola', 'bon', 'bona'],
+            'es': ['qué', 'cuál', 'cómo', 'dónde', 'cuándo', 'estoy', 'está', 'tengo', 'tenemos', 'quiero', 'querría', 'gracias', 'hola', 'buenos', 'buenas'],
+            'de': ['was', 'wie', 'wo', 'wann', 'welche', 'ich', 'bin', 'ist', 'sind', 'haben', 'möchte', 'danke', 'hallo', 'guten', 'uhr'],
+            'fr': ['quoi', 'quel', 'quelle', 'comment', 'où', 'quand', 'suis', 'est', 'sont', 'ai', 'avons', 'veux', 'voudrais', 'merci', 'bonjour', 'bonne']
+        }
+
+        # Count matches for each language
+        scores = {lang: 0 for lang in language_indicators}
+        for lang, keywords in language_indicators.items():
+            for keyword in keywords:
+                if keyword in message_lower:
+                    scores[lang] += 1
+
+        # Get language with highest score
+        detected_lang = max(scores, key=scores.get)
+
+        # Return detected language if confidence is high enough, otherwise default to 'en'
+        if scores[detected_lang] > 0:
+            return detected_lang
+        return 'en'
+
     async def chat(
         self,
         message: str,
@@ -32,7 +63,7 @@ class BarChatService:
 
         Args:
             message: User's message
-            language: Language code (ca, es, en, de, fr)
+            language: Language code (ca, es, en, de, fr) - used as fallback
             llm_provider: "ollama" or "grok"
             conversation_history: Previous messages for context
 
@@ -40,13 +71,20 @@ class BarChatService:
             Dict with response, context, and metadata
         """
         try:
-            # Step 1: Get relevant context from Elasticsearch
-            context = bar_es_service.get_context_for_rag(message, language, limit=3)
+            # Step 1: Detect language from user message
+            detected_language = self._detect_language(message)
+            logger.info(f"🌍 Detected language: {detected_language} (fallback: {language})")
 
-            # Step 2: Build system prompt with context
-            system_prompt = self._build_system_prompt(language, context)
+            # Use detected language, fallback to provided language
+            response_language = detected_language if detected_language else language
 
-            # Step 3: Get LLM response
+            # Step 2: Get relevant context from Elasticsearch
+            context = bar_es_service.get_context_for_rag(message, response_language, limit=3)
+
+            # Step 3: Build system prompt with context
+            system_prompt = self._build_system_prompt(response_language, context)
+
+            # Step 4: Get LLM response
             if llm_provider == "grok" and self.grok_api_key:
                 response_text = await self._chat_with_grok(
                     message, system_prompt, conversation_history
@@ -59,7 +97,7 @@ class BarChatService:
             return {
                 "response": response_text,
                 "context_used": context,
-                "language": language,
+                "language": response_language,  # Return detected language
                 "llm_provider": llm_provider,
                 "success": True
             }
@@ -83,8 +121,8 @@ Utilitza la següent informació per respondre les preguntes dels clients:
 
 {context}
 
-Instruccions:
-- Respon en català
+Instruccions IMPORTANTS:
+- SEMPRE respon en CATALÀ, independentment de l'idioma de la pregunta
 - Sigues amable i professional
 - Si no tens la informació, digues-ho educadament
 - Utilitza el context proporcionat per donar respostes precises
@@ -95,8 +133,8 @@ Utiliza la siguiente información para responder las preguntas de los clientes:
 
 {context}
 
-Instrucciones:
-- Responde en español
+Instrucciones IMPORTANTES:
+- SIEMPRE responde en ESPAÑOL, independientemente del idioma de la pregunta
 - Sé amable y profesional
 - Si no tienes la información, dilo educadamente
 - Utiliza el contexto proporcionado para dar respuestas precisas
@@ -107,8 +145,8 @@ Use the following information to answer customer questions:
 
 {context}
 
-Instructions:
-- Respond in English
+IMPORTANT Instructions:
+- ALWAYS respond in ENGLISH, regardless of the question's language
 - Be friendly and professional
 - If you don't have the information, say so politely
 - Use the provided context to give accurate answers
@@ -119,8 +157,8 @@ Nutze die folgenden Informationen, um Kundenfragen zu beantworten:
 
 {context}
 
-Anweisungen:
-- Antworte auf Deutsch
+WICHTIGE Anweisungen:
+- Antworte IMMER auf DEUTSCH, unabhängig von der Sprache der Frage
 - Sei freundlich und professionell
 - Wenn du die Information nicht hast, sage es höflich
 - Nutze den bereitgestellten Kontext für präzise Antworten
@@ -131,8 +169,8 @@ Utilisez les informations suivantes pour répondre aux questions des clients:
 
 {context}
 
-Instructions:
-- Répondez en français
+Instructions IMPORTANTES:
+- Répondez TOUJOURS en FRANÇAIS, quelle que soit la langue de la question
 - Soyez aimable et professionnel
 - Si vous n'avez pas l'information, dites-le poliment
 - Utilisez le contexte fourni pour donner des réponses précises
