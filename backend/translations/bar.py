@@ -402,11 +402,11 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
     # Newsletter
     "newsletter_title": {
-        "ca": "Subscriu-te al nostre butlletí",
-        "es": "Suscríbete a nuestro boletín",
-        "en": "Subscribe to our newsletter",
-        "de": "Abonniere unseren Newsletter",
-        "fr": "Abonnez-vous à notre newsletter"
+        "ca": "Subscriu-te al nostre butlletí i menú diari",
+        "es": "Suscríbete a nuestro boletín y menú diario",
+        "en": "Subscribe to our newsletter and daily menu",
+        "de": "Abonniere unseren Newsletter und Tagesmenü",
+        "fr": "Abonnez-vous à notre newsletter et menu du jour"
     },
     "newsletter_email": {
         "ca": "Correu electrònic",

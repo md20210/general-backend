@@ -7,6 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.services.bar_service import BarService
+from backend.services.email_service import email_service
 from backend.services.document_summary_service import DocumentSummaryService
 from backend.services.vector_service import VectorService
 from backend.services.llm_translation_service import LLMTranslationService
@@ -603,22 +604,26 @@ async def send_newsletter(
     try:
         # Get all active subscribers
         subscribers = BarService.get_all_subscribers(db, active_only=True)
-        active_subscribers = subscribers
 
-        # TODO: Implement actual email sending
-        # For now, just return success with count
-        # In production, this would:
-        # 1. Loop through each subscriber
-        # 2. Get their language preference
-        # 3. Select the appropriate translation from subject/content dicts
-        # 4. Send personalized email
+        # Prepare subscriber data for batch sending
+        subscriber_data = [
+            (sub.email, sub.name, sub.language)
+            for sub in subscribers
+        ]
 
-        sent_count = len(active_subscribers)
+        # Send newsletter to all subscribers
+        result = email_service.send_newsletter_batch(
+            subscribers=subscriber_data,
+            subject_translations=newsletter_data.get("subject", {}),
+            content_translations=newsletter_data.get("content", {})
+        )
 
         return {
             "success": True,
-            "sent_count": sent_count,
-            "message": f"Newsletter would be sent to {sent_count} subscribers"
+            "sent_count": result["success"],
+            "failed_count": result["failed"],
+            "total_count": result["total"],
+            "message": f"Newsletter sent to {result['success']} of {result['total']} subscribers"
         }
 
     except Exception as e:
