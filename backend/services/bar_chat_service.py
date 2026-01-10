@@ -20,37 +20,6 @@ class BarChatService:
         self.ollama_model = settings.OLLAMA_MODEL
         self.grok_api_key = settings.GROK_API_KEY
 
-    def _detect_language(self, message: str) -> str:
-        """
-        Detect language from message using simple keyword matching
-
-        Returns detected language code or 'en' as default
-        """
-        message_lower = message.lower()
-
-        # Common words for each language
-        language_indicators = {
-            'ca': ['què', 'quin', 'quina', 'com', 'és', 'són', 'estic', 'està', 'tinc', 'tenim', 'vull', 'voldria', 'gràcies', 'hola', 'bon', 'bona'],
-            'es': ['qué', 'cuál', 'cómo', 'dónde', 'cuándo', 'estoy', 'está', 'tengo', 'tenemos', 'quiero', 'querría', 'gracias', 'hola', 'buenos', 'buenas'],
-            'de': ['was', 'wie', 'wo', 'wann', 'welche', 'ich', 'bin', 'ist', 'sind', 'haben', 'möchte', 'danke', 'hallo', 'guten', 'uhr'],
-            'fr': ['quoi', 'quel', 'quelle', 'comment', 'où', 'quand', 'suis', 'est', 'sont', 'ai', 'avons', 'veux', 'voudrais', 'merci', 'bonjour', 'bonne']
-        }
-
-        # Count matches for each language
-        scores = {lang: 0 for lang in language_indicators}
-        for lang, keywords in language_indicators.items():
-            for keyword in keywords:
-                if keyword in message_lower:
-                    scores[lang] += 1
-
-        # Get language with highest score
-        detected_lang = max(scores, key=scores.get)
-
-        # Return detected language if confidence is high enough, otherwise default to 'en'
-        if scores[detected_lang] > 0:
-            return detected_lang
-        return 'en'
-
     async def chat(
         self,
         message: str,
@@ -63,7 +32,7 @@ class BarChatService:
 
         Args:
             message: User's message
-            language: Language code (ca, es, en, de, fr) - used as fallback
+            language: Language code (ca, es, en, de, fr) - response language
             llm_provider: "ollama" or "grok"
             conversation_history: Previous messages for context
 
@@ -71,18 +40,11 @@ class BarChatService:
             Dict with response, context, and metadata
         """
         try:
-            # Step 1: Detect language from user message
-            detected_language = self._detect_language(message)
-            logger.info(f"🌍 Detected language: {detected_language} (fallback: {language})")
+            # Step 1: Get relevant context from Elasticsearch
+            context = bar_es_service.get_context_for_rag(message, language, limit=3)
 
-            # Use detected language, fallback to provided language
-            response_language = detected_language if detected_language else language
-
-            # Step 2: Get relevant context from Elasticsearch
-            context = bar_es_service.get_context_for_rag(message, response_language, limit=3)
-
-            # Step 3: Build system prompt with context
-            system_prompt = self._build_system_prompt(response_language, context)
+            # Step 2: Build system prompt with context
+            system_prompt = self._build_system_prompt(language, context)
 
             # Step 4: Get LLM response
             if llm_provider == "grok" and self.grok_api_key:
@@ -97,7 +59,7 @@ class BarChatService:
             return {
                 "response": response_text,
                 "context_used": context,
-                "language": response_language,  # Return detected language
+                "language": language,
                 "llm_provider": llm_provider,
                 "success": True
             }
