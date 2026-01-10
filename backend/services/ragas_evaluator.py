@@ -64,7 +64,7 @@ class RAGASEvaluator:
             else:
                 # Grok uses OpenAI-compatible API
                 self.evaluator_llm = ChatOpenAI(
-                    model="grok-beta",
+                    model="grok-3",
                     openai_api_key=self.grok_api_key,
                     openai_api_base="https://api.x.ai/v1",
                     temperature=0.0,

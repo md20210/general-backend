@@ -204,7 +204,7 @@ Instructions IMPORTANTES:
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": "grok-beta",
+                        "model": "grok-3",
                         "messages": messages,
                         "temperature": 0.7
                     }

@@ -219,7 +219,7 @@ class LLMGateway:
             if self.grok_api_key:
                 models.extend([
                     {
-                        "name": "grok-beta",
+                        "name": "grok-3",
                         "provider": "grok",
                         "description": "GROK Beta - X.AI's frontier model"
                     },
