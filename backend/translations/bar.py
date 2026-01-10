@@ -137,6 +137,13 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Empfohlene Gerichte",
         "fr": "Plats vedettes"
     },
+    "our_dishes": {
+        "ca": "Els Nostres Plats",
+        "es": "Nuestros Platos",
+        "en": "Our Dishes",
+        "de": "Unsere Gerichte",
+        "fr": "Nos Plats"
+    },
 
     # Menu Page
     "menu_title": {
