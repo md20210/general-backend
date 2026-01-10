@@ -1,6 +1,7 @@
 """Main FastAPI application."""
 # MUST be first - monkey-patch passlib before any imports use it
 import backend.patch_passlib  # noqa: F401
+# Force restart to create bar_newsletter table
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
