@@ -57,8 +57,8 @@ class BarNews(Base):
     __tablename__ = "bar_news"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(500))
-    content = Column(Text)
+    title = Column(JSON)  # Multilingual: {"ca": "...", "es": "...", "en": "...", "de": "...", "fr": "..."}
+    content = Column(JSON)  # Multilingual: {"ca": "...", "es": "...", "en": "...", "de": "...", "fr": "..."}
     image_url = Column(String(500), nullable=True)
     publish_date = Column(DateTime, default=datetime.utcnow)
     is_published = Column(Boolean, default=True)

@@ -84,8 +84,8 @@ class BarMenuCreate(BaseModel):
 class BarNewsResponse(BaseModel):
     """Response schema for bar news"""
     id: int
-    title: str
-    content: str
+    title: Union[str, Dict[str, str]]  # Multilingual support
+    content: Union[str, Dict[str, str]]  # Multilingual support
     image_url: Optional[str] = None
     publish_date: datetime
     is_published: bool
@@ -99,8 +99,8 @@ class BarNewsResponse(BaseModel):
 
 class BarNewsCreate(BaseModel):
     """Schema for creating news/announcement"""
-    title: str = Field(..., min_length=1, max_length=500)
-    content: str = Field(..., min_length=1)
+    title: Union[str, Dict[str, str]] = Field(..., description="Title in one language (str) or all languages (dict)")
+    content: Union[str, Dict[str, str]] = Field(..., description="Content in one language (str) or all languages (dict)")
     image_url: Optional[str] = None
     is_published: bool = True
     is_event: bool = False
