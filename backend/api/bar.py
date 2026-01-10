@@ -18,7 +18,7 @@ from backend.schemas.bar import (
 from typing import List
 import os
 from datetime import datetime, timedelta
-import jwt
+from jose import jwt, JWTError
 
 router = APIRouter(prefix="/bar", tags=["bar"])
 
@@ -53,9 +53,9 @@ def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(secur
         if username != ADMIN_USERNAME:
             raise HTTPException(status_code=401, detail="Invalid authentication")
         return username
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.JWTError:
+    except JWTError as e:
+        if "expired" in str(e).lower():
+            raise HTTPException(status_code=401, detail="Token expired")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
