@@ -1,7 +1,7 @@
 """Add Bar Ca l'Elena tables
 
 Revision ID: 20260110_bar
-Revises: 20260105_klassentreffen_participants
+Revises: 20260101_fix_cv_showcase_enum
 Create Date: 2026-01-10
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '20260110_bar'
-down_revision = '20260105_klassentreffen_participants'
+down_revision = '20260101_fix_cv_showcase_enum'
 branch_labels = None
 depends_on = None
 
