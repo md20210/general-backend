@@ -439,6 +439,23 @@ class BarElasticsearchService:
         """Delete a menu from Elasticsearch"""
         self._delete_menu_documents(menu_id)
 
+    def delete_all_menus(self):
+        """Delete all menu documents from Elasticsearch to avoid chatbot confusion"""
+        if not self.es:
+            return
+
+        try:
+            delete_query = {
+                "query": {
+                    "term": {"type": "menu"}
+                }
+            }
+            result = self.es.delete_by_query(index=self.index_name, body=delete_query)
+            deleted_count = result.get("deleted", 0)
+            logger.info(f"🗑️ Deleted {deleted_count} menu documents from Elasticsearch")
+        except Exception as e:
+            logger.error(f"❌ Error deleting all menu documents: {e}")
+
 
 # Global instance
 bar_es_service = BarElasticsearchService()

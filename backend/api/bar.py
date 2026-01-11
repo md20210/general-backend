@@ -541,6 +541,9 @@ async def create_menu(
 
         # Index to Elasticsearch for RAG chatbot
         try:
+            # Delete all old menu documents first to avoid chatbot confusion
+            bar_es_service.delete_all_menus()
+
             menu_dict = {
                 "id": menu.id,
                 "menu_type": menu.menu_type,
