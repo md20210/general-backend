@@ -29,9 +29,9 @@ class BarInfoResponse(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     opening_hours: Optional[Dict[str, str]] = None
-    cuisine: Optional[str] = None
-    price_range: Optional[str] = None
-    rating: Optional[str] = None
+    cuisine: Optional[Union[str, Dict[str, str]]] = None
+    price_range: Optional[Union[str, Dict[str, str]]] = None
+    rating: Optional[Union[str, Dict[str, str]]] = None
     location_lat: Optional[str] = None
     location_lng: Optional[str] = None
     facebook_url: Optional[str] = None
@@ -49,9 +49,9 @@ class BarInfoUpdate(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     opening_hours: Optional[Dict[str, str]] = None
-    cuisine: Optional[str] = None
-    price_range: Optional[str] = None
-    rating: Optional[str] = None
+    cuisine: Optional[Union[str, Dict[str, str]]] = None
+    price_range: Optional[Union[str, Dict[str, str]]] = None
+    rating: Optional[Union[str, Dict[str, str]]] = None
     location_lat: Optional[str] = None
     location_lng: Optional[str] = None
     facebook_url: Optional[str] = None
