@@ -283,6 +283,93 @@ class BarElasticsearchService:
 
         return "\n".join(context_parts)
 
+    def index_team_member(self, team_member: Dict[str, Any]):
+        """Index a single team member in all languages"""
+        if not self.es:
+            return False
+
+        languages = ["ca", "es", "en", "de", "fr"]
+        indexed_count = 0
+
+        try:
+            # Only index if published
+            if not team_member.get("is_published"):
+                logger.info(f"⏭️ Skipping unpublished team member: {team_member.get('name')}")
+                return True
+
+            # Delete existing documents for this team member
+            self._delete_team_member_documents(team_member.get("id"))
+
+            # Index description in all languages
+            if isinstance(team_member.get("description"), dict):
+                for lang in languages:
+                    if lang in team_member["description"]:
+                        doc = {
+                            "type": "team_member",
+                            "language": lang,
+                            "title": f"Team: {team_member.get('name')}",
+                            "content": team_member["description"][lang],
+                            "metadata": {
+                                "team_member_id": team_member.get("id"),
+                                "name": team_member.get("name"),
+                                "display_order": team_member.get("display_order")
+                            },
+                            "timestamp": team_member.get("created_at", "2026-01-11T00:00:00")
+                        }
+                        self.es.index(index=self.index_name, document=doc)
+                        indexed_count += 1
+
+            self.es.indices.refresh(index=self.index_name)
+            logger.info(f"✅ Indexed {indexed_count} documents for team member: {team_member.get('name')}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Error indexing team member: {e}")
+            return False
+
+    def _delete_team_member_documents(self, team_member_id: int):
+        """Delete all Elasticsearch documents for a specific team member"""
+        if not self.es or not team_member_id:
+            return
+
+        try:
+            delete_query = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"term": {"type": "team_member"}},
+                            {"term": {"metadata.team_member_id": team_member_id}}
+                        ]
+                    }
+                }
+            }
+            self.es.delete_by_query(index=self.index_name, body=delete_query)
+            logger.info(f"🗑️ Deleted team member documents for ID: {team_member_id}")
+        except Exception as e:
+            logger.error(f"❌ Error deleting team member documents: {e}")
+
+    def index_all_team_members(self, team_members: List[Dict[str, Any]]):
+        """Index all team members (bulk operation)"""
+        if not self.es:
+            return False
+
+        try:
+            total_indexed = 0
+            for member in team_members:
+                if self.index_team_member(member):
+                    total_indexed += 1
+
+            logger.info(f"✅ Indexed {total_indexed} team members total")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Error bulk indexing team members: {e}")
+            return False
+
+    def delete_team_member(self, team_member_id: int):
+        """Delete a team member from Elasticsearch"""
+        self._delete_team_member_documents(team_member_id)
+
 
 # Global instance
 bar_es_service = BarElasticsearchService()

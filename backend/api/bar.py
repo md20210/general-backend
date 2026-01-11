@@ -12,7 +12,7 @@ from backend.services.email_service import email_service
 from backend.services.document_summary_service import DocumentSummaryService
 from backend.services.vector_service import VectorService
 from backend.services.llm_translation_service import LLMTranslationService
-from backend.services.bar_elasticsearch_service import BarElasticsearchService
+from backend.services.bar_elasticsearch_service import bar_es_service
 from backend.schemas.bar import (
     BarInfoResponse, BarInfoUpdate, BarMenuResponse, BarMenuCreate,
     BarNewsResponse, BarNewsCreate, BarReservationResponse, BarReservationCreate,
@@ -684,7 +684,21 @@ async def admin_create_team_member(
             status_code=400,
             detail="Maximum of 5 team members allowed"
         )
-    return BarTeamService.create_team_member(db, team_data)
+    team_member = BarTeamService.create_team_member(db, team_data)
+
+    # Index in Elasticsearch if published
+    if team_member.is_published:
+        team_dict = {
+            "id": team_member.id,
+            "name": team_member.name,
+            "description": team_member.description,
+            "display_order": team_member.display_order,
+            "is_published": team_member.is_published,
+            "created_at": team_member.created_at.isoformat() if team_member.created_at else None
+        }
+        bar_es_service.index_team_member(team_dict)
+
+    return team_member
 
 
 @router.put("/admin/team/{team_id}", response_model=BarTeamResponse, summary="Update team member")
@@ -698,6 +712,18 @@ async def admin_update_team_member(
     team_member = BarTeamService.update_team_member(db, team_id, team_data)
     if not team_member:
         raise HTTPException(status_code=404, detail="Team member not found")
+
+    # Re-index in Elasticsearch
+    team_dict = {
+        "id": team_member.id,
+        "name": team_member.name,
+        "description": team_member.description,
+        "display_order": team_member.display_order,
+        "is_published": team_member.is_published,
+        "created_at": team_member.created_at.isoformat() if team_member.created_at else None
+    }
+    bar_es_service.index_team_member(team_dict)
+
     return team_member
 
 
@@ -711,4 +737,8 @@ async def admin_delete_team_member(
     success = BarTeamService.delete_team_member(db, team_id)
     if not success:
         raise HTTPException(status_code=404, detail="Team member not found")
+
+    # Delete from Elasticsearch
+    bar_es_service.delete_team_member(team_id)
+
     return None
