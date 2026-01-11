@@ -7,6 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.services.bar_service import BarService
+from backend.services.bar_team_service import BarTeamService
 from backend.services.email_service import email_service
 from backend.services.document_summary_service import DocumentSummaryService
 from backend.services.vector_service import VectorService
@@ -16,7 +17,8 @@ from backend.schemas.bar import (
     BarInfoResponse, BarInfoUpdate, BarMenuResponse, BarMenuCreate,
     BarNewsResponse, BarNewsCreate, BarReservationResponse, BarReservationCreate,
     BarNewsletterResponse, BarNewsletterCreate, AdminLoginRequest, AdminLoginResponse,
-    LLMSelectRequest, LLMSelectResponse, BarSettingsResponse, BarSettingsUpdate
+    LLMSelectRequest, LLMSelectResponse, BarSettingsResponse, BarSettingsUpdate,
+    BarTeamResponse, BarTeamCreate, BarTeamUpdate
 )
 from typing import List
 import os
@@ -649,3 +651,64 @@ async def send_newsletter(
             status_code=500,
             detail=f"Failed to send newsletter: {str(e)}"
         )
+
+
+# ========== TEAM ENDPOINTS ==========
+
+@router.get("/team", response_model=List[BarTeamResponse], summary="Get published team members")
+async def get_team_members(db: Session = Depends(get_db)):
+    """Get all published team members - Public endpoint"""
+    return BarTeamService.get_all_team_members(db, published_only=True)
+
+
+@router.get("/admin/team", response_model=List[BarTeamResponse], summary="Get all team members")
+async def admin_get_all_team_members(
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_admin_token)
+):
+    """Get all team members (published and unpublished) - Admin only"""
+    return BarTeamService.get_all_team_members(db, published_only=False)
+
+
+@router.post("/admin/team", response_model=BarTeamResponse, status_code=status.HTTP_201_CREATED, summary="Create team member")
+async def admin_create_team_member(
+    team_data: BarTeamCreate,
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_admin_token)
+):
+    """Create a new team member - Admin only"""
+    # Check if we already have 5 team members
+    existing_members = BarTeamService.get_all_team_members(db, published_only=False)
+    if len(existing_members) >= 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum of 5 team members allowed"
+        )
+    return BarTeamService.create_team_member(db, team_data)
+
+
+@router.put("/admin/team/{team_id}", response_model=BarTeamResponse, summary="Update team member")
+async def admin_update_team_member(
+    team_id: int,
+    team_data: BarTeamUpdate,
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_admin_token)
+):
+    """Update a team member - Admin only"""
+    team_member = BarTeamService.update_team_member(db, team_id, team_data)
+    if not team_member:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    return team_member
+
+
+@router.delete("/admin/team/{team_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete team member")
+async def admin_delete_team_member(
+    team_id: int,
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_admin_token)
+):
+    """Delete a team member - Admin only"""
+    success = BarTeamService.delete_team_member(db, team_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    return None

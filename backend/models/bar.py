@@ -114,3 +114,18 @@ class BarSettings(Base):
     contact_email = Column(String(255), nullable=True)  # Email for contact form submissions
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class BarTeam(Base):
+    """Team members of the bar"""
+    __tablename__ = "bar_team"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255))  # Team member name
+    description = Column(JSON)  # Multilingual: {"ca": "...", "es": "...", "en": "...", "de": "...", "fr": "..."}
+    image = Column(Text)  # Base64 encoded image: "data:image/jpeg;base64,..."
+    display_order = Column(Integer, default=0)  # Order in which to display
+    is_published = Column(Boolean, default=True)  # Show/hide team member
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

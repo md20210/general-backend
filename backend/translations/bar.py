@@ -1373,5 +1373,61 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Content Preview",
         "de": "Inhaltsvorschau",
         "fr": "Aperçu du contenu"
+    },
+    "team": {
+        "ca": "Equip",
+        "es": "Equipo",
+        "en": "Team",
+        "de": "Team",
+        "fr": "Équipe"
+    },
+    "our_team": {
+        "ca": "El nostre equip",
+        "es": "Nuestro equipo",
+        "en": "Our Team",
+        "de": "Unser Team",
+        "fr": "Notre équipe"
+    },
+    "team_member_name": {
+        "ca": "Nom del membre",
+        "es": "Nombre del miembro",
+        "en": "Member name",
+        "de": "Mitgliedsname",
+        "fr": "Nom du membre"
+    },
+    "team_member_description": {
+        "ca": "Descripció del membre",
+        "es": "Descripción del miembro",
+        "en": "Member description",
+        "de": "Mitgliedsbeschreibung",
+        "fr": "Description du membre"
+    },
+    "add_team_member": {
+        "ca": "Afegir membre de l'equip",
+        "es": "Agregar miembro del equipo",
+        "en": "Add team member",
+        "de": "Teammitglied hinzufügen",
+        "fr": "Ajouter un membre d'équipe"
+    },
+    "edit_team_member": {
+        "ca": "Editar membre de l'equip",
+        "es": "Editar miembro del equipo",
+        "en": "Edit team member",
+        "de": "Teammitglied bearbeiten",
+        "fr": "Modifier le membre d'équipe"
+    },
+    "delete_team_member": {
+        "ca": "Eliminar membre de l'equip",
+        "es": "Eliminar miembro del equipo",
+        "en": "Delete team member",
+        "de": "Teammitglied löschen",
+        "fr": "Supprimer le membre d'équipe"
+    },
+    "max_team_members": {
+        "ca": "Màxim 5 membres de l'equip",
+        "es": "Máximo 5 miembros del equipo",
+        "en": "Maximum 5 team members",
+        "de": "Maximal 5 Teammitglieder",
+        "fr": "Maximum 5 membres d'équipe"
     }
 }

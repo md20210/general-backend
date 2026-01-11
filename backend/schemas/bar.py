@@ -200,3 +200,35 @@ class BarSettingsUpdate(BaseModel):
     ollama_model: Optional[str] = None
     auto_speak_enabled: Optional[bool] = None
     contact_email: Optional[EmailStr] = None
+
+
+class BarTeamResponse(BaseModel):
+    """Response schema for team member"""
+    id: int
+    name: str
+    description: Dict[str, str]  # Multilingual: {"ca": "...", "es": "...", ...}
+    image: str  # Base64 encoded image
+    display_order: int
+    is_published: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BarTeamCreate(BaseModel):
+    """Schema for creating a team member"""
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Dict[str, str] = Field(..., description="Multilingual description")
+    image: str = Field(..., description="Base64 encoded image")
+    display_order: int = 0
+    is_published: bool = True
+
+
+class BarTeamUpdate(BaseModel):
+    """Schema for updating a team member"""
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[Dict[str, str]] = None
+    image: Optional[str] = None
+    display_order: Optional[int] = None
+    is_published: Optional[bool] = None
