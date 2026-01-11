@@ -20,6 +20,7 @@ from backend.schemas.bar import (
     LLMSelectRequest, LLMSelectResponse, BarSettingsResponse, BarSettingsUpdate,
     BarTeamResponse, BarTeamCreate, BarTeamUpdate
 )
+from backend.models.bar import BarSettings, BarMenu
 from typing import List
 import os
 import base64
@@ -418,50 +419,142 @@ async def update_bar_settings(
     return {"message": "Settings updated successfully", "settings": settings}
 
 
-@router.post("/admin/menus/upload", summary="Upload menu PDF")
-async def upload_menu(
-    title: str = Form(...),
-    menu_type: str = Form(..., regex="^(lunch|food|drinks|other)$"),
-    description: str = Form(None),
+@router.post("/admin/menus/extract", summary="Extract text from menu file")
+async def extract_menu_text(
     file: UploadFile = File(...),
+    menu_type: str = Form(..., regex="^(daily|weekly)$"),
     db: Session = Depends(get_db),
     admin: str = Depends(verify_admin_token)
 ):
     """
-    Upload menu PDF/image file
+    Upload menu file (PDF/JPG/PNG) and extract text content
+    Uses LLM to extract and structure the menu text
     Requires admin authentication
     """
-    # Create uploads directory if not exists
-    UPLOAD_DIR = "uploads/menus"
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    
-    # Save file
-    file_extension = os.path.splitext(file.filename)[1]
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{menu_type}_{timestamp}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    
-    with open(file_path, "wb") as buffer:
+    try:
+        # Read file content
         content = await file.read()
-        buffer.write(content)
-    
-    # Create menu entry
-    from backend.schemas.bar import BarMenuCreate
-    menu_data = BarMenuCreate(
-        title=title,
-        description=description,
-        menu_type=menu_type,
-        document_url=f"/uploads/menus/{filename}",
-        display_order=0
-    )
-    
-    menu = BarService.create_menu(db, menu_data)
-    
-    return {
-        "message": "Menu uploaded successfully",
-        "menu": menu,
-        "file_url": f"/uploads/menus/{filename}"
-    }
+
+        # For images, use LLM vision to extract text
+        # For now, use a simple approach: convert to base64 and use LLM
+        if file.content_type in ['image/jpeg', 'image/png', 'image/jpg']:
+            # Convert image to base64
+            image_b64 = base64.b64encode(content).decode('utf-8')
+            data_uri = f"data:{file.content_type};base64,{image_b64}"
+
+            # Use LLM to extract text from image
+            from backend.services.llm_service import llm_service
+            settings = db.query(BarSettings).first()
+
+            prompt = f"""Extract all text content from this menu image.
+Return the menu items with their descriptions and prices in a clean, structured format.
+Format as a simple text list, one item per line."""
+
+            extracted_text = await llm_service.chat(
+                db=db,
+                message=prompt,
+                image_data=data_uri,
+                provider=settings.llm_provider if settings else "ollama"
+            )
+
+            return {
+                "success": True,
+                "extracted_text": extracted_text,
+                "menu_type": menu_type
+            }
+        else:
+            # For PDF, we'd need a PDF parser library
+            # For now, return a placeholder
+            raise HTTPException(
+                status_code=400,
+                detail="PDF extraction not yet implemented. Please use JPG or PNG images."
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to extract text: {str(e)}"
+        )
+
+
+@router.post("/admin/menus/translate", summary="Translate menu text")
+async def translate_menu_text(
+    text: str = Form(...),
+    target_language: str = Form(..., regex="^(es|en|de|fr)$"),
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Translate menu text to target language using LLM
+    Requires admin authentication
+    """
+    try:
+        from backend.services.llm_service import llm_service
+        settings = db.query(BarSettings).first()
+
+        prompt = f"""Translate this menu text to {target_language}.
+Maintain the same format and structure. Only translate, don't modify or add anything.
+
+Menu text:
+{text}"""
+
+        translated_text = await llm_service.chat(
+            db=db,
+            message=prompt,
+            provider=settings.llm_provider if settings else "ollama"
+        )
+
+        return {
+            "success": True,
+            "translated_text": translated_text,
+            "target_language": target_language
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Translation failed: {str(e)}"
+        )
+
+
+@router.post("/admin/menus", summary="Create menu with translations")
+async def create_menu(
+    menu_type: str = Form(..., regex="^(daily|weekly)$"),
+    content_translations: str = Form(...),  # JSON string
+    db: Session = Depends(get_db),
+    admin: str = Depends(verify_admin_token)
+):
+    """
+    Create a new menu entry with translations
+    Requires admin authentication
+    """
+    try:
+        import json
+        translations = json.loads(content_translations)
+
+        menu = BarMenu(
+            menu_type=menu_type,
+            content_translations=translations,
+            is_active=True,
+            display_order=0
+        )
+
+        db.add(menu)
+        db.commit()
+        db.refresh(menu)
+
+        return {
+            "success": True,
+            "message": "Menu created successfully",
+            "menu": menu
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create menu: {str(e)}"
+        )
 
 
 # ==========================================

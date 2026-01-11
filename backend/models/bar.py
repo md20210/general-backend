@@ -39,15 +39,12 @@ class BarInfo(Base):
 
 
 class BarMenu(Base):
-    """Bar menus (PDF/DOCX uploads) - links to documents table"""
+    """Bar menus - stores extracted text content with translations"""
     __tablename__ = "bar_menus"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255))  # "Mittagskarte", "Speisekarte", "Getränkekarte"
-    description = Column(Text, nullable=True)
-    menu_type = Column(String(100))  # "lunch", "food", "drinks"
-    document_id = Column(Integer, nullable=True)  # Reference to documents table
-    document_url = Column(String(500), nullable=True)  # If external URL
+    menu_type = Column(String(100))  # "daily" or "weekly"
+    content_translations = Column(JSON)  # Multilingual: {"ca": "...", "es": "...", "en": "...", "de": "...", "fr": "..."}
     is_active = Column(Boolean, default=True)
     display_order = Column(Integer, default=0)
 
