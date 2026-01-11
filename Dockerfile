@@ -1,5 +1,6 @@
-# Multi-stage build for faster deploys
-# Build time: ~2-3 min (first), <1 min (subsequent code changes)
+# Multi-stage build with BuildKit cache mounts for faster deploys
+# Build time: ~2-3 min (first), ~30-60 sec (subsequent code changes)
+# IMPORTANT: Railway must have DOCKER_BUILDKIT=1 enabled
 
 # Stage 1: Base image with system dependencies
 FROM python:3.11-slim as base
@@ -21,9 +22,10 @@ FROM base as dependencies
 # Copy only requirements first (for layer caching)
 COPY requirements.txt .
 
-# Install Python dependencies
-# This layer is cached and only rebuilds when requirements.txt changes
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies with BuildKit cache mount
+# The cache mount persists pip cache between builds for faster reinstalls
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt
 
 # Stage 3: Final application layer
 FROM dependencies as application
