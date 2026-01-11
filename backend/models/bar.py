@@ -18,9 +18,9 @@ class BarInfo(Base):
     address = Column(String(500))
     phone = Column(String(50))
     opening_hours = Column(JSON)  # {"Mo-Fr": "07:00-20:00", "Sa": "08:00-16:00", ...}
-    cuisine = Column(String(255))
-    price_range = Column(String(50))
-    rating = Column(String(100))
+    cuisine = Column(JSON)  # Multilingual: {"ca": "...", "es": "...", ...}
+    price_range = Column(JSON)  # Multilingual: {"ca": "...", "es": "...", ...}
+    rating = Column(JSON)  # Multilingual: {"ca": "...", "es": "...", ...}
     location_lat = Column(String(50), default="41.359276")
     location_lng = Column(String(50), default="2.124410")
     facebook_url = Column(String(500))
