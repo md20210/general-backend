@@ -709,5 +709,57 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
             "de": "Infrastruktur",
             "en": "Infrastructure",
             "es": "Infraestructura"
+        },
+
+        # Bar Ca l'Elena (Morningbar) Showcase Translations
+        "morningbar_tagline": {
+            "de": "KI-gestützte Website für katalanische Bar mit RAG-Chatbot",
+            "en": "AI-powered website for Catalan bar with RAG chatbot",
+            "es": "Sitio web impulsado por IA para bar catalán con chatbot RAG"
+        },
+        "morningbar_functional_title": {
+            "de": "Funktionale Beschreibung",
+            "en": "Functional Description",
+            "es": "Descripción Funcional"
+        },
+        "morningbar_functional_desc": {
+            "de": "Heute Morgen in dieser Bar, beim Genuss meines üblichen täglichen Café con Leche, hatte ich eine Idee: eine Webseite in nur 4-6 Stunden mit künstlicher Intelligenz zu erstellen. Das Ergebnis, das Sie hier sehen, ist eine Demonstration dessen, was heute mit frei verfügbaren State-of-the-Art Technologien im Bereich KI möglich ist. Diese mehrsprachige Website integriert fortschrittliche Funktionen wie Vektordatenbanken, lokale Sprachmodelle und viele weitere KI-Fähigkeiten. Dies ist ein schönes Beispiel vom Übergang vom Traditionellen zur Moderne durch eine Spielerei! Aber das Schönste ist die traditionelle katalanische Atmosphäre dieser Bar: Wenn man morgens hereinkommt und \"Guten Morgen\" sagt, antworten alle mit einem herzlichen \"Guten Morgen\". Und wenn man geht, sagen noch mehr Leute in einer schönen Art \"Tschüss\". Das ist die Magie von der Bar Ca l'Elena! Das inspiriert mich jeden Tag!",
+            "en": "This morning at this bar, while enjoying my usual daily Café con Leche, I had an idea: to create a website in just 4-6 hours using artificial intelligence. The result you see here is a demonstration of what is possible today with freely available state-of-the-art AI technologies. This multilingual website integrates advanced features like vector databases, local language models, and many other AI capabilities. This is a beautiful example of the transition from traditional to modern through experimentation! But the most beautiful thing is the traditional Catalan atmosphere of this bar: When you come in the morning and say \"Good morning\", everyone responds with a warm \"Good morning\". And when you leave, even more people say \"Goodbye\" in such a nice way. That's the magic of Bar Ca l'Elena! It inspires me every day!",
+            "es": "Esta mañana en este bar, mientras disfrutaba de mi habitual Café con Leche diario, tuve una idea: crear un sitio web en solo 4-6 horas usando inteligencia artificial. El resultado que ves aquí es una demostración de lo que es posible hoy con tecnologías de IA de vanguardia disponibles gratuitamente. Este sitio web multilingüe integra funciones avanzadas como bases de datos vectoriales, modelos de lenguaje locales y muchas otras capacidades de IA. ¡Este es un hermoso ejemplo de la transición de lo tradicional a lo moderno a través de la experimentación! Pero lo más hermoso es el ambiente tradicional catalán de este bar: Cuando entras por la mañana y dices \"Buenos días\", todos responden con un cálido \"Buenos días\". Y cuando te vas, aún más personas dicen \"Adiós\" de una manera tan agradable. ¡Esa es la magia del Bar Ca l'Elena! ¡Me inspira todos los días!"
+        },
+        "morningbar_feature_1": {
+            "de": "RAG-Chatbot mit Elasticsearch-Vektorsuche und Grok 3 / Ollama LLM (DSGVO-konform)",
+            "en": "RAG chatbot with Elasticsearch vector search and Grok 3 / Ollama LLM (GDPR-compliant)",
+            "es": "Chatbot RAG con búsqueda vectorial Elasticsearch y Grok 3 / Ollama LLM (conforme con RGPD)"
+        },
+        "morningbar_feature_2": {
+            "de": "Voice Assistant mit Spracherkennung und -synthese in 5 Sprachen (ElevenLabs)",
+            "en": "Voice Assistant with speech recognition and synthesis in 5 languages (ElevenLabs)",
+            "es": "Asistente de voz con reconocimiento y síntesis de voz en 5 idiomas (ElevenLabs)"
+        },
+        "morningbar_feature_3": {
+            "de": "Vollständig mehrsprachig: Katalanisch, Spanisch, Englisch, Deutsch, Französisch",
+            "en": "Fully multilingual: Catalan, Spanish, English, German, French",
+            "es": "Completamente multilingüe: catalán, español, inglés, alemán, francés"
+        },
+        "morningbar_feature_4": {
+            "de": "Admin-Panel mit Menu-Upload (OCR via Llama Vision), News-Management und Newsletter-System",
+            "en": "Admin panel with menu upload (OCR via Llama Vision), news management and newsletter system",
+            "es": "Panel de administración con carga de menú (OCR vía Llama Vision), gestión de noticias y sistema de boletín"
+        },
+        "morningbar_feature_5": {
+            "de": "Automatische Übersetzung aller Inhalte in alle 5 Sprachen mittels LLM",
+            "en": "Automatic translation of all content into all 5 languages using LLM",
+            "es": "Traducción automática de todo el contenido a los 5 idiomas mediante LLM"
+        },
+        "morningbar_technical_title": {
+            "de": "Technische Beschreibung",
+            "en": "Technical Description",
+            "es": "Descripción Técnica"
+        },
+        "morningbar_technical_desc": {
+            "de": "Full-Stack-Anwendung mit React-Frontend, FastAPI-Backend, PostgreSQL-Datenbank mit pgvector, Elasticsearch für RAG und Multi-Provider-LLM-Integration. Entwickelt in 4-6 Stunden mit KI-Unterstützung.",
+            "en": "Full-stack application with React frontend, FastAPI backend, PostgreSQL database with pgvector, Elasticsearch for RAG and multi-provider LLM integration. Developed in 4-6 hours with AI assistance.",
+            "es": "Aplicación full-stack con frontend React, backend FastAPI, base de datos PostgreSQL con pgvector, Elasticsearch para RAG e integración LLM multiproveedora. Desarrollado en 4-6 horas con asistencia de IA."
         }
 }
