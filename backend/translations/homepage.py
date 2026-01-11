@@ -733,9 +733,9 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
             "es": "Chatbot RAG con búsqueda vectorial Elasticsearch y Grok 3 / Ollama LLM (conforme con RGPD)"
         },
         "morningbar_feature_2": {
-            "de": "Voice Assistant mit Spracherkennung und -synthese in 5 Sprachen (Web Speech API)",
-            "en": "Voice Assistant with speech recognition and synthesis in 5 languages (Web Speech API)",
-            "es": "Asistente de voz con reconocimiento y síntesis de voz en 5 idiomas (Web Speech API)"
+            "de": "Voice Assistant mit Spracherkennung und -synthese in 5 Sprachen (ElevenLabs)",
+            "en": "Voice Assistant with speech recognition and synthesis in 5 languages (ElevenLabs)",
+            "es": "Asistente de voz con reconocimiento y síntesis de voz en 5 idiomas (ElevenLabs)"
         },
         "morningbar_feature_3": {
             "de": "Vollständig mehrsprachig: Katalanisch, Spanisch, Englisch, Deutsch, Französisch",
