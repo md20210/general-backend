@@ -195,6 +195,48 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Eingabesprache",
         "fr": "Langue d'entrée"
     },
+    "weather": {
+        "ca": "Temps",
+        "es": "Tiempo",
+        "en": "Weather",
+        "de": "Wetter",
+        "fr": "Météo"
+    },
+    "temperature": {
+        "ca": "Temperatura",
+        "es": "Temperatura",
+        "en": "Temperature",
+        "de": "Temperatur",
+        "fr": "Température"
+    },
+    "feels_like": {
+        "ca": "Sensació tèrmica",
+        "es": "Sensación térmica",
+        "en": "Feels like",
+        "de": "Gefühlt",
+        "fr": "Ressenti"
+    },
+    "humidity": {
+        "ca": "Humitat",
+        "es": "Humedad",
+        "en": "Humidity",
+        "de": "Luftfeuchtigkeit",
+        "fr": "Humidité"
+    },
+    "wind": {
+        "ca": "Vent",
+        "es": "Viento",
+        "en": "Wind",
+        "de": "Wind",
+        "fr": "Vent"
+    },
+    "weather_error": {
+        "ca": "Temps no disponible",
+        "es": "Tiempo no disponible",
+        "en": "Weather unavailable",
+        "de": "Wetter nicht verfügbar",
+        "fr": "Météo non disponible"
+    },
     "chat_language": {
         "ca": "Idioma del xat",
         "es": "Idioma del chat",
