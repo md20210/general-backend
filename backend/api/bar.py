@@ -11,6 +11,7 @@ from backend.services.email_service import email_service
 from backend.services.document_summary_service import DocumentSummaryService
 from backend.services.vector_service import VectorService
 from backend.services.llm_translation_service import LLMTranslationService
+from backend.services.bar_elasticsearch_service import BarElasticsearchService
 from backend.schemas.bar import (
     BarInfoResponse, BarInfoUpdate, BarMenuResponse, BarMenuCreate,
     BarNewsResponse, BarNewsCreate, BarReservationResponse, BarReservationCreate,
@@ -542,7 +543,7 @@ async def publish_featured_items(
     admin: str = Depends(verify_admin_token)
 ):
     """
-    Publish featured items to bar_info
+    Publish featured items to bar_info and index in Elasticsearch for RAG chat
     Each item should have: name (dict), description (dict), image (str)
     Requires admin authentication
     """
@@ -551,9 +552,30 @@ async def publish_featured_items(
         bar_data = BarInfoUpdate(featured_items=featured_items)
         updated_bar = BarService.create_or_update_bar_info(db, bar_data)
 
+        # Index in Elasticsearch for RAG chat
+        try:
+            es_service = BarElasticsearchService()
+            # Convert SQLAlchemy model to dict for Elasticsearch
+            bar_info_dict = {
+                "description": updated_bar.description,
+                "address": updated_bar.address,
+                "phone": updated_bar.phone,
+                "cuisine": updated_bar.cuisine,
+                "price_range": updated_bar.price_range,
+                "rating": updated_bar.rating,
+                "location_lat": updated_bar.location_lat,
+                "location_lng": updated_bar.location_lng,
+                "opening_hours": updated_bar.opening_hours,
+                "featured_items": updated_bar.featured_items
+            }
+            es_service.index_bar_info(bar_info_dict)
+        except Exception as es_error:
+            # Log error but don't fail the entire request
+            print(f"⚠️ Elasticsearch indexing failed (non-critical): {es_error}")
+
         return {
             "success": True,
-            "message": f"Published {len(featured_items)} featured items",
+            "message": f"Published {len(featured_items)} featured items and indexed in Elasticsearch for chat",
             "featured_items": updated_bar.featured_items
         }
 

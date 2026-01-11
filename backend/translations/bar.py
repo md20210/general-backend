@@ -188,6 +188,13 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Nur Übersetzungsmodus",
         "fr": "Mode traduction uniquement"
     },
+    "input_language": {
+        "ca": "Idioma d'entrada",
+        "es": "Idioma de entrada",
+        "en": "Input language",
+        "de": "Eingabesprache",
+        "fr": "Langue d'entrée"
+    },
     "chat_language": {
         "ca": "Idioma del xat",
         "es": "Idioma del chat",
