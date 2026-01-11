@@ -442,20 +442,21 @@ async def extract_menu_text(
             image_b64 = base64.b64encode(content).decode('utf-8')
             data_uri = f"data:{file.content_type};base64,{image_b64}"
 
-            # Use LLM to extract text from image
-            from backend.services.llm_service import llm_service
+            # Use LLM gateway to extract text from image
+            from backend.services.llm_gateway import llm_gateway
             settings = db.query(BarSettings).first()
 
             prompt = f"""Extract all text content from this menu image.
 Return the menu items with their descriptions and prices in a clean, structured format.
 Format as a simple text list, one item per line."""
 
-            extracted_text = await llm_service.chat(
-                db=db,
-                message=prompt,
+            result = llm_gateway.generate_with_image(
+                prompt=prompt,
                 image_data=data_uri,
-                provider=settings.llm_provider if settings else "ollama"
+                provider=settings.llm_provider if settings else "ollama",
+                model=settings.ollama_model if settings else "llama3.2-vision"
             )
+            extracted_text = result.get("text", "")
 
             return {
                 "success": True,
@@ -489,20 +490,15 @@ async def translate_menu_text(
     Requires admin authentication
     """
     try:
-        from backend.services.llm_service import llm_service
-        settings = db.query(BarSettings).first()
-
-        prompt = f"""Translate this menu text to {target_language}.
-Maintain the same format and structure. Only translate, don't modify or add anything.
-
-Menu text:
-{text}"""
-
-        translated_text = await llm_service.chat(
+        # Use translation service to translate to ALL languages at once
+        translations = await translation_service.translate_dish_name(
             db=db,
-            message=prompt,
-            provider=settings.llm_provider if settings else "ollama"
+            dish_name=text,
+            source_language="ca"  # Assume Catalan as source
         )
+
+        # Return the specific target language
+        translated_text = translations.get(target_language, text)
 
         return {
             "success": True,
@@ -542,6 +538,21 @@ async def create_menu(
         db.add(menu)
         db.commit()
         db.refresh(menu)
+
+        # Index to Elasticsearch for RAG chatbot
+        try:
+            menu_dict = {
+                "id": menu.id,
+                "menu_type": menu.menu_type,
+                "content_translations": menu.content_translations,
+                "is_active": menu.is_active,
+                "display_order": menu.display_order,
+                "created_at": menu.created_at.isoformat() if menu.created_at else None
+            }
+            bar_es_service.index_menu(menu_dict)
+        except Exception as es_error:
+            # Log error but don't fail the entire request
+            print(f"⚠️ Elasticsearch indexing failed (non-critical): {es_error}")
 
         return {
             "success": True,

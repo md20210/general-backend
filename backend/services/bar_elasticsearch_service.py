@@ -370,6 +370,75 @@ class BarElasticsearchService:
         """Delete a team member from Elasticsearch"""
         self._delete_team_member_documents(team_member_id)
 
+    def index_menu(self, menu: Dict[str, Any]):
+        """Index a single menu in all languages"""
+        if not self.es:
+            return False
+
+        languages = ["ca", "es", "en", "de", "fr"]
+        indexed_count = 0
+
+        try:
+            # Only index if active
+            if not menu.get("is_active"):
+                logger.info(f"⏭️ Skipping inactive menu: ID {menu.get('id')}")
+                return True
+
+            # Delete existing documents for this menu
+            self._delete_menu_documents(menu.get("id"))
+
+            # Index content in all languages
+            if isinstance(menu.get("content_translations"), dict):
+                for lang in languages:
+                    if lang in menu["content_translations"]:
+                        doc = {
+                            "type": "menu",
+                            "language": lang,
+                            "title": f"{menu.get('menu_type', 'Menu').title()} Menu",
+                            "content": menu["content_translations"][lang],
+                            "metadata": {
+                                "menu_id": menu.get("id"),
+                                "menu_type": menu.get("menu_type"),
+                                "display_order": menu.get("display_order")
+                            },
+                            "timestamp": menu.get("created_at", "2026-01-11T00:00:00")
+                        }
+                        self.es.index(index=self.index_name, document=doc)
+                        indexed_count += 1
+
+            self.es.indices.refresh(index=self.index_name)
+            logger.info(f"✅ Indexed {indexed_count} documents for menu ID: {menu.get('id')}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Error indexing menu: {e}")
+            return False
+
+    def _delete_menu_documents(self, menu_id: int):
+        """Delete all Elasticsearch documents for a specific menu"""
+        if not self.es or not menu_id:
+            return
+
+        try:
+            delete_query = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"term": {"type": "menu"}},
+                            {"term": {"metadata.menu_id": menu_id}}
+                        ]
+                    }
+                }
+            }
+            self.es.delete_by_query(index=self.index_name, body=delete_query)
+            logger.info(f"🗑️ Deleted menu documents for ID: {menu_id}")
+        except Exception as e:
+            logger.error(f"❌ Error deleting menu documents: {e}")
+
+    def delete_menu(self, menu_id: int):
+        """Delete a menu from Elasticsearch"""
+        self._delete_menu_documents(menu_id)
+
 
 # Global instance
 bar_es_service = BarElasticsearchService()
