@@ -19,6 +19,7 @@ from backend.schemas.bar import (
 )
 from typing import List
 import os
+import base64
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 
@@ -498,7 +499,7 @@ async def upload_featured_item_image(
     """
     Upload an image for a featured item
     Requires admin authentication
-    Returns the URL of the uploaded image
+    Returns the base64-encoded image as data URI
     """
     try:
         # Validate file type
@@ -508,28 +509,23 @@ async def upload_featured_item_image(
                 detail="Only JPG and PNG images are allowed"
             )
 
-        # Create uploads directory if it doesn't exist
-        upload_dir = "uploads/featured_items"
-        os.makedirs(upload_dir, exist_ok=True)
+        # Read file content
+        content = await file.read()
 
-        # Generate unique filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_extension = file.filename.split('.')[-1]
-        filename = f"featured_{timestamp}.{file_extension}"
-        file_path = os.path.join(upload_dir, filename)
+        # Convert to base64
+        base64_data = base64.b64encode(content).decode('utf-8')
 
-        # Save file
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
+        # Determine MIME type
+        mime_type = file.content_type
 
-        # Return URL
-        image_url = f"/morningbar/uploads/featured_items/{filename}"
+        # Create data URI
+        data_uri = f"data:{mime_type};base64,{base64_data}"
 
         return {
             "success": True,
-            "image_url": image_url,
-            "filename": filename
+            "image_url": data_uri,
+            "filename": file.filename,
+            "size_kb": len(base64_data) / 1024
         }
 
     except Exception as e:
