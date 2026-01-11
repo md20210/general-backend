@@ -253,6 +253,137 @@ class LLMGateway:
 
         return models
 
+    def generate_with_image(
+        self,
+        prompt: str,
+        image_data: str,
+        provider: str = "ollama",
+        model: Optional[str] = None,
+        temperature: float = 0.3,
+        max_tokens: int = 2000,
+        timeout: int = 120,
+    ) -> Dict[str, Any]:
+        """
+        Generate text using image input (OCR/Vision).
+
+        Args:
+            prompt: Text prompt for the LLM
+            image_data: Base64 encoded image data URI (data:image/jpeg;base64,...)
+            provider: "ollama" or "grok"
+            model: Model name (provider-specific)
+            temperature: Sampling temperature (0-1)
+            max_tokens: Maximum tokens to generate
+            timeout: Request timeout in seconds
+
+        Returns:
+            Dict with "text", "model", "provider", "usage" info
+        """
+        provider = provider.lower()
+
+        if provider == "ollama":
+            return self._generate_ollama_vision(prompt, image_data, model, temperature, max_tokens, timeout)
+        elif provider == "grok":
+            return self._generate_grok_vision(prompt, image_data, model, temperature, max_tokens, timeout)
+        else:
+            raise ValueError(f"Unsupported provider for vision: {provider}")
+
+    def _generate_ollama_vision(
+        self,
+        prompt: str,
+        image_data: str,
+        model: Optional[str],
+        temperature: float,
+        max_tokens: int,
+        timeout: int,
+    ) -> Dict[str, Any]:
+        """Generate text from image using Ollama vision model."""
+        # Extract base64 from data URI
+        if image_data.startswith('data:'):
+            image_b64 = image_data.split(',')[1]
+        else:
+            image_b64 = image_data
+
+        # Use llama3.2-vision or similar vision-capable model
+        model = model or "llama3.2-vision"
+
+        response = requests.post(
+            f"{self.ollama_base_url}/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "images": [image_b64],
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens
+                }
+            },
+            timeout=timeout
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"Ollama Vision API error: {response.status_code} - {response.text}")
+
+        response_json = response.json()
+        text = response_json.get("response", response_json.get("text", str(response_json)))
+
+        return {
+            "text": text,
+            "provider": "ollama",
+            "model": model,
+            "usage": {
+                "prompt_tokens": response_json.get("prompt_eval_count", 0),
+                "completion_tokens": response_json.get("eval_count", 0),
+                "total_tokens": response_json.get("prompt_eval_count", 0) + response_json.get("eval_count", 0),
+            }
+        }
+
+    def _generate_grok_vision(
+        self,
+        prompt: str,
+        image_data: str,
+        model: Optional[str],
+        temperature: float,
+        max_tokens: int,
+        timeout: int,
+    ) -> Dict[str, Any]:
+        """Generate text from image using GROK vision model."""
+        if not self.grok_api_key or self.grok_api_key.strip() == "":
+            raise ValueError("GROK API key not configured.")
+
+        if not self.grok_client:
+            raise ValueError("GROK client failed to initialize.")
+
+        model = model or "grok-vision-beta"
+
+        # GROK uses OpenAI-compatible vision API
+        completion = self.grok_client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": image_data}}
+                    ]
+                }
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+        )
+
+        return {
+            "text": completion.choices[0].message.content,
+            "provider": "grok",
+            "model": model,
+            "usage": {
+                "prompt_tokens": completion.usage.prompt_tokens,
+                "completion_tokens": completion.usage.completion_tokens,
+                "total_tokens": completion.usage.total_tokens,
+            }
+        }
+
     def embed(self, text: str, model: Optional[str] = None) -> List[float]:
         """
         Generate embeddings for text (using Ollama).
