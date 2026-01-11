@@ -37,6 +37,7 @@ class BarInfoResponse(BaseModel):
     facebook_url: Optional[str] = None
     featured_items: Optional[List[Dict[str, Any]]] = None
     reviews: Optional[List[Dict[str, Any]]] = None
+    language_flags: Optional[Dict[str, str]] = None  # {"ca": "data:image/jpeg;base64,..."}
 
     class Config:
         from_attributes = True
@@ -56,6 +57,7 @@ class BarInfoUpdate(BaseModel):
     facebook_url: Optional[str] = None
     featured_items: Optional[List[Dict[str, Any]]] = None
     reviews: Optional[List[Dict[str, Any]]] = None
+    language_flags: Optional[Dict[str, str]] = None
 
 
 class BarMenuResponse(BaseModel):
