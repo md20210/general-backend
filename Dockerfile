@@ -24,7 +24,7 @@ COPY requirements.txt .
 
 # Install Python dependencies with BuildKit cache mount
 # The cache mount persists pip cache between builds for faster reinstalls
-RUN --mount=type=cache,target=/root/.cache/pip \
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt
 
 # Stage 3: Final application layer
