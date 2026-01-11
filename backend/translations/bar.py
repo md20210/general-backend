@@ -1429,5 +1429,166 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Maximum 5 team members",
         "de": "Maximal 5 Teammitglieder",
         "fr": "Maximum 5 membres d'équipe"
+    },
+    "team_members_count": {
+        "ca": "Membres de l'equip",
+        "es": "Miembros del equipo",
+        "en": "Team members",
+        "de": "Teammitglieder",
+        "fr": "Membres d'équipe"
+    },
+    "no_team_members": {
+        "ca": "Encara no hi ha membres de l'equip. Fes clic a 'Afegir membre de l'equip' per començar.",
+        "es": "Aún no hay miembros del equipo. Haz clic en 'Agregar miembro del equipo' para comenzar.",
+        "en": "No team members yet. Click 'Add team member' to get started.",
+        "de": "Noch keine Teammitglieder. Klicken Sie auf 'Teammitglied hinzufügen', um zu beginnen.",
+        "fr": "Pas encore de membres d'équipe. Cliquez sur 'Ajouter un membre d'équipe' pour commencer."
+    },
+    "save": {
+        "ca": "Desar",
+        "es": "Guardar",
+        "en": "Save",
+        "de": "Speichern",
+        "fr": "Enregistrer"
+    },
+    "edit": {
+        "ca": "Editar",
+        "es": "Editar",
+        "en": "Edit",
+        "de": "Bearbeiten",
+        "fr": "Modifier"
+    },
+    "delete": {
+        "ca": "Eliminar",
+        "es": "Eliminar",
+        "en": "Delete",
+        "de": "Löschen",
+        "fr": "Supprimer"
+    },
+    "publish": {
+        "ca": "Publicar",
+        "es": "Publicar",
+        "en": "Publish",
+        "de": "Veröffentlichen",
+        "fr": "Publier"
+    },
+    "image": {
+        "ca": "Imatge",
+        "es": "Imagen",
+        "en": "Image",
+        "de": "Bild",
+        "fr": "Image"
+    },
+    "translate": {
+        "ca": "Traduir",
+        "es": "Traducir",
+        "en": "Translate",
+        "de": "Übersetzen",
+        "fr": "Traduire"
+    },
+    "new_team_member": {
+        "ca": "Nou membre de l'equip",
+        "es": "Nuevo miembro del equipo",
+        "en": "New team member",
+        "de": "Neues Teammitglied",
+        "fr": "Nouveau membre d'équipe"
+    },
+    "translations": {
+        "ca": "Traduccions",
+        "es": "Traducciones",
+        "en": "Translations",
+        "de": "Übersetzungen",
+        "fr": "Traductions"
+    },
+    "yes": {
+        "ca": "Sí",
+        "es": "Sí",
+        "en": "Yes",
+        "de": "Ja",
+        "fr": "Oui"
+    },
+    "no": {
+        "ca": "No",
+        "es": "No",
+        "en": "No",
+        "de": "Nein",
+        "fr": "Non"
+    },
+    "no_description": {
+        "ca": "Sense descripció",
+        "es": "Sin descripción",
+        "en": "No description",
+        "de": "Keine Beschreibung",
+        "fr": "Pas de description"
+    },
+    "error_loading_team": {
+        "ca": "Error en carregar els membres de l'equip",
+        "es": "Error al cargar los miembros del equipo",
+        "en": "Error loading team members",
+        "de": "Fehler beim Laden der Teammitglieder",
+        "fr": "Erreur lors du chargement des membres d'équipe"
+    },
+    "admin_fill_required_fields": {
+        "ca": "Si us plau, omple tots els camps obligatoris (nom i imatge)",
+        "es": "Por favor, rellena todos los campos obligatorios (nombre e imagen)",
+        "en": "Please fill all required fields (name and image)",
+        "de": "Bitte füllen Sie alle erforderlichen Felder aus (Name und Bild)",
+        "fr": "Veuillez remplir tous les champs obligatoires (nom et image)"
+    },
+    "team_member_updated": {
+        "ca": "Membre de l'equip actualitzat amb èxit",
+        "es": "Miembro del equipo actualizado con éxito",
+        "en": "Team member updated successfully",
+        "de": "Teammitglied erfolgreich aktualisiert",
+        "fr": "Membre d'équipe mis à jour avec succès"
+    },
+    "team_member_created": {
+        "ca": "Membre de l'equip creat amb èxit",
+        "es": "Miembro del equipo creado con éxito",
+        "en": "Team member created successfully",
+        "de": "Teammitglied erfolgreich erstellt",
+        "fr": "Membre d'équipe créé avec succès"
+    },
+    "team_member_save_failed": {
+        "ca": "Error en desar el membre de l'equip",
+        "es": "Error al guardar el miembro del equipo",
+        "en": "Failed to save team member",
+        "de": "Fehler beim Speichern des Teammitglieds",
+        "fr": "Échec de l'enregistrement du membre d'équipe"
+    },
+    "confirm_delete_team_member": {
+        "ca": "Estàs segur que vols eliminar aquest membre de l'equip?",
+        "es": "¿Estás seguro de que quieres eliminar este miembro del equipo?",
+        "en": "Are you sure you want to delete this team member?",
+        "de": "Sind Sie sicher, dass Sie dieses Teammitglied löschen möchten?",
+        "fr": "Êtes-vous sûr de vouloir supprimer ce membre d'équipe?"
+    },
+    "team_member_deleted": {
+        "ca": "Membre de l'equip eliminat amb èxit",
+        "es": "Miembro del equipo eliminado con éxito",
+        "en": "Team member deleted successfully",
+        "de": "Teammitglied erfolgreich gelöscht",
+        "fr": "Membre d'équipe supprimé avec succès"
+    },
+    "team_member_delete_failed": {
+        "ca": "Error en eliminar el membre de l'equip",
+        "es": "Error al eliminar el miembro del equipo",
+        "en": "Failed to delete team member",
+        "de": "Fehler beim Löschen des Teammitglieds",
+        "fr": "Échec de la suppression du membre d'équipe"
+    },
+    "published": {
+        "ca": "Publicat",
+        "es": "Publicado",
+        "en": "Published",
+        "de": "Veröffentlicht",
+        "fr": "Publié"
+    },
+    "admin_enter_description": {
+        "ca": "Si us plau, introdueix primer una descripció",
+        "es": "Por favor, introduce primero una descripción",
+        "en": "Please enter a description first",
+        "de": "Bitte geben Sie zuerst eine Beschreibung ein",
+        "fr": "Veuillez d'abord entrer une description"
     }
 }
