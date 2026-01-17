@@ -341,7 +341,7 @@ async def upload_application_directory(
                 doc_type = guess_doc_type(filename)
 
                 # Generate embedding
-                embedding = await vector_service.generate_embedding(extracted_text)
+                embedding = vector_service.generate_embedding(extracted_text)
 
                 # Save document
                 document = ApplicationDocument(
@@ -522,7 +522,7 @@ async def upload_batch_applications(
 
                     # Determine document type
                     doc_type = guess_doc_type(filename)
-                    embedding = await vector_service.generate_embedding(extracted_text)
+                    embedding = vector_service.generate_embedding(extracted_text)
 
                     # Save document
                     document = ApplicationDocument(
