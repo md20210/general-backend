@@ -60,33 +60,28 @@ async def test_ping():
 @router.post("/test/create-demo-user")
 async def create_demo_user_endpoint(db: Session = Depends(get_db)):
     """Manually create demo user for testing"""
-    from sqlalchemy import text
-    from uuid import UUID
-
     try:
         # Check if exists
-        result = db.execute(
-            text("SELECT id FROM \"user\" WHERE id = '00000000-0000-0000-0000-000000000001'")
-        ).first()
+        existing_user = db.query(User).filter(User.id == DEMO_USER_ID).first()
 
-        if result:
-            return {"status": "exists", "message": "Demo user already exists"}
+        if existing_user:
+            return {"status": "exists", "message": "Demo user already exists", "id": str(existing_user.id)}
 
-        # Create demo user
-        db.execute(text("""
-            INSERT INTO "user" (id, email, hashed_password, is_active, is_superuser, is_verified)
-            VALUES (
-                '00000000-0000-0000-0000-000000000001'::uuid,
-                'demo@applicationtracker.test',
-                '$2b$12$dummyhashfordemouseronly0000000000000000000000000',
-                true,
-                false,
-                true
-            )
-        """))
+        # Create demo user using User model
+        demo_user = User(
+            id=DEMO_USER_ID,
+            email="demo@applicationtracker.test",
+            hashed_password="$2b$12$dummyhashfordemouseronly0000000000000000000000000",  # dummy hash
+            is_active=True,
+            is_superuser=False,
+            is_verified=True,
+            is_admin=False
+        )
+        db.add(demo_user)
         db.commit()
+        db.refresh(demo_user)
 
-        return {"status": "created", "message": "Demo user created successfully", "id": "00000000-0000-0000-0000-000000000001"}
+        return {"status": "created", "message": "Demo user created successfully", "id": str(demo_user.id)}
     except Exception as e:
         db.rollback()
         return {"status": "error", "message": str(e)}
