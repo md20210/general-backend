@@ -47,53 +47,24 @@ async def lifespan(app: FastAPI):
     await create_db_and_tables()
     logger.info("Database tables created/verified")
 
-    # TEMPORARILY DISABLED: Skip Alembic to debug startup issues
-    logger.info("⚠️  Alembic migrations DISABLED for debugging")
-    # Clean up orphaned Alembic entries BEFORE running migrations
-    # try:
-    #     from sqlalchemy import text
-    #     from backend.database import sync_engine
-    #
-    #     logger.info("🧹 Cleaning up orphaned Alembic entries...")
-    #     with sync_engine.connect() as conn:
-    #         # Check if alembic_version table exists first
-    #         result = conn.execute(text("""
-    #             SELECT EXISTS (
-    #                 SELECT FROM information_schema.tables
-    #                 WHERE table_name = 'alembic_version'
-    #             );
-    #         """))
-    #         table_exists = result.scalar()
-    #
-    #         if table_exists:
-    #             conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '%klassentreffen%';"))
-    #             conn.execute(text("DELETE FROM alembic_version WHERE version_num LIKE '2026%';"))
-    #             conn.execute(text("DELETE FROM alembic_version WHERE version_num = 'add_cv_showcase_001';"))
-    #             conn.commit()
-    #             logger.info("✅ Alembic cleanup completed")
-    #         else:
-    #             logger.info("ℹ️  alembic_version table doesn't exist yet - skipping cleanup")
-    # except Exception as cleanup_error:
-    #     logger.warning(f"⚠️  Alembic cleanup skipped: {cleanup_error}")
+    # Run Alembic migrations automatically in a thread pool to avoid event loop conflicts
+    try:
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        from alembic.config import Config
+        from alembic import command
 
-    # # Run Alembic migrations automatically in a thread pool to avoid event loop conflicts
-    # try:
-    #     import asyncio
-    #     from concurrent.futures import ThreadPoolExecutor
-    #     from alembic.config import Config
-    #     from alembic import command
-    #
-    #     logger.info("Running Alembic migrations...")
-    #     alembic_cfg = Config("alembic.ini")
-    #
-    #     # Run migrations in a thread pool executor to avoid event loop conflicts
-    #     loop = asyncio.get_event_loop()
-    #     with ThreadPoolExecutor() as executor:
-    #         await loop.run_in_executor(executor, command.upgrade, alembic_cfg, "head")
-    #
-    #     logger.info("✅ Alembic migrations completed successfully")
-    # except Exception as e:
-    #     logger.warning(f"⚠️  Alembic migrations failed (non-critical): {e}")
+        logger.info("Running Alembic migrations...")
+        alembic_cfg = Config("alembic.ini")
+
+        # Run migrations in a thread pool executor to avoid event loop conflicts
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            await loop.run_in_executor(executor, command.upgrade, alembic_cfg, "head")
+
+        logger.info("✅ Alembic migrations completed successfully")
+    except Exception as e:
+        logger.warning(f"⚠️  Alembic migrations failed (non-critical): {e}")
 
     yield
     # Shutdown
