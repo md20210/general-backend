@@ -54,6 +54,28 @@ def get_demo_user() -> DemoUser:
     return DemoUser()
 
 
+# TEMPORARY TEST ENDPOINTS - NO AUTH, NO USER
+@router.get("/test/ping")
+async def test_ping():
+    """Test endpoint - no auth required"""
+    return {"status": "ok", "message": "Application Tracker is alive"}
+
+
+@router.get("/test/overview")
+async def test_overview(db: Session = Depends(get_db)):
+    """Test overview - returns ALL applications (no user filter)"""
+    applications = db.query(Application).all()
+    return {
+        "count": len(applications),
+        "applications": [{
+            "id": app.id,
+            "company_name": app.company_name,
+            "position": app.position,
+            "status": app.status
+        } for app in applications[:10]]  # First 10
+    }
+
+
 @router.get("/overview", response_model=List[ApplicationResponse])
 async def get_applications_overview(
     user: DemoUser = Depends(get_demo_user),
