@@ -82,7 +82,7 @@ class DocumentParser:
 
 
 def guess_doc_type(file_path: str) -> str:
-    """Guess document type from filename or path"""
+    """Guess document type from filename or path (fallback only)"""
     file_path_lower = file_path.lower()
 
     if 'cv' in file_path_lower or 'lebenslauf' in file_path_lower or 'resume' in file_path_lower:
@@ -97,6 +97,59 @@ def guess_doc_type(file_path: str) -> str:
         return 'portfolio'
     else:
         return 'other'
+
+
+def classify_document_with_llm(document_text: str, filename: str) -> str:
+    """
+    Classify document type using LLM content analysis
+
+    Args:
+        document_text: Extracted text from document
+        filename: Document filename (for context)
+
+    Returns:
+        'cv', 'cover_letter', 'job_description', or 'other'
+    """
+    from backend.services.llm_gateway import llm_gateway
+
+    # Use first 1500 chars for classification (enough to identify document type)
+    text_sample = document_text[:1500]
+
+    prompt = f"""Klassifiziere das folgende Dokument in GENAU EINE dieser Kategorien:
+- cv (Lebenslauf/CV/Resume mit Berufserfahrung, Ausbildung, Skills)
+- cover_letter (Anschreiben/Bewerbungsschreiben/Motivationsschreiben)
+- job_description (Stellenausschreibung/Job Posting mit Anforderungen)
+- other (Zeugnisse, Zertifikate, sonstige Dokumente)
+
+Dateiname: {filename}
+
+Dokumenteninhalt:
+{text_sample}
+
+Antworte NUR mit dem Kategorie-Namen (cv, cover_letter, job_description, oder other), keine Erklärungen."""
+
+    try:
+        result = llm_gateway.generate(
+            prompt=prompt,
+            provider="ollama",
+            temperature=0.1,
+            max_tokens=20
+        )
+
+        response_text = result.get('response', '').strip().lower()
+
+        # Extract valid category from response
+        if 'cv' in response_text or 'lebenslauf' in response_text or 'resume' in response_text:
+            return 'cv'
+        elif 'cover_letter' in response_text or 'anschreiben' in response_text or 'motivationsschreiben' in response_text:
+            return 'cover_letter'
+        elif 'job_description' in response_text or 'stellenausschreibung' in response_text:
+            return 'job_description'
+        else:
+            return 'other'
+    except Exception as e:
+        print(f"LLM classification failed, using filename fallback: {e}")
+        return guess_doc_type(filename)
 
 
 def extract_application_info(documents_text: str) -> dict:

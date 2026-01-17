@@ -32,7 +32,7 @@ from backend.schemas.application import (
     GenerateReportRequest,
     ReportResponse
 )
-from backend.services.application_service import DocumentParser, guess_doc_type, extract_application_info
+from backend.services.application_service import DocumentParser, guess_doc_type, classify_document_with_llm, extract_application_info
 from backend.services.vector_service import VectorService
 from backend.services.llm_gateway import llm_gateway
 from backend.services.application_elasticsearch_service import application_es_service
@@ -261,6 +261,52 @@ async def delete_application(
     return {
         "success": True,
         "message": f"Application for {company_name} deleted successfully"
+    }
+
+
+@router.delete("/{application_id}/documents/{document_id}")
+async def delete_document(
+    application_id: int,
+    document_id: int,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a single document from an application"""
+    # Verify application ownership
+    app = db.query(Application).filter(
+        Application.id == application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Find document
+    document = db.query(ApplicationDocument).filter(
+        ApplicationDocument.id == document_id,
+        ApplicationDocument.application_id == application_id
+    ).first()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    filename = document.filename
+
+    # Delete from Elasticsearch
+    try:
+        application_es_service.delete_document(document_id)
+        logger.info(f"Deleted document {document_id} from Elasticsearch")
+    except Exception as e:
+        logger.error(f"Failed to delete from Elasticsearch: {e}")
+        # Continue anyway
+
+    # Delete from database
+    db.delete(document)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Document {filename} deleted successfully"
     }
 
 
@@ -541,8 +587,9 @@ async def upload_batch_applications(
                     display_filename = parsed_file["display_filename"]
                     extracted_text = parsed_file["text"]
 
-                    # Determine document type
-                    doc_type = guess_doc_type(filename)
+                    # Determine document type using LLM classification
+                    doc_type = classify_document_with_llm(extracted_text, display_filename)
+                    logger.info(f"Classified {display_filename} as: {doc_type}")
                     embedding = vector_service.generate_embedding(extracted_text)
 
                     # Save document
