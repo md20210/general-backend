@@ -57,6 +57,26 @@ async def test_ping():
     return {"status": "ok", "message": "Application Tracker is alive"}
 
 
+@router.get("/test/elasticsearch-status")
+async def test_elasticsearch_status():
+    """Check Elasticsearch connection status"""
+    es_connected = application_es_service.es is not None
+    es_ping = False
+
+    if es_connected:
+        try:
+            es_ping = application_es_service.es.ping()
+        except:
+            pass
+
+    return {
+        "elasticsearch_connected": es_connected,
+        "elasticsearch_ping": es_ping,
+        "index_name": application_es_service.index_name,
+        "message": "Elasticsearch is running" if (es_connected and es_ping) else "Elasticsearch not available (using PostgreSQL pgvector only)"
+    }
+
+
 @router.post("/test/create-demo-user")
 async def create_demo_user_endpoint(db: Session = Depends(get_db)):
     """Manually create demo user for testing"""
