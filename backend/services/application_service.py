@@ -97,3 +97,53 @@ def guess_doc_type(file_path: str) -> str:
         return 'portfolio'
     else:
         return 'other'
+
+
+async def extract_application_info(documents_text: str) -> dict:
+    """
+    Extract company name and position from application documents using LLM
+
+    Args:
+        documents_text: Combined text from CV, cover letter, etc.
+
+    Returns:
+        dict with 'company_name' and 'position' (or None if not found)
+    """
+    from backend.services.llm_gateway import llm_gateway
+
+    prompt = f"""Analysiere die folgenden Bewerbungsunterlagen und extrahiere:
+1. Firmenname (Unternehmen, an das sich beworben wird)
+2. Position/Jobtitel (z.B. "Senior Developer", "Product Manager")
+
+Dokumente:
+{documents_text[:2000]}
+
+Antworte NUR im folgenden JSON-Format (keine zusätzlichen Erklärungen):
+{{"company_name": "Firmenname oder null", "position": "Position oder null"}}
+"""
+
+    try:
+        response = await llm_gateway.generate(
+            message=prompt,
+            system_prompt="Du bist ein präziser Information Extractor. Antworte nur mit validem JSON.",
+            llm_type="ollama",  # Fast local model for extraction
+            temperature=0.1,  # Low temperature for consistent extraction
+            max_tokens=100
+        )
+
+        # Parse JSON response
+        import json
+        # Extract JSON from response (in case there's extra text)
+        json_start = response.find('{')
+        json_end = response.rfind('}') + 1
+        if json_start >= 0 and json_end > json_start:
+            json_str = response[json_start:json_end]
+            result = json.loads(json_str)
+            return {
+                "company_name": result.get("company_name") if result.get("company_name") != "null" else None,
+                "position": result.get("position") if result.get("position") != "null" else None
+            }
+    except Exception as e:
+        print(f"LLM extraction failed: {e}")
+
+    return {"company_name": None, "position": None}

@@ -26,7 +26,7 @@ from backend.schemas.application import (
     GenerateReportRequest,
     ReportResponse
 )
-from backend.services.application_service import DocumentParser, guess_doc_type
+from backend.services.application_service import DocumentParser, guess_doc_type, extract_application_info
 from backend.services.vector_service import VectorService
 from backend.services.llm_gateway import llm_gateway
 from backend.services.application_elasticsearch_service import application_es_service
@@ -179,20 +179,77 @@ async def delete_application(
 @router.post("/upload/directory")
 async def upload_application_directory(
     files: List[UploadFile] = File(...),
-    company_name: str = Form(...),
-    position: str = Form(None),
+    company_name: str = Form(None),  # Optional - will be extracted if not provided
+    position: str = Form(None),  # Optional - will be extracted if not provided
     user: User = Depends(current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Upload multiple application documents (supports directory upload and multiple files)"""
+    """Upload multiple application documents (supports directory upload and multiple files)
+
+    Company name and position can be:
+    - Provided manually (override)
+    - Auto-extracted from documents using LLM
+    """
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
 
-    # Create application entry
+    parser = DocumentParser()
+
+    # Phase 1: Parse all documents first (to extract company/position if needed)
+    parsed_files = []
+    all_text = []
+
+    for uploaded_file in files:
+        try:
+            file_data = await uploaded_file.read()
+            filename = uploaded_file.filename
+
+            if not filename or filename.endswith('/') or len(file_data) == 0:
+                continue
+
+            display_filename = filename.split('/')[-1] if '/' in filename else filename
+            extracted_text = await parser.parse_file(display_filename, file_data)
+
+            parsed_files.append({
+                "filename": filename,
+                "display_filename": display_filename,
+                "data": file_data,
+                "text": extracted_text
+            })
+
+            # Collect text for LLM extraction
+            if extracted_text:
+                all_text.append(extracted_text[:1000])  # First 1000 chars of each doc
+
+        except Exception as e:
+            logger.error(f"Failed to parse {uploaded_file.filename}: {e}")
+            continue
+
+    # Phase 2: Extract company/position if not provided manually
+    if not company_name or not position:
+        combined_text = "\n\n".join(all_text[:3])  # Use first 3 documents
+        extracted_info = await extract_application_info(combined_text)
+
+        # Use extracted values if manual values not provided
+        final_company = company_name if company_name else extracted_info.get("company_name")
+        final_position = position if position else extracted_info.get("position")
+
+        logger.info(f"Extracted: Company={final_company}, Position={final_position}")
+    else:
+        final_company = company_name
+        final_position = position
+
+    if not final_company:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not extract company name. Please provide it manually."
+        )
+
+    # Phase 3: Create application entry
     application = Application(
         user_id=user.id,
-        company_name=company_name,
-        position=position,
+        company_name=final_company,
+        position=final_position,
         status="uploaded",
         upload_path=f"{len(files)} files uploaded"
     )
@@ -200,29 +257,21 @@ async def upload_application_directory(
     db.commit()
     db.refresh(application)
 
-    parser = DocumentParser()
     vector_service = VectorService()
 
     processed_files = []
     errors = []
 
     try:
-        for uploaded_file in files:
+        # Phase 4: Process already-parsed files
+        for parsed_file in parsed_files:
             try:
-                # Read file content
-                file_data = await uploaded_file.read()
-                filename = uploaded_file.filename
+                filename = parsed_file["filename"]
+                display_filename = parsed_file["display_filename"]
+                extracted_text = parsed_file["text"]
 
-                # Skip if it's a directory marker (empty file with trailing /)
-                if not filename or filename.endswith('/') or len(file_data) == 0:
-                    continue
-
-                # Extract just the filename (remove path if present)
-                display_filename = filename.split('/')[-1] if '/' in filename else filename
-
-                # Parse file content
+                # Determine document type
                 doc_type = guess_doc_type(filename)
-                extracted_text = await parser.parse_file(display_filename, file_data)
 
                 # Generate embedding
                 embedding = await vector_service.generate_embedding(extracted_text)
@@ -245,8 +294,8 @@ async def upload_application_directory(
                         document_id=document.id,
                         application_id=application.id,
                         user_id=str(user.id),
-                        company_name=company_name,
-                        position=position,
+                        company_name=final_company,
+                        position=final_position,
                         filename=display_filename,
                         file_path=filename,
                         doc_type=doc_type,
@@ -264,7 +313,7 @@ async def upload_application_directory(
                 })
 
             except Exception as e:
-                errors.append({"filename": uploaded_file.filename, "error": str(e)})
+                errors.append({"filename": filename, "error": str(e)})
 
         db.commit()
 
@@ -277,10 +326,12 @@ async def upload_application_directory(
     return {
         "success": True,
         "application_id": application.id,
-        "company_name": company_name,
+        "company_name": final_company,
+        "position": final_position,
         "processed_files": processed_files,
         "total_files": len(processed_files),
-        "errors": errors
+        "errors": errors,
+        "extracted": not (company_name and position)  # True if auto-extracted
     }
 
 
@@ -342,10 +393,49 @@ async def upload_batch_applications(
     # Process each company separately
     for company_name, company_files in companies.items():
         try:
-            # Create application for this company
+            # Phase 1: Parse all files for this company
+            parsed_files = []
+            all_text = []
+
+            for uploaded_file in company_files:
+                try:
+                    await uploaded_file.seek(0)
+                    file_data = await uploaded_file.read()
+                    filename = uploaded_file.filename
+
+                    if len(file_data) == 0:
+                        continue
+
+                    display_filename = filename.split('/')[-1] if '/' in filename else filename
+                    extracted_text = await parser.parse_file(display_filename, file_data)
+
+                    parsed_files.append({
+                        "filename": filename,
+                        "display_filename": display_filename,
+                        "data": file_data,
+                        "text": extracted_text
+                    })
+
+                    if extracted_text:
+                        all_text.append(extracted_text[:1000])
+
+                except Exception as e:
+                    logger.error(f"Failed to parse {uploaded_file.filename}: {e}")
+                    continue
+
+            # Phase 2: Extract position from documents
+            position = None
+            if all_text:
+                combined_text = "\n\n".join(all_text[:3])
+                extracted_info = await extract_application_info(combined_text)
+                position = extracted_info.get("position")
+                logger.info(f"Extracted position for {company_name}: {position}")
+
+            # Phase 3: Create application entry
             application = Application(
                 user_id=user.id,
                 company_name=company_name,
+                position=position,
                 status="uploaded",
                 upload_path=f"{len(company_files)} files from batch upload"
             )
@@ -356,24 +446,15 @@ async def upload_batch_applications(
             processed_files = []
             errors = []
 
-            # Process all files for this company
-            for uploaded_file in company_files:
+            # Phase 4: Process already-parsed files
+            for parsed_file in parsed_files:
                 try:
-                    # Reset file pointer
-                    await uploaded_file.seek(0)
-                    file_data = await uploaded_file.read()
-                    filename = uploaded_file.filename
+                    filename = parsed_file["filename"]
+                    display_filename = parsed_file["display_filename"]
+                    extracted_text = parsed_file["text"]
 
-                    # Skip empty files
-                    if len(file_data) == 0:
-                        continue
-
-                    # Extract filename (remove path)
-                    display_filename = filename.split('/')[-1] if '/' in filename else filename
-
-                    # Parse file
+                    # Determine document type
                     doc_type = guess_doc_type(filename)
-                    extracted_text = await parser.parse_file(display_filename, file_data)
                     embedding = await vector_service.generate_embedding(extracted_text)
 
                     # Save document
@@ -395,7 +476,7 @@ async def upload_batch_applications(
                             application_id=application.id,
                             user_id=str(user.id),
                             company_name=company_name,
-                            position=None,  # Batch upload doesn't have position
+                            position=position,  # Extracted position
                             filename=display_filename,
                             file_path=filename,
                             doc_type=doc_type,
@@ -412,12 +493,13 @@ async def upload_batch_applications(
                     })
 
                 except Exception as e:
-                    errors.append({"filename": uploaded_file.filename, "error": str(e)})
+                    errors.append({"filename": filename, "error": str(e)})
 
             db.commit()
 
             results.append({
                 "company_name": company_name,
+                "position": position,  # Include extracted position
                 "application_id": application.id,
                 "processed_files": processed_files,
                 "total_files": len(processed_files),
