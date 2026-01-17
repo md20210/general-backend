@@ -295,7 +295,7 @@ async def upload_application_directory(
     # Phase 2: Extract company/position if not provided manually
     if not company_name or not position:
         combined_text = "\n\n".join(all_text[:3])  # Use first 3 documents
-        extracted_info = await extract_application_info(combined_text)
+        extracted_info = extract_application_info(combined_text)
 
         # Use extracted values if manual values not provided
         final_company = company_name if company_name else extracted_info.get("company_name")
@@ -494,7 +494,7 @@ async def upload_batch_applications(
             position = None
             if all_text:
                 combined_text = "\n\n".join(all_text[:3])
-                extracted_info = await extract_application_info(combined_text)
+                extracted_info = extract_application_info(combined_text)
                 position = extracted_info.get("position")
                 logger.info(f"Extracted position for {company_name}: {position}")
 

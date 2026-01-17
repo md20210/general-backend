@@ -99,7 +99,7 @@ def guess_doc_type(file_path: str) -> str:
         return 'other'
 
 
-async def extract_application_info(documents_text: str) -> dict:
+def extract_application_info(documents_text: str) -> dict:
     """
     Extract company name and position from application documents using LLM
 
@@ -123,25 +123,26 @@ Antworte NUR im folgenden JSON-Format (keine zusätzlichen Erklärungen):
 """
 
     try:
-        response = await llm_gateway.generate(
-            message=prompt,
-            system_prompt="Du bist ein präziser Information Extractor. Antworte nur mit validem JSON.",
-            llm_type="ollama",  # Fast local model for extraction
+        result = llm_gateway.generate(
+            prompt=prompt,
+            provider="ollama",  # Fast local model for extraction
             temperature=0.1,  # Low temperature for consistent extraction
             max_tokens=100
         )
 
-        # Parse JSON response
+        # Parse JSON response from LLM
         import json
+        response_text = result.get('response', '')
+
         # Extract JSON from response (in case there's extra text)
-        json_start = response.find('{')
-        json_end = response.rfind('}') + 1
+        json_start = response_text.find('{')
+        json_end = response_text.rfind('}') + 1
         if json_start >= 0 and json_end > json_start:
-            json_str = response[json_start:json_end]
-            result = json.loads(json_str)
+            json_str = response_text[json_start:json_end]
+            parsed = json.loads(json_str)
             return {
-                "company_name": result.get("company_name") if result.get("company_name") != "null" else None,
-                "position": result.get("position") if result.get("position") != "null" else None
+                "company_name": parsed.get("company_name") if parsed.get("company_name") != "null" else None,
+                "position": parsed.get("position") if parsed.get("position") != "null" else None
             }
     except Exception as e:
         print(f"LLM extraction failed: {e}")
