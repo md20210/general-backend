@@ -107,14 +107,31 @@ async def get_applications_overview(
     user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
-    """Get overview of all applications with document counts"""
+    """Get overview of all applications with document breakdown"""
     applications = db.query(Application).filter(Application.user_id == user.id).all()
 
     result = []
     for app in applications:
-        doc_count = db.query(ApplicationDocument).filter(
+        # Get all documents for this application
+        documents = db.query(ApplicationDocument).filter(
             ApplicationDocument.application_id == app.id
-        ).count()
+        ).all()
+
+        # Categorize documents by type
+        cv_file = None
+        cover_letter_file = None
+        job_description_file = None
+        other_files = []
+
+        for doc in documents:
+            if doc.doc_type == 'cv' and not cv_file:
+                cv_file = doc.filename
+            elif doc.doc_type == 'cover_letter' and not cover_letter_file:
+                cover_letter_file = doc.filename
+            elif doc.doc_type in ['certificate', 'transcript'] and not job_description_file:
+                job_description_file = doc.filename
+            else:
+                other_files.append(doc.filename)
 
         result.append(ApplicationResponse(
             id=app.id,
@@ -126,7 +143,11 @@ async def get_applications_overview(
             upload_path=app.upload_path,
             created_at=app.created_at,
             updated_at=app.updated_at,
-            document_count=doc_count
+            document_count=len(documents),
+            cv_file=cv_file,
+            cover_letter_file=cover_letter_file,
+            job_description_file=job_description_file,
+            other_files_count=len(other_files)
         ))
 
     return result

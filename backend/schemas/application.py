@@ -50,6 +50,11 @@ class ApplicationResponse(ApplicationBase):
     created_at: datetime
     updated_at: datetime
     document_count: int = 0
+    # Document type breakdown for better overview
+    cv_file: Optional[str] = None
+    cover_letter_file: Optional[str] = None
+    job_description_file: Optional[str] = None
+    other_files_count: int = 0
 
     class Config:
         from_attributes = True
