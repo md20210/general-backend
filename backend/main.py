@@ -78,6 +78,41 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️  Elasticsearch initialization failed (non-critical): {e}")
 
+    # TEMPORARY: Create demo user for Application Tracker testing (NO AUTH)
+    try:
+        from sqlalchemy import text
+        from backend.database import get_session
+
+        logger.info("Creating demo user for Application Tracker testing...")
+        session = next(get_session())
+
+        # Check if demo user exists
+        result = session.execute(
+            text("SELECT id FROM \"user\" WHERE id = '00000000-0000-0000-0000-000000000001'")
+        ).first()
+
+        if not result:
+            # Create demo user with fixed UUID
+            session.execute(text("""
+                INSERT INTO "user" (id, email, hashed_password, is_active, is_superuser, is_verified)
+                VALUES (
+                    '00000000-0000-0000-0000-000000000001',
+                    'demo@applicationtracker.test',
+                    '$2b$12$dummyhash',
+                    true,
+                    false,
+                    true
+                )
+            """))
+            session.commit()
+            logger.warning("⚠️  DEMO USER CREATED for testing (NO AUTH) - ID: 00000000-0000-0000-0000-000000000001")
+        else:
+            logger.info("✅ Demo user already exists")
+
+        session.close()
+    except Exception as e:
+        logger.warning(f"⚠️  Demo user creation failed (non-critical): {e}")
+
     yield
     # Shutdown
     logger.info("Shutting down General Backend...")

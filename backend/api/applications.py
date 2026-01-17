@@ -42,16 +42,12 @@ router = APIRouter()
 # TEMPORARY: Fixed demo user UUID (no auth needed)
 DEMO_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
-class DemoUser:
-    """Temporary demo user for testing without authentication"""
-    id = DEMO_USER_ID
-    email = "demo@applicationtracker.test"
-    is_active = True
-    is_superuser = False
-
-def get_demo_user() -> DemoUser:
-    """TEMPORARY: Return demo user without any auth check"""
-    return DemoUser()
+def get_demo_user(db: Session = Depends(get_db)) -> User:
+    """TEMPORARY: Return real demo user from DB without any auth check"""
+    user = db.query(User).filter(User.id == DEMO_USER_ID).first()
+    if not user:
+        raise HTTPException(status_code=500, detail="Demo user not found - backend not initialized")
+    return user
 
 
 # TEMPORARY TEST ENDPOINTS - NO AUTH, NO USER
@@ -78,7 +74,7 @@ async def test_overview(db: Session = Depends(get_db)):
 
 @router.get("/overview", response_model=List[ApplicationResponse])
 async def get_applications_overview(
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Get overview of all applications with document counts"""
@@ -109,7 +105,7 @@ async def get_applications_overview(
 @router.get("/{application_id}", response_model=ApplicationDetailResponse)
 async def get_application_detail(
     application_id: int,
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Get detailed application info with documents and status history"""
@@ -149,7 +145,7 @@ async def get_application_detail(
 async def update_application_status(
     application_id: int,
     status_update: StatusUpdateRequest,
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Update application status and log to history"""
@@ -185,7 +181,7 @@ async def update_application_status(
 @router.delete("/{application_id}")
 async def delete_application(
     application_id: int,
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Delete application and all associated documents (CASCADE)"""
@@ -222,7 +218,7 @@ async def upload_application_directory(
     files: List[UploadFile] = File(...),
     company_name: str = Form(None),  # Optional - will be extracted if not provided
     position: str = Form(None),  # Optional - will be extracted if not provided
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Upload multiple application documents (supports directory upload and multiple files)
@@ -379,7 +375,7 @@ async def upload_application_directory(
 @router.post("/upload/batch")
 async def upload_batch_applications(
     files: List[UploadFile] = File(...),
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Batch upload: Upload entire directory structure with multiple applications
@@ -568,7 +564,7 @@ async def upload_batch_applications(
 @router.post("/chat/message", response_model=ChatMessageResponse)
 async def send_chat_message(
     request: ChatMessageRequest,
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Send chat message and get response with RAG"""
@@ -735,7 +731,7 @@ async def _check_status_update(message: str, user_id, db: Session):
 
 @router.get("/reports/status")
 async def get_status_report(
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Get status report"""
@@ -767,7 +763,7 @@ async def get_status_report(
 @router.post("/reports/generate", response_model=ReportResponse)
 async def generate_report(
     request: GenerateReportRequest,
-    user: DemoUser = Depends(get_demo_user),
+    user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
     """Generate custom report"""
