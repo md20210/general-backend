@@ -5,6 +5,9 @@ from sqlalchemy import func, desc
 from typing import List
 from datetime import datetime
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 from backend.database import get_db
 from backend.models.application import (
@@ -26,6 +29,7 @@ from backend.schemas.application import (
 from backend.services.application_service import DocumentParser, guess_doc_type
 from backend.services.vector_service import VectorService
 from backend.services.llm_gateway import llm_gateway
+from backend.services.application_elasticsearch_service import application_es_service
 from backend.auth.dependencies import current_active_user
 
 router = APIRouter()
@@ -153,6 +157,16 @@ async def delete_application(
         raise HTTPException(status_code=404, detail="Application not found")
 
     company_name = app.company_name
+
+    # Delete from Elasticsearch first
+    try:
+        deleted_count = application_es_service.delete_by_application(application_id)
+        logger.info(f"Deleted {deleted_count} documents from Elasticsearch for application {application_id}")
+    except Exception as e:
+        logger.error(f"Failed to delete from Elasticsearch: {e}")
+        # Continue anyway - database is source of truth
+
+    # Delete from database (CASCADE will delete documents)
     db.delete(app)
     db.commit()
 
@@ -164,28 +178,28 @@ async def delete_application(
 
 @router.post("/upload/directory")
 async def upload_application_directory(
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     company_name: str = Form(...),
     position: str = Form(None),
     user: User = Depends(current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Upload a ZIP file containing application documents"""
-    if not file.filename.endswith('.zip'):
-        raise HTTPException(status_code=400, detail="Only ZIP files are supported")
+    """Upload multiple application documents (supports directory upload and multiple files)"""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
 
+    # Create application entry
     application = Application(
         user_id=user.id,
         company_name=company_name,
         position=position,
         status="uploaded",
-        upload_path=file.filename
+        upload_path=f"{len(files)} files uploaded"
     )
     db.add(application)
     db.commit()
     db.refresh(application)
 
-    content = await file.read()
     parser = DocumentParser()
     vector_service = VectorService()
 
@@ -193,32 +207,64 @@ async def upload_application_directory(
     errors = []
 
     try:
-        files = await parser.extract_zip(content)
-
-        for file_path, filename, file_data in files:
+        for uploaded_file in files:
             try:
-                doc_type = guess_doc_type(file_path)
-                extracted_text = await parser.parse_file(filename, file_data)
+                # Read file content
+                file_data = await uploaded_file.read()
+                filename = uploaded_file.filename
+
+                # Skip if it's a directory marker (empty file with trailing /)
+                if not filename or filename.endswith('/') or len(file_data) == 0:
+                    continue
+
+                # Extract just the filename (remove path if present)
+                display_filename = filename.split('/')[-1] if '/' in filename else filename
+
+                # Parse file content
+                doc_type = guess_doc_type(filename)
+                extracted_text = await parser.parse_file(display_filename, file_data)
+
+                # Generate embedding
                 embedding = await vector_service.generate_embedding(extracted_text)
 
+                # Save document
                 document = ApplicationDocument(
                     application_id=application.id,
-                    filename=filename,
-                    file_path=file_path,
+                    filename=display_filename,
+                    file_path=filename,  # Keep full path for reference
                     doc_type=doc_type,
                     content=extracted_text,
                     embedding=embedding
                 )
                 db.add(document)
+                db.flush()  # Get document ID before Elasticsearch indexing
+
+                # Index in Elasticsearch for hybrid search
+                try:
+                    application_es_service.index_document(
+                        document_id=document.id,
+                        application_id=application.id,
+                        user_id=str(user.id),
+                        company_name=company_name,
+                        position=position,
+                        filename=display_filename,
+                        file_path=filename,
+                        doc_type=doc_type,
+                        content=extracted_text or "",
+                        created_at=document.created_at.isoformat() if document.created_at else datetime.utcnow().isoformat()
+                    )
+                except Exception as es_error:
+                    logger.error(f"Elasticsearch indexing failed for {display_filename}: {es_error}")
+                    # Continue anyway - Elasticsearch is optional enhancement
 
                 processed_files.append({
-                    "filename": filename,
+                    "filename": display_filename,
                     "type": doc_type,
                     "chars": len(extracted_text) if extracted_text else 0
                 })
 
             except Exception as e:
-                errors.append({"filename": file_path, "error": str(e)})
+                errors.append({"filename": uploaded_file.filename, "error": str(e)})
 
         db.commit()
 
@@ -226,7 +272,7 @@ async def upload_application_directory(
         db.rollback()
         db.delete(application)
         db.commit()
-        raise HTTPException(status_code=400, detail=f"ZIP processing failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"File processing failed: {str(e)}")
 
     return {
         "success": True,
@@ -235,6 +281,164 @@ async def upload_application_directory(
         "processed_files": processed_files,
         "total_files": len(processed_files),
         "errors": errors
+    }
+
+
+@router.post("/upload/batch")
+async def upload_batch_applications(
+    files: List[UploadFile] = File(...),
+    user: User = Depends(current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Batch upload: Upload entire directory structure with multiple applications
+
+    Directory structure example:
+    Bewerbungen/
+      ├── Allianz/
+      │   ├── CV.pdf
+      │   └── Anschreiben.docx
+      ├── SAP/
+      │   ├── CV.pdf
+      │   └── Anschreiben.docx
+
+    Each first-level subdirectory becomes a separate application.
+    """
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    # Group files by company (first-level directory)
+    companies = {}
+    for uploaded_file in files:
+        filename = uploaded_file.filename
+
+        # Skip empty files or directory markers
+        if not filename or filename.endswith('/'):
+            continue
+
+        # Extract company name from path (first directory level)
+        parts = filename.split('/')
+        if len(parts) < 2:
+            # File in root - skip or use filename as company
+            continue
+
+        company_name = parts[0]  # First directory = company name
+
+        if company_name not in companies:
+            companies[company_name] = []
+
+        companies[company_name].append(uploaded_file)
+
+    if not companies:
+        raise HTTPException(status_code=400, detail="No valid company directories found")
+
+    parser = DocumentParser()
+    vector_service = VectorService()
+
+    results = []
+    total_applications = 0
+    total_files_processed = 0
+    total_errors = []
+
+    # Process each company separately
+    for company_name, company_files in companies.items():
+        try:
+            # Create application for this company
+            application = Application(
+                user_id=user.id,
+                company_name=company_name,
+                status="uploaded",
+                upload_path=f"{len(company_files)} files from batch upload"
+            )
+            db.add(application)
+            db.commit()
+            db.refresh(application)
+
+            processed_files = []
+            errors = []
+
+            # Process all files for this company
+            for uploaded_file in company_files:
+                try:
+                    # Reset file pointer
+                    await uploaded_file.seek(0)
+                    file_data = await uploaded_file.read()
+                    filename = uploaded_file.filename
+
+                    # Skip empty files
+                    if len(file_data) == 0:
+                        continue
+
+                    # Extract filename (remove path)
+                    display_filename = filename.split('/')[-1] if '/' in filename else filename
+
+                    # Parse file
+                    doc_type = guess_doc_type(filename)
+                    extracted_text = await parser.parse_file(display_filename, file_data)
+                    embedding = await vector_service.generate_embedding(extracted_text)
+
+                    # Save document
+                    document = ApplicationDocument(
+                        application_id=application.id,
+                        filename=display_filename,
+                        file_path=filename,
+                        doc_type=doc_type,
+                        content=extracted_text,
+                        embedding=embedding
+                    )
+                    db.add(document)
+                    db.flush()  # Get document ID
+
+                    # Index in Elasticsearch
+                    try:
+                        application_es_service.index_document(
+                            document_id=document.id,
+                            application_id=application.id,
+                            user_id=str(user.id),
+                            company_name=company_name,
+                            position=None,  # Batch upload doesn't have position
+                            filename=display_filename,
+                            file_path=filename,
+                            doc_type=doc_type,
+                            content=extracted_text or "",
+                            created_at=document.created_at.isoformat() if document.created_at else datetime.utcnow().isoformat()
+                        )
+                    except Exception as es_error:
+                        logger.error(f"Elasticsearch indexing failed: {es_error}")
+
+                    processed_files.append({
+                        "filename": display_filename,
+                        "type": doc_type,
+                        "chars": len(extracted_text) if extracted_text else 0
+                    })
+
+                except Exception as e:
+                    errors.append({"filename": uploaded_file.filename, "error": str(e)})
+
+            db.commit()
+
+            results.append({
+                "company_name": company_name,
+                "application_id": application.id,
+                "processed_files": processed_files,
+                "total_files": len(processed_files),
+                "errors": errors
+            })
+
+            total_applications += 1
+            total_files_processed += len(processed_files)
+            total_errors.extend(errors)
+
+        except Exception as e:
+            total_errors.append({"company": company_name, "error": str(e)})
+            db.rollback()
+            continue
+
+    return {
+        "success": True,
+        "total_applications": total_applications,
+        "total_files": total_files_processed,
+        "applications": results,
+        "errors": total_errors
     }
 
 
@@ -255,6 +459,17 @@ async def send_chat_message(
 
     action_taken = await _check_status_update(request.message, user.id, db)
 
+    # HYBRID SEARCH: Combine Elasticsearch (keyword) + pgvector (semantic)
+
+    # 1. Elasticsearch: Full-text search with fuzzy matching
+    es_results = application_es_service.search(
+        query=request.message,
+        user_id=str(user.id),
+        limit=10
+    )
+    es_doc_ids = {r["document_id"]: r["score"] for r in es_results}
+
+    # 2. pgvector: Semantic similarity search
     vector_service = VectorService()
     query_embedding = await vector_service.generate_embedding(request.message)
 
@@ -262,19 +477,38 @@ async def send_chat_message(
         Application.user_id == user.id
     ).all()
 
-    relevant_docs = []
+    vector_results = {}
     for doc in documents:
         if doc.embedding:
             similarity = vector_service.cosine_similarity(query_embedding, doc.embedding)
             if similarity > 0.3:
-                relevant_docs.append({
+                vector_results[doc.id] = {
                     "id": doc.id,
                     "filename": doc.filename,
                     "similarity": similarity,
-                    "content": doc.content[:500] if doc.content else ""
-                })
+                    "content": doc.content[:500] if doc.content else "",
+                    "company": doc.application.company_name if doc.application else ""
+                }
 
-    relevant_docs.sort(key=lambda x: x["similarity"], reverse=True)
+    # 3. Combine results (Hybrid Ranking)
+    # Documents found by both get higher score
+    all_doc_ids = set(es_doc_ids.keys()) | set(vector_results.keys())
+    relevant_docs = []
+
+    for doc_id in all_doc_ids:
+        es_score = es_doc_ids.get(doc_id, 0) / 10.0  # Normalize ES score
+        vector_score = vector_results.get(doc_id, {}).get("similarity", 0)
+
+        # Hybrid score: Weighted combination
+        hybrid_score = (0.6 * vector_score) + (0.4 * es_score)
+
+        if doc_id in vector_results:
+            doc_info = vector_results[doc_id]
+            doc_info["hybrid_score"] = hybrid_score
+            doc_info["es_score"] = es_score
+            relevant_docs.append(doc_info)
+
+    relevant_docs.sort(key=lambda x: x.get("hybrid_score", 0), reverse=True)
     relevant_docs = relevant_docs[:5]
 
     applications = db.query(Application).filter(Application.user_id == user.id).all()

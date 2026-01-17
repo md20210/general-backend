@@ -66,6 +66,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️  Alembic migrations failed (non-critical): {e}")
 
+    # Initialize Elasticsearch indices
+    try:
+        from backend.services.application_elasticsearch_service import application_es_service
+
+        logger.info("Initializing Elasticsearch index for Application Tracker...")
+        if application_es_service.create_index():
+            logger.info("✅ Application Tracker Elasticsearch index ready")
+        else:
+            logger.warning("⚠️  Could not create Elasticsearch index (service may be unavailable)")
+    except Exception as e:
+        logger.warning(f"⚠️  Elasticsearch initialization failed (non-critical): {e}")
+
     yield
     # Shutdown
     logger.info("Shutting down General Backend...")
