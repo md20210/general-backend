@@ -148,7 +148,7 @@ async def get_applications_overview(
                 cv_file = doc.filename
             elif doc.doc_type == 'cover_letter' and not cover_letter_file:
                 cover_letter_file = doc.filename
-            elif doc.doc_type in ['certificate', 'transcript'] and not job_description_file:
+            elif doc.doc_type == 'job_description' and not job_description_file:
                 job_description_file = doc.filename
             else:
                 other_files.append(doc.filename)
@@ -311,6 +311,40 @@ async def delete_application(
     return {
         "success": True,
         "message": f"Application for {company_name} deleted successfully"
+    }
+
+
+@router.get("/{application_id}/documents/{document_id}/content")
+async def get_document_content(
+    application_id: int,
+    document_id: int,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Get extracted text content of a document"""
+    # Verify application ownership
+    app = db.query(Application).filter(
+        Application.id == application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Find document
+    document = db.query(ApplicationDocument).filter(
+        ApplicationDocument.id == document_id,
+        ApplicationDocument.application_id == application_id
+    ).first()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return {
+        "filename": document.filename,
+        "doc_type": document.doc_type,
+        "content": document.content,
+        "created_at": document.created_at
     }
 
 
