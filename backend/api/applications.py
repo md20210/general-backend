@@ -144,13 +144,15 @@ async def get_applications_overview(
         other_files = []
 
         for doc in documents:
+            # Check each type independently (not elif chain)
             if doc.doc_type == 'cv' and not cv_file:
                 cv_file = doc.filename
-            elif doc.doc_type == 'cover_letter' and not cover_letter_file:
+            if doc.doc_type == 'cover_letter' and not cover_letter_file:
                 cover_letter_file = doc.filename
-            elif doc.doc_type == 'job_description' and not job_description_file:
+            if doc.doc_type == 'job_description' and not job_description_file:
                 job_description_file = doc.filename
-            else:
+            # Only count as "other" if it's not one of the main types
+            if doc.doc_type not in ['cv', 'cover_letter', 'job_description']:
                 other_files.append(doc.filename)
 
         result.append(ApplicationResponse(
