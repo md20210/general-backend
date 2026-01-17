@@ -32,8 +32,7 @@ from backend.api.cv_optimization import router as cv_optimization_router
 from backend.api.klassentreffen import router as klassentreffen_router
 from backend.api.bar import router as bar_router
 from backend.api.bar_chat import router as bar_chat_router
-# TEMPORARILY DISABLED for debugging
-# from backend.api.applications import router as applications_router
+from backend.api.applications import router as applications_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -125,8 +124,7 @@ app.include_router(cv_optimization_router)
 app.include_router(klassentreffen_router)
 app.include_router(bar_router)
 app.include_router(bar_chat_router)
-# TEMPORARILY DISABLED for debugging
-# app.include_router(applications_router, prefix="/api/applications", tags=["Applications"])
+app.include_router(applications_router, prefix="/api/applications", tags=["Applications"])
 
 # Mount static files for uploads (LifeChronicle photos, etc.)
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads"))

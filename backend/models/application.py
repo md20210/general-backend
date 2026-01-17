@@ -79,7 +79,7 @@ class ApplicationChatMessage(Base):
     role = Column(String(20), nullable=False)
     content = Column(Text, nullable=False)
     embedding = Column(Vector(384), nullable=True)
-    metadata = Column(Text, nullable=True)
+    message_metadata = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
