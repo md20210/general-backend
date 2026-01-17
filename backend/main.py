@@ -97,9 +97,9 @@ async def lifespan(app: FastAPI):
                 session.execute(text("""
                     INSERT INTO "user" (id, email, hashed_password, is_active, is_superuser, is_verified)
                     VALUES (
-                        '00000000-0000-0000-0000-000000000001',
+                        '00000000-0000-0000-0000-000000000001'::uuid,
                         'demo@applicationtracker.test',
-                        '$2b$12$dummyhash',
+                        '$2b$12$dummyhashfordemouseronly0000000000000000000000000',
                         true,
                         false,
                         true
