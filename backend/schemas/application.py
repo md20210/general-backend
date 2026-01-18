@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
@@ -29,20 +29,14 @@ class ApplicationDocumentResponse(BaseModel):
     indexed: bool = False
     created_at: datetime
 
+    @field_validator('indexed', mode='before')
+    @classmethod
+    def handle_none_indexed(cls, v):
+        # Convert None to False for backwards compatibility
+        return False if v is None else v
+
     class Config:
         from_attributes = True
-
-    @classmethod
-    def from_orm(cls, obj):
-        # Handle None values for indexed field
-        data = {
-            'id': obj.id,
-            'filename': obj.filename,
-            'doc_type': obj.doc_type,
-            'indexed': obj.indexed if obj.indexed is not None else False,
-            'created_at': obj.created_at
-        }
-        return cls(**data)
 
 
 class ApplicationStatusHistoryResponse(BaseModel):
