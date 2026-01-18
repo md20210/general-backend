@@ -25,12 +25,24 @@ class ApplicationUpdate(BaseModel):
 class ApplicationDocumentResponse(BaseModel):
     id: int
     filename: str
-    doc_type: Optional[str]
-    indexed: Optional[bool] = False
+    doc_type: Optional[str] = None
+    indexed: bool = False
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def from_orm(cls, obj):
+        # Handle None values for indexed field
+        data = {
+            'id': obj.id,
+            'filename': obj.filename,
+            'doc_type': obj.doc_type,
+            'indexed': obj.indexed if obj.indexed is not None else False,
+            'created_at': obj.created_at
+        }
+        return cls(**data)
 
 
 class ApplicationStatusHistoryResponse(BaseModel):

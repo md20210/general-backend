@@ -42,7 +42,7 @@ class ApplicationDocument(Base):
     doc_type = Column(String(50), nullable=True)
     content = Column(Text, nullable=True)
     embedding = Column(Vector(384), nullable=True)
-    indexed = Column(Boolean, nullable=False, default=False, server_default='false', index=True)
+    indexed = Column(Boolean, nullable=True, default=False, server_default='false', index=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
