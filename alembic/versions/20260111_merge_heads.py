@@ -1,6 +1,6 @@
 """Merge parallel migration heads
 
-Revision ID: merge_heads_001
+Revision ID: 20260111_merge_heads
 Revises: team_001, add_cv_showcase_001
 Create Date: 2026-01-11
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'merge_heads_001'
+revision = '20260111_merge_heads'
 down_revision = ('team_001', 'add_cv_showcase_001')
 branch_labels = None
 depends_on = None
