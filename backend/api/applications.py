@@ -5,6 +5,7 @@ All endpoints use a fixed demo UUID for testing.
 TODO: Re-enable authentication before production!
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, text
 from typing import List, Optional
@@ -1857,9 +1858,14 @@ async def generate_report(
 # CHAT ENDPOINT
 # ========================================
 
+class ChatRequest(BaseModel):
+    message: str
+    provider: str = "ollama"
+
+
 @router.post("/chat/message")
 async def send_chat_message(
-    request: dict,
+    request: ChatRequest,
     user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
@@ -1867,8 +1873,8 @@ async def send_chat_message(
     Chat with documents using RAG.
     Auto-searches and uses indexed documents for context.
     """
-    message = request.get("message", "")
-    provider = request.get("provider", "ollama")
+    message = request.message
+    provider = request.provider
 
     if not message:
         raise HTTPException(status_code=400, detail="Message is required")
