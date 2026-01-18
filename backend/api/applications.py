@@ -266,28 +266,27 @@ async def delete_all_applications(
     db: Session = Depends(get_db)
 ):
     """TESTING ONLY: Delete ALL applications for demo user"""
-    applications = db.query(Application).filter(Application.user_id == user.id).all()
+    try:
+        # Delete documents first to avoid cascade issues
+        db.execute("DELETE FROM application_documents WHERE application_id IN (SELECT id FROM applications WHERE user_id = :user_id)", {"user_id": user.id})
 
-    deleted_count = len(applications)
+        # Delete applications
+        deleted_count = db.execute("DELETE FROM applications WHERE user_id = :user_id", {"user_id": user.id}).rowcount
 
-    # Delete from Elasticsearch first
-    for app in applications:
-        try:
-            application_es_service.delete_by_application(app.id)
-        except Exception as e:
-            logger.error(f"Failed to delete from Elasticsearch: {e}")
+        db.commit()
 
-    # Delete from database (CASCADE will delete documents)
-    for app in applications:
-        db.delete(app)
-
-    db.commit()
-
-    return {
-        "success": True,
-        "message": f"Deleted {deleted_count} applications",
-        "deleted_count": deleted_count
-    }
+        return {
+            "success": True,
+            "message": f"Deleted {deleted_count} applications and all documents",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Delete failed: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @router.delete("/{application_id}")
