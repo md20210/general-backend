@@ -61,7 +61,7 @@ def get_demo_user(db: Session = Depends(get_db)) -> User:
 @router.get("/test/ping")
 async def test_ping():
     """Test endpoint - no auth required"""
-    return {"status": "ok", "message": "Application Tracker is alive", "version": "2026-01-18-fix4-text"}
+    return {"status": "ok", "message": "Application Tracker is alive", "version": "2026-01-18-folder-hierarchy"}
 
 
 @router.get("/test/add-indexed-column")
