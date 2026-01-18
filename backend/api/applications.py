@@ -779,12 +779,188 @@ async def upload_batch_applications(
     }
 
 
-# TEMPORARILY DISABLED: FileBrowser endpoints require 'indexed' column
-# These will be re-enabled after running /test/add-indexed-column
+@router.post("/files/upload")
+async def upload_files_only(
+    files: List[UploadFile] = File(...),
+    application_id: Optional[int] = Form(None),
+    company_name: Optional[str] = Form(None),
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Upload files WITHOUT automatic processing - for FileBrowser"""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
 
-# @router.post("/files/upload")
-# @router.post("/documents/{document_id}/index")
-# @router.get("/files/list")
+    parser = DocumentParser()
+
+    if application_id:
+        app = db.query(Application).filter(
+            Application.id == application_id,
+            Application.user_id == user.id
+        ).first()
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+    else:
+        final_company = company_name or "Neue Bewerbung"
+        app = Application(
+            user_id=user.id,
+            company_name=final_company,
+            position=None,
+            status="uploaded",
+            upload_path=f"{len(files)} files uploaded"
+        )
+        db.add(app)
+        db.commit()
+        db.refresh(app)
+
+    uploaded_files = []
+    errors = []
+
+    for uploaded_file in files:
+        try:
+            file_data = await uploaded_file.read()
+            filename = uploaded_file.filename
+
+            if not filename or filename.endswith('/') or len(file_data) == 0:
+                continue
+
+            display_filename = filename.split('/')[-1] if '/' in filename else filename
+            extracted_text = await parser.parse_file(display_filename, file_data)
+
+            document = ApplicationDocument(
+                application_id=app.id,
+                filename=display_filename,
+                file_path=filename,
+                content=extracted_text,
+                doc_type=None,
+                embedding=None,
+                indexed=False
+            )
+            db.add(document)
+            db.flush()
+
+            uploaded_files.append({
+                "id": document.id,
+                "filename": display_filename,
+                "indexed": False
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to upload {uploaded_file.filename}: {e}")
+            errors.append({"filename": uploaded_file.filename, "error": str(e)})
+
+    db.commit()
+
+    return {
+        "success": True,
+        "application_id": app.id,
+        "company_name": app.company_name,
+        "uploaded_files": uploaded_files,
+        "total_files": len(uploaded_files),
+        "errors": errors
+    }
+
+
+@router.post("/documents/{document_id}/index")
+async def index_document_manually(
+    document_id: int,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Manually index a document: LLM + embeddings + Elasticsearch"""
+    document = db.query(ApplicationDocument).join(Application).filter(
+        ApplicationDocument.id == document_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if document.indexed:
+        return {
+            "success": True,
+            "message": "Document already indexed",
+            "document_id": document_id
+        }
+
+    try:
+        doc_type = classify_document_with_llm(
+            document.content[:1500] if document.content else "",
+            document.filename
+        )
+        logger.info(f"Classified {document.filename} as: {doc_type}")
+
+        vector_service = VectorService()
+        embedding = vector_service.generate_embedding(document.content or "")
+
+        try:
+            application_es_service.index_document(
+                document_id=document.id,
+                application_id=document.application_id,
+                user_id=str(user.id),
+                company_name=document.application.company_name,
+                position=document.application.position,
+                filename=document.filename,
+                file_path=document.file_path or document.filename,
+                doc_type=doc_type,
+                content=document.content or "",
+                created_at=document.created_at.isoformat() if document.created_at else datetime.utcnow().isoformat()
+            )
+        except Exception as es_error:
+            logger.error(f"Elasticsearch indexing failed: {es_error}")
+
+        document.doc_type = doc_type
+        document.embedding = embedding
+        document.indexed = True
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Document indexed successfully",
+            "document_id": document_id,
+            "doc_type": doc_type
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to index document {document_id}: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
+
+
+@router.get("/files/list")
+async def list_all_files(
+    application_id: Optional[int] = None,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """List all uploaded files with indexing status"""
+    query = db.query(ApplicationDocument).join(Application).filter(
+        Application.user_id == user.id
+    )
+
+    if application_id:
+        query = query.filter(ApplicationDocument.application_id == application_id)
+
+    documents = query.order_by(ApplicationDocument.created_at.desc()).all()
+
+    files = []
+    for doc in documents:
+        files.append({
+            "id": doc.id,
+            "application_id": doc.application_id,
+            "filename": doc.filename,
+            "doc_type": doc.doc_type,
+            "indexed": doc.indexed,
+            "created_at": doc.created_at.isoformat() if doc.created_at else None,
+            "company_name": doc.application.company_name if doc.application else "Unknown"
+        })
+
+    return {
+        "success": True,
+        "files": files,
+        "total_files": len(files)
+    }
 
 
 @router.post("/chat/message", response_model=ChatMessageResponse)

@@ -26,14 +26,14 @@ class ApplicationDocumentResponse(BaseModel):
     id: int
     filename: str
     doc_type: Optional[str] = None
-    # indexed: bool = False  # Temporarily disabled - column doesn't exist yet
+    indexed: bool = False
     created_at: datetime
 
-    # @field_validator('indexed', mode='before')
-    # @classmethod
-    # def handle_none_indexed(cls, v):
-    #     # Convert None to False for backwards compatibility
-    #     return False if v is None else v
+    @field_validator('indexed', mode='before')
+    @classmethod
+    def handle_none_indexed(cls, v):
+        # Convert None to False for backwards compatibility
+        return False if v is None else v
 
     class Config:
         from_attributes = True
