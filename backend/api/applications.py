@@ -1193,6 +1193,7 @@ async def list_all_files(
                 "id": doc.id,
                 "type": "file",
                 "application_id": doc.application_id,
+                "folder_id": doc.folder_id,
                 "filename": doc.filename,
                 "doc_type": doc.doc_type,
                 "indexed": doc.indexed,
