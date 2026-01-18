@@ -57,24 +57,29 @@ async def test_ping():
     return {"status": "ok", "message": "Application Tracker is alive", "version": "2026-01-18-fix4-text"}
 
 
-@router.get("/test/fix-indexed")
-async def fix_indexed_field(db: Session = Depends(get_db)):
-    """Fix indexed field - set all NULL values to false"""
+@router.get("/test/add-indexed-column")
+async def add_indexed_column(db: Session = Depends(get_db)):
+    """Manually add indexed column if it doesn't exist"""
     try:
-        # Use raw SQL to update
-        result = db.execute(text("UPDATE application_documents SET indexed = false WHERE indexed IS NULL"))
-        affected = result.rowcount
+        # Try to add the column
+        db.execute(text("ALTER TABLE application_documents ADD COLUMN indexed BOOLEAN NOT NULL DEFAULT false"))
+        db.execute(text("CREATE INDEX ix_application_documents_indexed ON application_documents (indexed)"))
         db.commit()
         return {
             "success": True,
-            "message": f"Updated {affected} documents",
-            "affected_rows": affected
+            "message": "Added indexed column successfully"
         }
     except Exception as e:
         db.rollback()
+        error_msg = str(e)
+        if "already exists" in error_msg.lower():
+            return {
+                "success": True,
+                "message": "Column already exists"
+            }
         return {
             "success": False,
-            "error": str(e)
+            "error": error_msg
         }
 
 
