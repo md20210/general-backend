@@ -54,7 +54,28 @@ def get_demo_user(db: Session = Depends(get_db)) -> User:
 @router.get("/test/ping")
 async def test_ping():
     """Test endpoint - no auth required"""
-    return {"status": "ok", "message": "Application Tracker is alive"}
+    return {"status": "ok", "message": "Application Tracker is alive", "version": "2026-01-18-fix3"}
+
+
+@router.get("/test/fix-indexed")
+async def fix_indexed_field(db: Session = Depends(get_db)):
+    """Fix indexed field - set all NULL values to false"""
+    try:
+        # Use raw SQL to update
+        result = db.execute("UPDATE application_documents SET indexed = false WHERE indexed IS NULL")
+        affected = result.rowcount
+        db.commit()
+        return {
+            "success": True,
+            "message": f"Updated {affected} documents",
+            "affected_rows": affected
+        }
+    except Exception as e:
+        db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @router.get("/test/elasticsearch-status")
