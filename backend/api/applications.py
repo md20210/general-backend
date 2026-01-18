@@ -1212,7 +1212,7 @@ async def list_all_files(
 # HIERARCHICAL FOLDER ENDPOINTS (Up to 10 levels)
 # ========================================
 
-@router.get("/folders", response_model=List[FolderResponse])
+@router.get("/{application_id}/folders", response_model=List[FolderResponse])
 async def list_folders(
     application_id: int,
     parent_id: Optional[int] = None,
@@ -1248,7 +1248,7 @@ async def list_folders(
     return folders
 
 
-@router.post("/folders", response_model=FolderResponse)
+@router.post("/{application_id}/folders", response_model=FolderResponse)
 async def create_folder(
     application_id: int,
     request: CreateFolderRequest,
