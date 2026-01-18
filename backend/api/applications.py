@@ -19,6 +19,7 @@ from backend.database import get_db
 from backend.models.application import (
     Application,
     ApplicationDocument,
+    ApplicationFolder,
     ApplicationStatusHistory,
     ApplicationChatMessage
 )
@@ -32,7 +33,11 @@ from backend.schemas.application import (
     GenerateReportRequest,
     ReportResponse,
     RenameApplicationRequest,
-    MoveDocumentRequest
+    MoveDocumentRequest,
+    FolderResponse,
+    CreateFolderRequest,
+    RenameFolderRequest,
+    MoveFolderRequest
 )
 from backend.services.application_service import DocumentParser, guess_doc_type, classify_document_with_llm, extract_application_info
 from backend.services.vector_service import VectorService
@@ -79,6 +84,46 @@ async def add_indexed_column(db: Session = Depends(get_db)):
                 "success": True,
                 "message": "Column already exists"
             }
+        return {
+            "success": False,
+            "error": error_msg
+        }
+
+
+@router.get("/test/add-folder-hierarchy")
+async def add_folder_hierarchy(db: Session = Depends(get_db)):
+    """Manually create application_folders table and add folder_id to documents"""
+    try:
+        # Create application_folders table
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS application_folders (
+                id SERIAL PRIMARY KEY,
+                application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                parent_id INTEGER REFERENCES application_folders(id) ON DELETE CASCADE,
+                path VARCHAR(2000) NOT NULL,
+                level INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+
+        # Add indexes
+        db.execute(text("CREATE INDEX IF NOT EXISTS ix_application_folders_application_id ON application_folders (application_id)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS ix_application_folders_parent_id ON application_folders (parent_id)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS ix_application_folders_path ON application_folders (path)"))
+
+        # Add folder_id column to application_documents
+        db.execute(text("ALTER TABLE application_documents ADD COLUMN IF NOT EXISTS folder_id INTEGER REFERENCES application_folders(id) ON DELETE CASCADE"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS ix_application_documents_folder_id ON application_documents (folder_id)"))
+
+        db.commit()
+        return {
+            "success": True,
+            "message": "Added folder hierarchy successfully"
+        }
+    except Exception as e:
+        db.rollback()
+        error_msg = str(e)
         return {
             "success": False,
             "error": error_msg
@@ -886,7 +931,7 @@ async def upload_files_only(
     user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
-    """Upload files WITHOUT automatic processing - for FileBrowser"""
+    """Upload files with folder structure preservation (up to 10 levels)"""
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
 
@@ -915,6 +960,59 @@ async def upload_files_only(
     uploaded_files = []
     errors = []
 
+    # Cache for created folders: {path: folder_id}
+    folder_cache = {}
+
+    def get_or_create_folder(folder_path_parts, current_index=0, parent_id=None):
+        """Recursively create folder hierarchy"""
+        if current_index >= len(folder_path_parts):
+            return parent_id
+
+        folder_name = folder_path_parts[current_index]
+
+        # Build path up to current level
+        if parent_id:
+            parent = db.query(ApplicationFolder).filter(
+                ApplicationFolder.id == parent_id
+            ).first()
+            full_path = f"{parent.path}/{folder_name}"
+        else:
+            full_path = f"/{folder_name}"
+
+        # Check cache first
+        if full_path in folder_cache:
+            return get_or_create_folder(folder_path_parts, current_index + 1, folder_cache[full_path])
+
+        # Check if folder exists
+        existing = db.query(ApplicationFolder).filter(
+            ApplicationFolder.application_id == app.id,
+            ApplicationFolder.path == full_path
+        ).first()
+
+        if existing:
+            folder_cache[full_path] = existing.id
+            return get_or_create_folder(folder_path_parts, current_index + 1, existing.id)
+
+        # Create new folder
+        level = current_index
+        if level >= 10:
+            raise HTTPException(status_code=400, detail=f"Maximum folder depth (10 levels) exceeded in path: {full_path}")
+
+        new_folder = ApplicationFolder(
+            application_id=app.id,
+            name=folder_name,
+            parent_id=parent_id,
+            path=full_path,
+            level=level
+        )
+        db.add(new_folder)
+        db.flush()
+
+        folder_cache[full_path] = new_folder.id
+
+        # Continue with next level
+        return get_or_create_folder(folder_path_parts, current_index + 1, new_folder.id)
+
     for uploaded_file in files:
         try:
             file_data = await uploaded_file.read()
@@ -923,11 +1021,29 @@ async def upload_files_only(
             if not filename or filename.endswith('/') or len(file_data) == 0:
                 continue
 
-            display_filename = filename.split('/')[-1] if '/' in filename else filename
+            # Parse folder structure from filename
+            # Format: "Bewerbungen/Januar/Firma A/cv.pdf" or just "cv.pdf"
+            path_parts = filename.split('/')
+
+            if len(path_parts) > 1:
+                # Has folder structure
+                folder_parts = path_parts[:-1]  # All except filename
+                display_filename = path_parts[-1]  # Just the filename
+
+                # Create folder hierarchy and get the folder_id
+                folder_id = get_or_create_folder(folder_parts)
+            else:
+                # No folder structure - just a file
+                display_filename = filename
+                folder_id = None
+
+            # Extract text from file
             extracted_text = await parser.parse_file(display_filename, file_data)
 
+            # Create document with folder_id
             document = ApplicationDocument(
                 application_id=app.id,
+                folder_id=folder_id,
                 filename=display_filename,
                 file_path=filename,
                 content=extracted_text,
@@ -941,6 +1057,7 @@ async def upload_files_only(
             uploaded_files.append({
                 "id": document.id,
                 "filename": display_filename,
+                "folder_path": '/'.join(folder_parts) if len(path_parts) > 1 else None,
                 "indexed": False
             })
 
@@ -956,7 +1073,8 @@ async def upload_files_only(
         "company_name": app.company_name,
         "uploaded_files": uploaded_files,
         "total_files": len(uploaded_files),
-        "errors": errors
+        "errors": errors,
+        "folders_created": len(folder_cache)
     }
 
 
@@ -1087,6 +1205,393 @@ async def list_all_files(
         "files": files,
         "total_folders": len(folders),
         "total_files": len(files)
+    }
+
+
+# ========================================
+# HIERARCHICAL FOLDER ENDPOINTS (Up to 10 levels)
+# ========================================
+
+@router.get("/folders", response_model=List[FolderResponse])
+async def list_folders(
+    application_id: int,
+    parent_id: Optional[int] = None,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """List folders for an application
+
+    If parent_id is None, returns root level folders
+    Otherwise returns children of the specified folder
+    """
+    # Verify application belongs to user
+    app = db.query(Application).filter(
+        Application.id == application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Query folders
+    query = db.query(ApplicationFolder).filter(
+        ApplicationFolder.application_id == application_id
+    )
+
+    if parent_id is None:
+        query = query.filter(ApplicationFolder.parent_id.is_(None))
+    else:
+        query = query.filter(ApplicationFolder.parent_id == parent_id)
+
+    folders = query.order_by(ApplicationFolder.name).all()
+
+    return folders
+
+
+@router.post("/folders", response_model=FolderResponse)
+async def create_folder(
+    application_id: int,
+    request: CreateFolderRequest,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new folder (up to 10 levels deep)"""
+    # Verify application belongs to user
+    app = db.query(Application).filter(
+        Application.id == application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Calculate level and path
+    level = 0
+    path = f"/{request.name}"
+
+    if request.parent_id:
+        parent = db.query(ApplicationFolder).filter(
+            ApplicationFolder.id == request.parent_id,
+            ApplicationFolder.application_id == application_id
+        ).first()
+
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent folder not found")
+
+        level = parent.level + 1
+
+        if level >= 10:
+            raise HTTPException(status_code=400, detail="Maximum folder depth (10 levels) reached")
+
+        path = f"{parent.path}/{request.name}"
+
+    # Create folder
+    folder = ApplicationFolder(
+        application_id=application_id,
+        name=request.name,
+        parent_id=request.parent_id,
+        path=path,
+        level=level
+    )
+
+    db.add(folder)
+    db.commit()
+    db.refresh(folder)
+
+    return folder
+
+
+@router.patch("/folders/{folder_id}/rename", response_model=FolderResponse)
+async def rename_folder(
+    folder_id: int,
+    request: RenameFolderRequest,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Rename folder and update all child paths recursively"""
+    # Get folder and verify ownership
+    folder = db.query(ApplicationFolder).filter(
+        ApplicationFolder.id == folder_id
+    ).first()
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    # Verify user owns the application
+    app = db.query(Application).filter(
+        Application.id == folder.application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Store old path for recursive update
+    old_path = folder.path
+
+    # Calculate new path
+    if folder.parent_id:
+        parent = db.query(ApplicationFolder).filter(
+            ApplicationFolder.id == folder.parent_id
+        ).first()
+        new_path = f"{parent.path}/{request.new_name}"
+    else:
+        new_path = f"/{request.new_name}"
+
+    # Update folder
+    folder.name = request.new_name
+    folder.path = new_path
+
+    # Recursively update all children paths
+    def update_children_paths(parent_folder):
+        children = db.query(ApplicationFolder).filter(
+            ApplicationFolder.parent_id == parent_folder.id
+        ).all()
+
+        for child in children:
+            # Replace old parent path with new parent path
+            child.path = child.path.replace(old_path, new_path, 1)
+            update_children_paths(child)
+
+    update_children_paths(folder)
+
+    db.commit()
+    db.refresh(folder)
+
+    return folder
+
+
+@router.post("/folders/{folder_id}/move", response_model=FolderResponse)
+async def move_folder(
+    folder_id: int,
+    request: MoveFolderRequest,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Move folder to new parent (updates all child paths recursively)"""
+    # Get folder
+    folder = db.query(ApplicationFolder).filter(
+        ApplicationFolder.id == folder_id
+    ).first()
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    # Verify user owns the application
+    app = db.query(Application).filter(
+        Application.id == folder.application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Prevent moving folder into itself or its children
+    if request.target_parent_id == folder_id:
+        raise HTTPException(status_code=400, detail="Cannot move folder into itself")
+
+    if request.target_parent_id:
+        # Check if target is a descendant
+        target = db.query(ApplicationFolder).filter(
+            ApplicationFolder.id == request.target_parent_id
+        ).first()
+
+        if not target or target.application_id != folder.application_id:
+            raise HTTPException(status_code=404, detail="Target folder not found")
+
+        # Check depth limit
+        new_level = target.level + 1
+
+        # Calculate max depth of subtree being moved
+        def get_max_depth(f, current_depth=0):
+            children = db.query(ApplicationFolder).filter(
+                ApplicationFolder.parent_id == f.id
+            ).all()
+
+            if not children:
+                return current_depth
+
+            return max(get_max_depth(child, current_depth + 1) for child in children)
+
+        subtree_depth = get_max_depth(folder)
+
+        if new_level + subtree_depth >= 10:
+            raise HTTPException(status_code=400, detail="Moving would exceed maximum depth (10 levels)")
+
+        # Prevent circular reference
+        current = target
+        while current:
+            if current.id == folder_id:
+                raise HTTPException(status_code=400, detail="Cannot move folder into its own descendant")
+            current = db.query(ApplicationFolder).filter(
+                ApplicationFolder.id == current.parent_id
+            ).first() if current.parent_id else None
+
+    old_path = folder.path
+
+    # Update folder
+    if request.target_parent_id:
+        target = db.query(ApplicationFolder).filter(
+            ApplicationFolder.id == request.target_parent_id
+        ).first()
+        folder.parent_id = request.target_parent_id
+        folder.level = target.level + 1
+        folder.path = f"{target.path}/{folder.name}"
+    else:
+        # Move to root
+        folder.parent_id = None
+        folder.level = 0
+        folder.path = f"/{folder.name}"
+
+    new_path = folder.path
+
+    # Recursively update all children
+    def update_children(parent_folder, level_diff):
+        children = db.query(ApplicationFolder).filter(
+            ApplicationFolder.parent_id == parent_folder.id
+        ).all()
+
+        for child in children:
+            child.path = child.path.replace(old_path, new_path, 1)
+            child.level += level_diff
+            update_children(child, level_diff)
+
+    level_diff = folder.level - (target.level + 1 if request.target_parent_id else 0)
+    update_children(folder, level_diff)
+
+    db.commit()
+    db.refresh(folder)
+
+    return folder
+
+
+@router.delete("/folders/{folder_id}")
+async def delete_folder(
+    folder_id: int,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Delete folder recursively (all children and documents)"""
+    # Get folder
+    folder = db.query(ApplicationFolder).filter(
+        ApplicationFolder.id == folder_id
+    ).first()
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    # Verify user owns the application
+    app = db.query(Application).filter(
+        Application.id == folder.application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Recursively delete all children and documents
+    def delete_recursive(f):
+        # Get all children
+        children = db.query(ApplicationFolder).filter(
+            ApplicationFolder.parent_id == f.id
+        ).all()
+
+        # Delete children first
+        for child in children:
+            delete_recursive(child)
+
+        # Delete all documents in this folder
+        db.query(ApplicationDocument).filter(
+            ApplicationDocument.folder_id == f.id
+        ).delete()
+
+        # Delete the folder
+        db.delete(f)
+
+    delete_recursive(folder)
+    db.commit()
+
+    return {"success": True, "message": "Folder deleted recursively"}
+
+
+@router.post("/folders/{folder_id}/index-all")
+async def index_folder_recursively(
+    folder_id: int,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Index all documents in folder and subfolders recursively"""
+    # Get folder
+    folder = db.query(ApplicationFolder).filter(
+        ApplicationFolder.id == folder_id
+    ).first()
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    # Verify user owns the application
+    app = db.query(Application).filter(
+        Application.id == folder.application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Collect all folder IDs recursively
+    folder_ids = []
+
+    def collect_folder_ids(f):
+        folder_ids.append(f.id)
+        children = db.query(ApplicationFolder).filter(
+            ApplicationFolder.parent_id == f.id
+        ).all()
+        for child in children:
+            collect_folder_ids(child)
+
+    collect_folder_ids(folder)
+
+    # Get all documents in these folders
+    documents = db.query(ApplicationDocument).filter(
+        ApplicationDocument.folder_id.in_(folder_ids)
+    ).all()
+
+    # Index each document
+    vector_service = VectorService()
+    indexed_count = 0
+    failed_count = 0
+
+    for doc in documents:
+        try:
+            if doc.content:
+                # Generate embedding
+                embedding = await vector_service.generate_embedding(doc.content)
+                doc.embedding = embedding
+
+                # Index in Elasticsearch
+                application_es_service.index_document(
+                    document_id=doc.id,
+                    filename=doc.filename,
+                    content=doc.content,
+                    company_name=app.company_name,
+                    position=app.position or "",
+                    user_id=str(user.id)
+                )
+
+                doc.indexed = True
+                indexed_count += 1
+        except Exception as e:
+            logger.error(f"Failed to index document {doc.id}: {e}")
+            failed_count += 1
+
+    db.commit()
+
+    return {
+        "success": True,
+        "total_documents": len(documents),
+        "indexed": indexed_count,
+        "failed": failed_count,
+        "folders_processed": len(folder_ids)
     }
 
 

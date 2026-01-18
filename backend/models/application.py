@@ -31,12 +31,33 @@ class Application(Base):
         return f"<Application(id={self.id}, company={self.company_name}, status={self.status})>"
 
 
+class ApplicationFolder(Base):
+    """Hierarchical folder structure for application documents (up to 10 levels)"""
+    __tablename__ = "application_folders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)  # Folder name (e.g., "Verträge")
+    parent_id = Column(Integer, ForeignKey("application_folders.id", ondelete="CASCADE"), nullable=True, index=True)  # Parent folder
+    path = Column(String(2000), nullable=False, index=True)  # Full path (e.g., "/Bewerbungen/Januar/Firma A")
+    level = Column(Integer, nullable=False, default=0)  # Depth level (0-9 for 10 levels)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    application = relationship("Application")
+    parent = relationship("ApplicationFolder", remote_side=[id], backref="children")
+
+    def __repr__(self):
+        return f"<ApplicationFolder(id={self.id}, path={self.path})>"
+
+
 class ApplicationDocument(Base):
     """Document associated with a job application"""
     __tablename__ = "application_documents"
 
     id = Column(Integer, primary_key=True, index=True)
     application_id = Column(Integer, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True)
+    folder_id = Column(Integer, ForeignKey("application_folders.id", ondelete="CASCADE"), nullable=True, index=True)  # Which folder
     filename = Column(String(500), nullable=False)
     file_path = Column(String(500), nullable=True)  # Original upload path (for reference)
     doc_type = Column(String(50), nullable=True)
@@ -48,6 +69,7 @@ class ApplicationDocument(Base):
 
     # Relationships
     application = relationship("Application", back_populates="documents")
+    folder = relationship("ApplicationFolder")
 
     def __repr__(self):
         return f"<ApplicationDocument(id={self.id}, filename={self.filename}, indexed={self.indexed})>"

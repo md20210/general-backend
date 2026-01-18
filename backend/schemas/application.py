@@ -43,8 +43,34 @@ class RenameApplicationRequest(BaseModel):
     new_name: str
 
 
+class FolderResponse(BaseModel):
+    id: int
+    application_id: int
+    name: str
+    parent_id: Optional[int] = None
+    path: str
+    level: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CreateFolderRequest(BaseModel):
+    name: str
+    parent_id: Optional[int] = None  # None = root level
+
+
+class RenameFolderRequest(BaseModel):
+    new_name: str
+
+
+class MoveFolderRequest(BaseModel):
+    target_parent_id: Optional[int] = None  # None = move to root
+
+
 class MoveDocumentRequest(BaseModel):
-    target_application_id: int
+    target_folder_id: Optional[int] = None  # None = root level of application
 
 
 class ApplicationStatusHistoryResponse(BaseModel):
