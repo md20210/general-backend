@@ -1851,3 +1851,94 @@ async def generate_report(
         total_rows=len(rows),
         generated_at=datetime.utcnow()
     )
+
+
+# ========================================
+# CHAT ENDPOINT
+# ========================================
+
+@router.post("/chat/message")
+async def send_chat_message(
+    request: dict,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Chat with documents using RAG.
+    Auto-searches and uses indexed documents for context.
+    """
+    message = request.get("message", "")
+    provider = request.get("provider", "ollama")
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    try:
+        # Get all indexed documents for this user
+        documents = db.query(ApplicationDocument).join(Application).filter(
+            Application.user_id == user.id,
+            ApplicationDocument.indexed == True
+        ).all()
+
+        if not documents:
+            return {
+                "message": "Keine indexierten Dokumente gefunden. Bitte indexieren Sie zuerst Dokumente.",
+                "context_used": [],
+                "action_taken": None
+            }
+
+        # Simple keyword search in content
+        relevant_docs = []
+        search_terms = message.lower().split()
+
+        for doc in documents:
+            if doc.content:
+                content_lower = doc.content.lower()
+                score = sum(1 for term in search_terms if term in content_lower)
+                if score > 0:
+                    relevant_docs.append({
+                        "document": doc,
+                        "score": score
+                    })
+
+        # Sort by relevance
+        relevant_docs.sort(key=lambda x: x["score"], reverse=True)
+        relevant_docs = relevant_docs[:3]  # Top 3
+
+        if not relevant_docs:
+            return {
+                "message": f"Ich habe {len(documents)} indexierte Dokumente durchsucht, aber keine relevanten Informationen zu Ihrer Frage gefunden.",
+                "context_used": [],
+                "action_taken": None
+            }
+
+        # Build context
+        context_parts = []
+        for item in relevant_docs:
+            doc = item["document"]
+            preview = doc.content[:500] + "..." if len(doc.content) > 500 else doc.content
+            context_parts.append(f"[{doc.filename}]: {preview}")
+
+        context = "\n\n".join(context_parts)
+
+        # Simple response (without actual LLM call)
+        response = f"""Basierend auf {len(relevant_docs)} relevanten Dokumenten:
+
+{context}
+
+Ihre Frage: "{message}"
+
+Hinweis: Dies ist eine Basis-Implementierung. Für KI-gestützte Antworten muss ein LLM-Provider konfiguriert werden."""
+
+        return {
+            "message": response,
+            "context_used": [{"filename": item["document"].filename} for item in relevant_docs],
+            "action_taken": None
+        }
+
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat failed: {str(e)}"
+        )
