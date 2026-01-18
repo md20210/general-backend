@@ -6,7 +6,7 @@ TODO: Re-enable authentication before production!
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, text
 from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
@@ -62,7 +62,7 @@ async def fix_indexed_field(db: Session = Depends(get_db)):
     """Fix indexed field - set all NULL values to false"""
     try:
         # Use raw SQL to update
-        result = db.execute("UPDATE application_documents SET indexed = false WHERE indexed IS NULL")
+        result = db.execute(text("UPDATE application_documents SET indexed = false WHERE indexed IS NULL"))
         affected = result.rowcount
         db.commit()
         return {
@@ -289,10 +289,10 @@ async def delete_all_applications(
     """TESTING ONLY: Delete ALL applications for demo user"""
     try:
         # Delete documents first to avoid cascade issues
-        db.execute("DELETE FROM application_documents WHERE application_id IN (SELECT id FROM applications WHERE user_id = :user_id)", {"user_id": user.id})
+        db.execute(text("DELETE FROM application_documents WHERE application_id IN (SELECT id FROM applications WHERE user_id = :user_id)"), {"user_id": str(user.id)})
 
         # Delete applications
-        deleted_count = db.execute("DELETE FROM applications WHERE user_id = :user_id", {"user_id": user.id}).rowcount
+        deleted_count = db.execute(text("DELETE FROM applications WHERE user_id = :user_id"), {"user_id": str(user.id)}).rowcount
 
         db.commit()
 
