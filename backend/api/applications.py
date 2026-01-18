@@ -139,18 +139,24 @@ async def get_applications_overview(
 
         # Categorize documents by type
         cv_file = None
+        cv_document_id = None
         cover_letter_file = None
+        cover_letter_document_id = None
         job_description_file = None
+        job_description_document_id = None
         other_files = []
 
         for doc in documents:
             # Check each type independently (not elif chain)
             if doc.doc_type == 'cv' and not cv_file:
                 cv_file = doc.filename
+                cv_document_id = doc.id
             if doc.doc_type == 'cover_letter' and not cover_letter_file:
                 cover_letter_file = doc.filename
+                cover_letter_document_id = doc.id
             if doc.doc_type == 'job_description' and not job_description_file:
                 job_description_file = doc.filename
+                job_description_document_id = doc.id
             # Only count as "other" if it's not one of the main types
             if doc.doc_type not in ['cv', 'cover_letter', 'job_description']:
                 other_files.append(doc.filename)
@@ -167,8 +173,11 @@ async def get_applications_overview(
             updated_at=app.updated_at,
             document_count=len(documents),
             cv_file=cv_file,
+            cv_document_id=cv_document_id,
             cover_letter_file=cover_letter_file,
+            cover_letter_document_id=cover_letter_document_id,
             job_description_file=job_description_file,
+            job_description_document_id=job_description_document_id,
             other_files_count=len(other_files)
         ))
 

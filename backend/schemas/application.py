@@ -52,8 +52,11 @@ class ApplicationResponse(ApplicationBase):
     document_count: int = 0
     # Document type breakdown for better overview
     cv_file: Optional[str] = None
+    cv_document_id: Optional[int] = None
     cover_letter_file: Optional[str] = None
+    cover_letter_document_id: Optional[int] = None
     job_description_file: Optional[str] = None
+    job_description_document_id: Optional[int] = None
     other_files_count: int = 0
 
     class Config:
