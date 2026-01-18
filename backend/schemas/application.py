@@ -26,7 +26,7 @@ class ApplicationDocumentResponse(BaseModel):
     id: int
     filename: str
     doc_type: Optional[str]
-    indexed: bool = False
+    indexed: Optional[bool] = False
     created_at: datetime
 
     class Config:
