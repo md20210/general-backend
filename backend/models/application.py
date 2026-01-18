@@ -42,7 +42,7 @@ class ApplicationDocument(Base):
     doc_type = Column(String(50), nullable=True)
     content = Column(Text, nullable=True)
     embedding = Column(Vector(384), nullable=True)
-    indexed = Column(Boolean, nullable=True, default=False, server_default='false', index=True)
+    # indexed = Column(Boolean, nullable=True, default=False, server_default='false', index=True)  # Temporarily disabled - column doesn't exist yet
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -50,7 +50,7 @@ class ApplicationDocument(Base):
     application = relationship("Application", back_populates="documents")
 
     def __repr__(self):
-        return f"<ApplicationDocument(id={self.id}, filename={self.filename}, indexed={self.indexed})>"
+        return f"<ApplicationDocument(id={self.id}, filename={self.filename})>"
 
 
 class ApplicationStatusHistory(Base):
