@@ -38,7 +38,7 @@ class ApplicationDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     application_id = Column(Integer, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True)
     filename = Column(String(500), nullable=False)
-    file_path = Column(String(500), nullable=True)
+    file_path = Column(String(500), nullable=True)  # Original upload path (for reference)
     doc_type = Column(String(50), nullable=True)
     content = Column(Text, nullable=True)
     embedding = Column(Vector(384), nullable=True)

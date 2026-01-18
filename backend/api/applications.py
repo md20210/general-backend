@@ -30,7 +30,9 @@ from backend.schemas.application import (
     ChatMessageRequest,
     ChatMessageResponse,
     GenerateReportRequest,
-    ReportResponse
+    ReportResponse,
+    RenameApplicationRequest,
+    MoveDocumentRequest
 )
 from backend.services.application_service import DocumentParser, guess_doc_type, classify_document_with_llm, extract_application_info
 from backend.services.vector_service import VectorService
@@ -315,6 +317,36 @@ async def delete_all_applications(
         }
 
 
+@router.patch("/{application_id}/rename")
+async def rename_application(
+    application_id: int,
+    request: RenameApplicationRequest,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Rename application (folder)"""
+    app = db.query(Application).filter(
+        Application.id == application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    old_name = app.company_name
+    app.company_name = request.new_name
+    app.updated_at = datetime.utcnow()
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Renamed from '{old_name}' to '{request.new_name}'",
+        "application_id": application_id,
+        "new_name": request.new_name
+    }
+
+
 @router.delete("/{application_id}")
 async def delete_application(
     application_id: int,
@@ -381,6 +413,73 @@ async def get_document_content(
         "doc_type": document.doc_type,
         "content": document.content,
         "created_at": document.created_at
+    }
+
+
+@router.post("/{application_id}/documents/{document_id}/move")
+async def move_document(
+    application_id: int,
+    document_id: int,
+    request: MoveDocumentRequest,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Move document to another application (folder)"""
+    # Verify source application ownership
+    source_app = db.query(Application).filter(
+        Application.id == application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not source_app:
+        raise HTTPException(status_code=404, detail="Source application not found")
+
+    # Verify target application ownership
+    target_app = db.query(Application).filter(
+        Application.id == request.target_application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not target_app:
+        raise HTTPException(status_code=404, detail="Target application not found")
+
+    # Find document
+    document = db.query(ApplicationDocument).filter(
+        ApplicationDocument.id == document_id,
+        ApplicationDocument.application_id == application_id
+    ).first()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Move document
+    old_app_name = source_app.company_name
+    document.application_id = request.target_application_id
+
+    # Update Elasticsearch if indexed
+    if document.indexed:
+        try:
+            application_es_service.delete_document(document_id)
+            application_es_service.index_document(
+                document_id=document.id,
+                application_id=request.target_application_id,
+                user_id=str(user.id),
+                company_name=target_app.company_name,
+                position=target_app.position,
+                filename=document.filename,
+                file_path=document.file_path or document.filename,
+                doc_type=document.doc_type,
+                content=document.content or "",
+                created_at=document.created_at.isoformat() if document.created_at else datetime.utcnow().isoformat()
+            )
+        except Exception as e:
+            logger.error(f"Failed to update Elasticsearch: {e}")
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Moved {document.filename} from '{old_app_name}' to '{target_app.company_name}'"
     }
 
 
@@ -934,31 +1033,59 @@ async def list_all_files(
     user: User = Depends(get_demo_user),
     db: Session = Depends(get_db)
 ):
-    """List all uploaded files with indexing status"""
-    query = db.query(ApplicationDocument).join(Application).filter(
-        Application.user_id == user.id
-    )
+    """List all applications (folders) and their files
 
-    if application_id:
-        query = query.filter(ApplicationDocument.application_id == application_id)
+    Ein Folder = eine Bewerbung (Application)
+    """
+    # Get all applications for this user
+    applications = db.query(Application).filter(Application.user_id == user.id).all()
 
-    documents = query.order_by(ApplicationDocument.created_at.desc()).all()
+    folders = []
+    for app in applications:
+        # Get document count and indexed count
+        doc_count = db.query(ApplicationDocument).filter(
+            ApplicationDocument.application_id == app.id
+        ).count()
 
-    files = []
-    for doc in documents:
-        files.append({
-            "id": doc.id,
-            "application_id": doc.application_id,
-            "filename": doc.filename,
-            "doc_type": doc.doc_type,
-            "indexed": doc.indexed,
-            "created_at": doc.created_at.isoformat() if doc.created_at else None,
-            "company_name": doc.application.company_name if doc.application else "Unknown"
+        indexed_count = db.query(ApplicationDocument).filter(
+            ApplicationDocument.application_id == app.id,
+            ApplicationDocument.indexed == True
+        ).count()
+
+        folders.append({
+            "id": app.id,
+            "type": "folder",
+            "company_name": app.company_name,
+            "position": app.position,
+            "status": app.status,
+            "document_count": doc_count,
+            "indexed_count": indexed_count,
+            "created_at": app.created_at.isoformat() if app.created_at else None
         })
+
+    # If specific application_id requested, also return its files
+    files = []
+    if application_id:
+        documents = db.query(ApplicationDocument).filter(
+            ApplicationDocument.application_id == application_id
+        ).order_by(ApplicationDocument.created_at.desc()).all()
+
+        for doc in documents:
+            files.append({
+                "id": doc.id,
+                "type": "file",
+                "application_id": doc.application_id,
+                "filename": doc.filename,
+                "doc_type": doc.doc_type,
+                "indexed": doc.indexed,
+                "created_at": doc.created_at.isoformat() if doc.created_at else None
+            })
 
     return {
         "success": True,
+        "folders": folders,
         "files": files,
+        "total_folders": len(folders),
         "total_files": len(files)
     }
 

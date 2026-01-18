@@ -39,6 +39,14 @@ class ApplicationDocumentResponse(BaseModel):
         from_attributes = True
 
 
+class RenameApplicationRequest(BaseModel):
+    new_name: str
+
+
+class MoveDocumentRequest(BaseModel):
+    target_application_id: int
+
+
 class ApplicationStatusHistoryResponse(BaseModel):
     id: int
     old_status: Optional[str]
