@@ -49,12 +49,23 @@ def upgrade() -> None:
         op.add_column('application_documents', sa.Column('indexed', sa.Boolean(), nullable=True, server_default='false'))
         op.create_index('ix_application_documents_indexed', 'application_documents', ['indexed'])
 
-    # Now add the new tracking attributes to application_folders
-    op.add_column('application_folders', sa.Column('is_bewerbung', sa.Boolean(), nullable=True, server_default='false'))
-    op.add_column('application_folders', sa.Column('status', sa.String(length=100), nullable=True))
-    op.add_column('application_folders', sa.Column('gehaltsangabe', sa.Float(), nullable=True))
-    op.add_column('application_folders', sa.Column('gehaltsvorgabe', sa.Float(), nullable=True))
-    op.add_column('application_folders', sa.Column('gehalt_schaetzung', sa.Float(), nullable=True))
+    # Now add the new tracking attributes to application_folders (check if they don't exist first)
+    existing_columns = [col['name'] for col in inspector.get_columns('application_folders')]
+
+    if 'is_bewerbung' not in existing_columns:
+        op.add_column('application_folders', sa.Column('is_bewerbung', sa.Boolean(), nullable=True, server_default='false'))
+
+    if 'status' not in existing_columns:
+        op.add_column('application_folders', sa.Column('status', sa.String(length=100), nullable=True))
+
+    if 'gehaltsangabe' not in existing_columns:
+        op.add_column('application_folders', sa.Column('gehaltsangabe', sa.Float(), nullable=True))
+
+    if 'gehaltsvorgabe' not in existing_columns:
+        op.add_column('application_folders', sa.Column('gehaltsvorgabe', sa.Float(), nullable=True))
+
+    if 'gehalt_schaetzung' not in existing_columns:
+        op.add_column('application_folders', sa.Column('gehalt_schaetzung', sa.Float(), nullable=True))
 
 
 def downgrade() -> None:
