@@ -20,8 +20,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Rename date column to entry_date."""
-    # Rename the column
-    op.alter_column('lifechronicle_entries', 'date', new_column_name='entry_date')
+    # Check if the table exists and has the 'date' column
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+
+    if 'lifechronicle_entries' in inspector.get_table_names():
+        existing_columns = [col['name'] for col in inspector.get_columns('lifechronicle_entries')]
+
+        # Only rename if 'date' exists and 'entry_date' doesn't
+        if 'date' in existing_columns and 'entry_date' not in existing_columns:
+            op.alter_column('lifechronicle_entries', 'date', new_column_name='entry_date')
 
 
 def downgrade() -> None:
