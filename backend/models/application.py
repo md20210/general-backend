@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -41,6 +41,14 @@ class ApplicationFolder(Base):
     parent_id = Column(Integer, ForeignKey("application_folders.id", ondelete="CASCADE"), nullable=True, index=True)  # Parent folder
     path = Column(String(2000), nullable=False, index=True)  # Full path (e.g., "/Bewerbungen/Januar/Firma A")
     level = Column(Integer, nullable=False, default=0)  # Depth level (0-9 for 10 levels)
+
+    # Application tracking attributes
+    is_bewerbung = Column(Boolean, nullable=True, default=False)  # Ist dieser Folder eine Bewerbung?
+    status = Column(String(100), nullable=True)  # Status: Bewerbung/1. Interview/2. Interview/etc.
+    gehaltsangabe = Column(Float, nullable=True)  # Angegebenes Gehalt in Euro
+    gehaltsvorgabe = Column(Float, nullable=True)  # Gewünschtes Gehalt in Euro
+    gehalt_schaetzung = Column(Float, nullable=True)  # Geschätztes Gehalt in Euro
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -48,7 +56,7 @@ class ApplicationFolder(Base):
     parent = relationship("ApplicationFolder", remote_side=[id], backref="children")
 
     def __repr__(self):
-        return f"<ApplicationFolder(id={self.id}, path={self.path})>"
+        return f"<ApplicationFolder(id={self.id}, path={self.path}, is_bewerbung={self.is_bewerbung})>"
 
 
 class ApplicationDocument(Base):

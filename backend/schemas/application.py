@@ -52,6 +52,13 @@ class FolderResponse(BaseModel):
     level: int
     created_at: datetime
 
+    # Application tracking attributes
+    is_bewerbung: Optional[bool] = False
+    status: Optional[str] = None
+    gehaltsangabe: Optional[float] = None
+    gehaltsvorgabe: Optional[float] = None
+    gehalt_schaetzung: Optional[float] = None
+
     class Config:
         from_attributes = True
 
@@ -67,6 +74,14 @@ class RenameFolderRequest(BaseModel):
 
 class MoveFolderRequest(BaseModel):
     target_parent_id: Optional[int] = None  # None = move to root
+
+
+class UpdateFolderAttributesRequest(BaseModel):
+    is_bewerbung: Optional[bool] = None
+    status: Optional[str] = None
+    gehaltsangabe: Optional[float] = None
+    gehaltsvorgabe: Optional[float] = None
+    gehalt_schaetzung: Optional[float] = None
 
 
 class MoveDocumentRequest(BaseModel):

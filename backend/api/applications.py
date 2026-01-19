@@ -38,7 +38,8 @@ from backend.schemas.application import (
     FolderResponse,
     CreateFolderRequest,
     RenameFolderRequest,
-    MoveFolderRequest
+    MoveFolderRequest,
+    UpdateFolderAttributesRequest
 )
 from backend.services.application_service import DocumentParser, guess_doc_type, classify_document_with_llm, extract_application_info
 from backend.services.vector_service import VectorService
@@ -1514,6 +1515,53 @@ async def delete_folder(
     db.commit()
 
     return {"success": True, "message": "Folder deleted recursively"}
+
+
+@router.patch("/folders/{folder_id}/attributes", response_model=FolderResponse)
+async def update_folder_attributes(
+    folder_id: int,
+    request: UpdateFolderAttributesRequest,
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Update folder application tracking attributes"""
+    # Get folder and verify ownership
+    folder = db.query(ApplicationFolder).filter(
+        ApplicationFolder.id == folder_id
+    ).first()
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    # Verify user owns the application
+    app = db.query(Application).filter(
+        Application.id == folder.application_id,
+        Application.user_id == user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Update attributes (only update fields that are provided)
+    if request.is_bewerbung is not None:
+        folder.is_bewerbung = request.is_bewerbung
+
+    if request.status is not None:
+        folder.status = request.status
+
+    if request.gehaltsangabe is not None:
+        folder.gehaltsangabe = request.gehaltsangabe
+
+    if request.gehaltsvorgabe is not None:
+        folder.gehaltsvorgabe = request.gehaltsvorgabe
+
+    if request.gehalt_schaetzung is not None:
+        folder.gehalt_schaetzung = request.gehalt_schaetzung
+
+    db.commit()
+    db.refresh(folder)
+
+    return folder
 
 
 @router.post("/folders/{folder_id}/index-all")
