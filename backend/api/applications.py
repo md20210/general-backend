@@ -1645,6 +1645,51 @@ async def index_folder_recursively(
     }
 
 
+@router.get("/bewerbungen/all")
+async def get_all_bewerbungen(
+    user: User = Depends(get_demo_user),
+    db: Session = Depends(get_db)
+):
+    """Get all folders marked as Bewerbungen (is_bewerbung=true) for the current user"""
+    # Get all applications for this user
+    applications = db.query(Application).filter(
+        Application.user_id == user.id
+    ).all()
+
+    app_ids = [app.id for app in applications]
+
+    # Get all folders marked as bewerbungen
+    folders = db.query(ApplicationFolder).filter(
+        ApplicationFolder.application_id.in_(app_ids),
+        ApplicationFolder.is_bewerbung == True
+    ).all()
+
+    # Build response with application info
+    result = []
+    for folder in folders:
+        app = db.query(Application).filter(Application.id == folder.application_id).first()
+
+        # Count documents in this folder
+        doc_count = db.query(ApplicationDocument).filter(
+            ApplicationDocument.folder_id == folder.id
+        ).count()
+
+        result.append({
+            "id": folder.id,
+            "name": folder.name,
+            "application_id": folder.application_id,
+            "application_name": app.company_name if app else "",
+            "status": folder.status,
+            "gehaltsangabe": folder.gehaltsangabe,
+            "gehaltsvorgabe": folder.gehaltsvorgabe,
+            "gehalt_schaetzung": folder.gehalt_schaetzung,
+            "document_count": doc_count,
+            "created_at": folder.created_at.isoformat() if folder.created_at else None
+        })
+
+    return {"bewerbungen": result}
+
+
 @router.post("/chat/message", response_model=ChatMessageResponse)
 async def send_chat_message(
     request: ChatMessageRequest,
