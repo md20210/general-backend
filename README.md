@@ -235,3 +235,4 @@ Bei Fragen siehe [ARCHITECTURE.md](./ARCHITECTURE.md) oder kontaktiere den Maint
 **Erstellt:** 2025-12-21
 **Maintainer:** Michael Dabrock
 # Trigger deployment to run Klassentreffen migration
+# Trigger Railway deploy
