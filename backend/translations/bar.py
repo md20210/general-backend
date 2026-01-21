@@ -65,7 +65,7 @@ BAR_TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "de": "Willkommen bei Bar Ca l'Elena",
         "fr": "Bienvenue à Bar Ca l'Elena"
     },
-    "about_title": {
+    "bar_about_title": {
         "ca": "Sobre Nosaltres",
         "es": "Sobre Nosotros",
         "en": "About Us",
