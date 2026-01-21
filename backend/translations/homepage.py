@@ -28,9 +28,9 @@ HOMEPAGE_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
             "es": "Contacto"
         },
         "hero_title": {
-            "de": "KI-Experte & Full-Stack Entwickler",
-            "en": "AI Expert & Full-Stack Developer",
-            "es": "Experto en IA y Desarrollador Full-Stack"
+            "de": "Generative AI Architect",
+            "en": "Generative AI Architect",
+            "es": "Arquitecto de IA Generativa"
         },
         "hero_subtitle": {
             "de": "Spezialisiert auf LLM, RAG & moderne Web-Anwendungen",
