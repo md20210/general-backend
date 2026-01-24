@@ -1,6 +1,7 @@
 """Application Tracker Service - Document parsing and processing"""
 import io
 import zipfile
+import numpy as np
 from typing import List, Tuple, Literal
 from PyPDF2 import PdfReader
 from docx import Document as DocxDocument
@@ -12,6 +13,12 @@ try:
     TESSERACT_AVAILABLE = True
 except ImportError:
     TESSERACT_AVAILABLE = False
+
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
 
 try:
     from paddleocr import PaddleOCR, PPStructure
@@ -45,6 +52,64 @@ def get_paddle_structure():
         except Exception as e:
             print(f"Failed to initialize PPStructure: {e}")
     return _paddle_structure_instance
+
+
+def detect_and_correct_rotation(image_path: str) -> np.ndarray:
+    """
+    Automatic rotation correction for 0°/90°/180°/270° + light deskewing.
+
+    Uses Laplace variance to find the best orientation (sharper text = higher score).
+    Also applies Hough line detection for slight angle correction.
+
+    Args:
+        image_path: Path to the image file
+
+    Returns:
+        Corrected image as numpy array (grayscale)
+    """
+    if not CV2_AVAILABLE:
+        # Fallback: Return PIL image as numpy array
+        img = Image.open(image_path).convert('L')
+        return np.array(img)
+
+    img = cv2.imread(image_path)
+    if img is None:
+        # Fallback to PIL
+        img = Image.open(image_path).convert('L')
+        return np.array(img)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.medianBlur(gray, 3)  # Reduce noise
+
+    best_img = gray
+    best_score = -np.inf
+
+    # Test all 4 rotations
+    for rot in [0, 90, 180, 270]:
+        rotated = np.rot90(gray, k=rot // 90)
+
+        # Light deskew (slight angle correction)
+        try:
+            edges = cv2.Canny(rotated, 50, 150)
+            lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
+            if lines is not None and len(lines) > 0:
+                angles = [np.arctan2(line[0][3] - line[0][1], line[0][2] - line[0][0]) for line in lines]
+                median_angle = np.median(angles)
+                (h, w) = rotated.shape
+                center = (w // 2, h // 2)
+                M = cv2.getRotationMatrix2D(center, np.degrees(median_angle), 1.0)
+                rotated = cv2.warpAffine(rotated, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        except Exception as e:
+            # If deskew fails, continue with non-deskewed rotation
+            print(f"Deskew failed for rotation {rot}: {e}")
+
+        # Score: Laplace variance (higher = sharper text)
+        score = cv2.Laplacian(rotated, cv2.CV_64F).var()
+        if score > best_score:
+            best_score = score
+            best_img = rotated
+
+    return best_img
 
 
 class DocumentParser:
@@ -85,30 +150,45 @@ class DocumentParser:
 
         Args:
             file_data: Image file bytes
-            file_path: Optional file path for PaddleOCR
+            file_path: Optional file path for rotation correction
             ocr_engine: OCR engine to use ('tesseract' or 'paddle')
         """
         if ocr_engine == 'paddle':
             return self._parse_image_paddle(file_path or file_data)
         else:
-            return self._parse_image_tesseract(file_data)
+            return self._parse_image_tesseract(file_data, file_path)
 
-    def _parse_image_tesseract(self, file_data: bytes) -> str:
-        """Extract text from image using Tesseract OCR"""
+    def _parse_image_tesseract(self, file_data: bytes, file_path: str = None) -> str:
+        """Extract text from image using Tesseract OCR with automatic rotation correction"""
         if not TESSERACT_AVAILABLE:
             return "[Tesseract OCR not available - Pillow/pytesseract not installed]"
 
         try:
-            image = Image.open(io.BytesIO(file_data))
-            # Use German + English language for OCR
-            try:
-                text = pytesseract.image_to_string(image, lang='deu+eng')
-            except Exception as tess_err:
-                # Tesseract binary not found, try without language specification
+            # Apply rotation correction if file_path is available and OpenCV is installed
+            if file_path and CV2_AVAILABLE:
                 try:
-                    text = pytesseract.image_to_string(image)
+                    corrected_array = detect_and_correct_rotation(file_path)
+                    image = Image.fromarray(corrected_array)
+                except Exception as rot_err:
+                    # If rotation correction fails, fall back to original image
+                    print(f"Rotation correction failed, using original: {rot_err}")
+                    image = Image.open(io.BytesIO(file_data))
+            else:
+                image = Image.open(io.BytesIO(file_data))
+
+            # Use German + English + Spanish language for OCR (for Canary Islands invoices)
+            try:
+                text = pytesseract.image_to_string(image, lang='deu+eng+spa')
+            except Exception as tess_err:
+                # If language pack not available, try German + English
+                try:
+                    text = pytesseract.image_to_string(image, lang='deu+eng')
                 except:
-                    return f"[Tesseract OCR not installed on system. Install tesseract-ocr package.]"
+                    # Tesseract binary not found, try without language specification
+                    try:
+                        text = pytesseract.image_to_string(image)
+                    except:
+                        return f"[Tesseract OCR not installed on system. Install tesseract-ocr package.]"
 
             if text.strip():
                 return f"[Tesseract OCR]\n{text.strip()}"

@@ -60,5 +60,6 @@ Pillow==11.0.0
 
 # OCR Support
 pytesseract==0.3.10
-paddlepaddle==3.0.0
-paddleocr==3.3.3
+opencv-python-headless==4.10.0.84  # For rotation detection and deskewing
+# paddlepaddle==3.0.0  # Disabled: Railway AVX incompatibility
+# paddleocr==3.3.3     # Disabled: Railway AVX incompatibility
