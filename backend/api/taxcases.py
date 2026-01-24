@@ -725,6 +725,10 @@ async def free_upload_and_preview(
                     from backend.services.application_service import detect_and_correct_rotation, CV2_AVAILABLE
                     import cv2
 
+                    # Convert original to base64
+                    with open(original_path, "rb") as f:
+                        original_base64 = base64.b64encode(f.read()).decode('utf-8')
+
                     if CV2_AVAILABLE:
                         # Apply rotation correction
                         corrected_array = detect_and_correct_rotation(original_path)
@@ -733,33 +737,35 @@ async def free_upload_and_preview(
                         corrected_path = os.path.join(upload_dir, file.filename)
                         cv2.imwrite(corrected_path, corrected_array)
 
-                        # Convert to base64 for preview
+                        # Convert corrected to base64
                         _, buffer = cv2.imencode('.jpg', corrected_array)
-                        img_base64 = base64.b64encode(buffer).decode('utf-8')
+                        processed_base64 = base64.b64encode(buffer).decode('utf-8')
 
                         processed_images.append({
                             "filename": file.filename,
-                            "preview": f"data:image/jpeg;base64,{img_base64}",
+                            "original_preview": f"data:image/jpeg;base64,{original_base64}",
+                            "processed_preview": f"data:image/jpeg;base64,{processed_base64}",
                             "path": corrected_path
                         })
                     else:
                         # No OpenCV, just save original
                         logger.warning("OpenCV not available, skipping rotation correction")
-                        with open(original_path, "rb") as f:
-                            img_base64 = base64.b64encode(f.read()).decode('utf-8')
                         processed_images.append({
                             "filename": file.filename,
-                            "preview": f"data:image/jpeg;base64,{img_base64}",
-                            "path": original_path
+                            "original_preview": f"data:image/jpeg;base64,{original_base64}",
+                            "processed_preview": f"data:image/jpeg;base64,{original_base64}",
+                            "path": original_path,
+                            "message": "Rotation correction not available"
                         })
                 except Exception as img_err:
                     logger.error(f"Image processing failed: {img_err}")
-                    # Fallback: Return original
+                    # Fallback: Return original only
                     with open(original_path, "rb") as f:
-                        img_base64 = base64.b64encode(f.read()).decode('utf-8')
+                        original_base64 = base64.b64encode(f.read()).decode('utf-8')
                     processed_images.append({
                         "filename": file.filename,
-                        "preview": f"data:image/jpeg;base64,{img_base64}",
+                        "original_preview": f"data:image/jpeg;base64,{original_base64}",
+                        "processed_preview": f"data:image/jpeg;base64,{original_base64}",
                         "path": original_path,
                         "error": str(img_err)
                     })
