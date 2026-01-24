@@ -169,10 +169,31 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float, flo
     gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
     gray = cv2.medianBlur(gray, 3)  # Reduce noise
 
-    # Test ALL 4 rotations to find the best one
-    # IMPORTANT: Always test all rotations! A 90% OCR quality does NOT mean correct orientation
-    # Example: An invoice rotated 180° can still have 90% quality (numbers are readable upside-down)
-    print("Testing all 4 rotations to find best orientation...")
+    # PERFORMANCE OPTIMIZATION: Test original first
+    print("Testing original orientation (0°)...")
+    original_quality = get_ocr_quality(gray)
+    print(f"Original OCR quality: {original_quality:.1f}%")
+
+    # Early exit if original is already excellent (≥90%)
+    if original_quality >= 90.0:
+        print(f"✓ Original quality is excellent ({original_quality:.1f}%) - skipping rotation testing")
+        # Still apply deskewing for slight angle correction
+        try:
+            deskewed_gray, skew_angle = deskew_image(gray)
+            print(f"Deskew angle: {skew_angle:.2f}°")
+            if abs(skew_angle) > 0.5:
+                (h, w) = gray.shape
+                center = (w // 2, h // 2)
+                M = cv2.getRotationMatrix2D(center, skew_angle, 1.0)
+                final_img_color = cv2.warpAffine(img_color, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+                final_quality = get_ocr_quality(deskewed_gray)
+                return final_img_color, original_quality, final_quality
+        except Exception as e:
+            print(f"Deskew failed: {e}")
+        return img_color, original_quality, original_quality
+
+    # Original quality < 90%, test ALL 4 rotations to find the best one
+    print("Original quality < 90% - testing all 4 rotations to find best orientation...")
 
     best_img = gray
     best_score = -1
@@ -242,10 +263,6 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float, flo
             best_score = original_score
 
     print(f"✓ Best rotation: {best_angle}° (score={best_score:.1f})")
-
-    # Measure original OCR quality (before any rotation)
-    original_quality = get_ocr_quality(gray)
-    print(f"Original OCR quality (0°): {original_quality:.1f}%")
 
     # Apply the SAME rotation to the COLOR image
     if best_angle == 0:
