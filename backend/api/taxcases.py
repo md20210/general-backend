@@ -1401,3 +1401,42 @@ async def delete_case(
     logger.info(f"Deleted case {case_id}")
 
     return {"success": True, "message": "Case deleted"}
+
+
+@router.post("/free/export-pdf")
+async def export_free_h7_pdf(
+    extracted_data: Dict[str, Any],
+    case_name: Optional[str] = None
+):
+    """
+    Export extracted H7 data to Spanish PDF
+
+    Args:
+        extracted_data: Dictionary with extracted H7 field values
+        case_name: Optional name for the document
+
+    Returns:
+        StreamingResponse with PDF file
+    """
+    try:
+        from backend.services.document_service import generate_h7_pdf
+
+        # Generate PDF
+        pdf_buffer = generate_h7_pdf(extracted_data, case_name or "H7 Form")
+
+        # Generate filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"H7_Formulario_{timestamp}.pdf"
+
+        # Return as streaming response
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")

@@ -42,6 +42,7 @@ olefile==0.47  # For parsing old .doc files
 
 # PDF Generation
 reportlab==4.0.9
+odfpy==1.4.1  # For ODT template processing
 
 # LLM APIs
 anthropic==0.18.1
