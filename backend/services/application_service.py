@@ -212,12 +212,27 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float]:
                 print(f"Rotation {rot}°: OCR failed ({e})")
                 score = 0
 
+        # Track scores for all rotations
+        if rot == 0:
+            original_score = score
+            original_img = rotated
+
         if score > best_score:
             best_score = score
             best_img = rotated
             best_angle = rot
 
-    print(f"✓ Best rotation: {best_angle}° ({best_score} chars)")
+    # Prefer original orientation unless another rotation is SIGNIFICANTLY better
+    # Threshold: 20% better score needed to rotate
+    if original_score > 0 and best_angle != 0:
+        improvement = (best_score - original_score) / original_score
+        if improvement < 0.20:  # Less than 20% improvement
+            print(f"⚠ Rotation {best_angle}° only {improvement*100:.1f}% better - keeping original (0°)")
+            best_angle = 0
+            best_img = original_img
+            best_score = original_score
+
+    print(f"✓ Best rotation: {best_angle}° (score={best_score:.1f})")
 
     # Apply deskewing to the best rotation
     final_img = best_img
