@@ -551,10 +551,18 @@ async def debug_check_services():
 
     # Check PaddleOCR
     try:
-        from paddleocr import PaddleOCR, PPStructure
-        ocr = PaddleOCR(use_angle_cls=True, lang='latin', use_gpu=False)
-        status["paddleocr"] = True
-        status["paddleocr_version"] = "3.3.3 (expected)"
+        from backend.services.application_service import get_paddle_ocr, PADDLE_AVAILABLE
+        if PADDLE_AVAILABLE:
+            ocr = get_paddle_ocr()
+            if ocr:
+                status["paddleocr"] = True
+                status["paddleocr_version"] = "3.3.3 with latin language"
+            else:
+                status["paddleocr"] = False
+                status["errors"]["paddleocr"] = "Initialization failed"
+        else:
+            status["paddleocr"] = False
+            status["errors"]["paddleocr"] = "PaddleOCR not installed"
     except Exception as e:
         status["errors"]["paddleocr"] = str(e)
 

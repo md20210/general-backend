@@ -20,20 +20,40 @@ except ImportError:
     PADDLE_AVAILABLE = False
 
 
+# Global PaddleOCR instances (singleton to avoid re-initialization error)
+_paddle_ocr_instance = None
+_paddle_structure_instance = None
+
+
+def get_paddle_ocr():
+    """Get or create PaddleOCR singleton instance"""
+    global _paddle_ocr_instance
+    if _paddle_ocr_instance is None and PADDLE_AVAILABLE:
+        try:
+            _paddle_ocr_instance = PaddleOCR(use_angle_cls=True, lang='latin', use_gpu=False)
+        except Exception as e:
+            print(f"Failed to initialize PaddleOCR: {e}")
+    return _paddle_ocr_instance
+
+
+def get_paddle_structure():
+    """Get or create PPStructure singleton instance"""
+    global _paddle_structure_instance
+    if _paddle_structure_instance is None and PADDLE_AVAILABLE:
+        try:
+            _paddle_structure_instance = PPStructure(table=True, ocr=True, lang='latin', recovery=True, use_gpu=False)
+        except Exception as e:
+            print(f"Failed to initialize PPStructure: {e}")
+    return _paddle_structure_instance
+
+
 class DocumentParser:
     """Parse documents and extract text"""
 
     def __init__(self):
-        self.paddle_ocr = None
-        self.paddle_structure = None
-        if PADDLE_AVAILABLE:
-            try:
-                # Initialize PaddleOCR with latin language for EU invoices (CPU-only)
-                self.paddle_ocr = PaddleOCR(use_angle_cls=True, lang='latin', use_gpu=False)
-                # Initialize PPStructure for table extraction from invoices
-                self.paddle_structure = PPStructure(table=True, ocr=True, lang='latin', recovery=True, use_gpu=False)
-            except Exception as e:
-                print(f"Failed to initialize PaddleOCR: {e}")
+        # Use singleton instances to avoid re-initialization errors
+        self.paddle_ocr = get_paddle_ocr() if PADDLE_AVAILABLE else None
+        self.paddle_structure = get_paddle_structure() if PADDLE_AVAILABLE else None
 
     def parse(self, file_path: str, ocr_engine: Literal['tesseract', 'paddle'] = 'tesseract') -> str:
         """Parse file from path and return extracted text
