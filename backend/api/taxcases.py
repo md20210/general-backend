@@ -682,6 +682,294 @@ async def debug_test_llm(data: dict):
 
 
 # FREE TAB ENDPOINTS
+
+@router.post("/free/upload-and-preview")
+async def free_upload_and_preview(
+    email: str = Form(...),
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_demo_user)
+):
+    """Upload image, apply rotation correction, return preview"""
+    import base64
+    from datetime import datetime
+
+    # Create temporary case
+    case_name = f"Free Upload Preview - {email} - {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+    new_case = TaxCase(
+        user_id=user.id,
+        name=case_name,
+        status="preview",
+        notes="Bildvorschau - noch nicht verarbeitet"
+    )
+    db.add(new_case)
+    db.flush()
+
+    case_id = new_case.id
+    upload_dir = f"/tmp/tax_uploads/{case_id}"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    processed_images = []
+
+    try:
+        for file in files:
+            # Save original file
+            original_path = os.path.join(upload_dir, f"original_{file.filename}")
+            with open(original_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+
+            # Apply rotation correction if it's an image
+            if file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.bmp')):
+                try:
+                    from backend.services.application_service import detect_and_correct_rotation, CV2_AVAILABLE
+                    import cv2
+
+                    if CV2_AVAILABLE:
+                        # Apply rotation correction
+                        corrected_array = detect_and_correct_rotation(original_path)
+
+                        # Save corrected image
+                        corrected_path = os.path.join(upload_dir, file.filename)
+                        cv2.imwrite(corrected_path, corrected_array)
+
+                        # Convert to base64 for preview
+                        _, buffer = cv2.imencode('.jpg', corrected_array)
+                        img_base64 = base64.b64encode(buffer).decode('utf-8')
+
+                        processed_images.append({
+                            "filename": file.filename,
+                            "preview": f"data:image/jpeg;base64,{img_base64}",
+                            "path": corrected_path
+                        })
+                    else:
+                        # No OpenCV, just save original
+                        logger.warning("OpenCV not available, skipping rotation correction")
+                        with open(original_path, "rb") as f:
+                            img_base64 = base64.b64encode(f.read()).decode('utf-8')
+                        processed_images.append({
+                            "filename": file.filename,
+                            "preview": f"data:image/jpeg;base64,{img_base64}",
+                            "path": original_path
+                        })
+                except Exception as img_err:
+                    logger.error(f"Image processing failed: {img_err}")
+                    # Fallback: Return original
+                    with open(original_path, "rb") as f:
+                        img_base64 = base64.b64encode(f.read()).decode('utf-8')
+                    processed_images.append({
+                        "filename": file.filename,
+                        "preview": f"data:image/jpeg;base64,{img_base64}",
+                        "path": original_path,
+                        "error": str(img_err)
+                    })
+            else:
+                # Not an image, skip processing
+                processed_images.append({
+                    "filename": file.filename,
+                    "message": "Not an image file"
+                })
+
+        db.commit()
+
+        return {
+            "success": True,
+            "case_id": case_id,
+            "processed_images": processed_images,
+            "message": f"{len(processed_images)} Bilder verarbeitet und rotationskorrigiert"
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Upload preview failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@router.post("/free/extract")
+async def free_extract(
+    case_id: int = Form(...),
+    use_local_llm: str = Form("true"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_demo_user)
+):
+    """Extract data from previously uploaded and processed images"""
+    prefer_local = use_local_llm.lower() == "true"
+    llm_mode = "Lokales LLM (DSGVO)" if prefer_local else "Grok API"
+
+    # Get case
+    case = db.query(TaxCase).filter(
+        TaxCase.id == case_id,
+        TaxCase.user_id == user.id
+    ).first()
+
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Get uploaded files
+    upload_dir = f"/tmp/tax_uploads/{case_id}"
+    if not os.path.exists(upload_dir):
+        raise HTTPException(status_code=404, detail="Upload directory not found")
+
+    # Find processed images
+    files = [f for f in os.listdir(upload_dir) if not f.startswith("original_")]
+    if not files:
+        raise HTTPException(status_code=404, detail="No processed files found")
+
+    extracted_data = {
+        "verarbeitungsmodus": llm_mode,
+        "ocr_engine": "Tesseract OCR",
+        "email": case.name.split(" - ")[1] if " - " in case.name else "unknown",
+        "dateiname": ", ".join(files)
+    }
+
+    try:
+        # Extract text from all images
+        all_content = []
+
+        for filename in files:
+            file_path = os.path.join(upload_dir, filename)
+
+            # Extract text with Tesseract (image is already rotated/corrected)
+            if DocumentParser:
+                try:
+                    parser = DocumentParser()
+                    # Pass file_path=None to skip re-rotation (already done)
+                    doc_content = parser._parse_image_tesseract(
+                        open(file_path, 'rb').read(),
+                        file_path=None  # Skip rotation correction
+                    )
+                    logger.info(f"Extracted {len(doc_content)} characters from {filename}")
+                except Exception as parse_error:
+                    logger.warning(f"OCR failed for {filename}: {parse_error}")
+                    doc_content = f"Dokument: {filename} (OCR fehlgeschlagen: {str(parse_error)})"
+            else:
+                doc_content = f"Dokument: {filename}"
+
+            all_content.append(f"--- {filename} ---\n{doc_content}\n")
+
+        combined_content = "\n\n".join(all_content)
+
+        # LLM Extraction (same as original /free/upload)
+        try:
+            from backend.services.llm_gateway import llm_gateway
+
+            prompt = f"""Extrahiere folgende Informationen aus diesem Dokument für Import auf die Kanarischen Inseln (H7-Formular):
+
+1. ALLGEMEINE SENDUNGSDATEN:
+- art_der_sendung: B2C (Business to Consumer) oder C2C (Consumer to Consumer)
+- warenwert_gesamt_eur: Gesamtwert der Waren in EUR
+- waehrung: Währung (meist EUR)
+- versandkosten: Versandkosten
+- versicherungskosten: Versicherungskosten (optional)
+- gesamtbetrag_fuer_zoll: Summe aus Wert + Versand + Versicherung
+- art_der_lieferung: Kauf oder Geschenk
+
+2. ABSENDER (Versender):
+- absender_name: Name oder Firma des Absenders
+- absender_strasse: Straße und Hausnummer
+- absender_plz: Postleitzahl
+- absender_ort: Ort
+- absender_land: Land (ISO-Code)
+- absender_email: E-Mail (optional)
+- absender_telefon: Telefonnummer (optional)
+
+3. EMPFÄNGER (Kanarische Inseln):
+- empfaenger_name: Name des Empfängers
+- empfaenger_strasse: Straße und Hausnummer
+- empfaenger_plz: Postleitzahl
+- empfaenger_ort: Ort
+- empfaenger_insel: Welche kanarische Insel (wichtig!)
+- empfaenger_nif_nie_cif: NIF/NIE/CIF Nummer (sehr wichtig!)
+- empfaenger_email: E-Mail
+- empfaenger_telefon: Telefonnummer
+
+4. WARENPOSITIONEN (mindestens 1):
+- position_1_beschreibung: Klare Warenbeschreibung
+- position_1_anzahl: Stückzahl
+- position_1_stueckpreis: Preis pro Stück
+- position_1_gesamtwert: Gesamtwert der Position
+- position_1_ursprungsland: Ursprungsland (ISO-Code)
+- position_1_zolltarifnummer: 6-stellige Zolltarifnummer (optional)
+- position_1_gewicht: Gewicht (optional)
+- position_1_zustand: Neu oder gebraucht (optional)
+
+5. RECHNUNGS-/WERTNACHWEIS:
+- rechnungsnummer: Nummer der Rechnung
+- rechnungsdatum: Datum der Rechnung
+- mehrwertsteuer_ausgewiesen: Ja/Nein, wurde MwSt ausgewiesen?
+
+6. ZUSÄTZLICHE ANGABEN:
+- zahlungsnachweis: Art des Zahlungsnachweises (PayPal, Karte, etc.)
+- bemerkungen: Weitere Anmerkungen
+
+Dokumenteninhalt:
+{combined_content[:8000]}
+
+Gib die extrahierten Daten als JSON-Objekt zurück.
+Verwende exakt die Feldnamen wie oben angegeben.
+Falls ein Feld nicht gefunden wird, lasse es weg oder gib null zurück.
+Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
+"""
+
+            provider = "ollama" if prefer_local else "grok"
+            timeout = 240 if provider == "ollama" else 60
+            result_dict = llm_gateway.generate(prompt=prompt, provider=provider, max_tokens=4000, timeout=timeout)
+            result = result_dict.get("response", "")
+
+            logger.info(f"LLM extraction completed with {llm_mode}")
+
+            # Parse JSON
+            try:
+                llm_data = llm_gateway.parse_json_response(result)
+                # Flatten nested objects
+                flattened = {}
+                for key, value in llm_data.items():
+                    if isinstance(value, dict):
+                        for nested_key, nested_value in value.items():
+                            flattened[nested_key] = nested_value
+                    else:
+                        flattened[key] = value
+                extracted_data.update(flattened)
+                logger.info(f"Successfully parsed {len(flattened)} fields")
+            except (json.JSONDecodeError, ValueError) as parse_error:
+                logger.warning(f"JSON parsing failed: {parse_error}")
+                extracted_data["llm_antwort"] = result[:1000]
+                extracted_data["inhalt_vorschau"] = combined_content[:500]
+
+        except Exception as llm_error:
+            logger.error(f"LLM extraction failed: {llm_error}", exc_info=True)
+            extracted_data["fehler"] = f"LLM-Extraktion fehlgeschlagen: {type(llm_error).__name__}"
+            extracted_data["fehler_details"] = str(llm_error)
+            extracted_data["dokument_vorschau"] = combined_content[:800]
+
+        # Save to database
+        for field_name, field_value in extracted_data.items():
+            if field_value:
+                data_entry = TaxCaseExtractedData(
+                    tax_case_id=case_id,
+                    field_name=field_name,
+                    field_value=str(field_value),
+                    field_type="text",
+                    confidence=0.7,
+                    confirmed=False
+                )
+                db.add(data_entry)
+
+        case.status = "validated"
+        db.commit()
+
+        return {
+            "success": True,
+            "extracted_data": extracted_data,
+            "message": f"Daten erfolgreich extrahiert ({llm_mode})"
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Extraction failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
+
+
 @router.post("/free/upload")
 async def free_upload(
     email: str = Form(...),
