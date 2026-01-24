@@ -624,6 +624,32 @@ async def debug_check_services():
     return status
 
 
+@router.get("/debug/pip-list")
+async def debug_pip_list():
+    """Debug: Check installed packages"""
+    import subprocess
+    try:
+        result = subprocess.run(['pip', 'list'], capture_output=True, text=True, timeout=10)
+        lines = result.stdout.split('\n')
+
+        # Filter for relevant packages
+        relevant = []
+        for line in lines:
+            if any(pkg in line.lower() for pkg in ['paddle', 'tesseract', 'pillow', 'numpy', 'opencv']):
+                relevant.append(line.strip())
+
+        return {
+            "success": True,
+            "relevant_packages": relevant,
+            "full_output_lines": len(lines)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 @router.post("/debug/test-llm")
 async def debug_test_llm(data: dict):
     """Debug: Test LLM extraction with simple prompt"""
