@@ -287,12 +287,15 @@ Falls Felder nicht gefunden werden, lass sie weg.
 """
 
         # Use LLM to extract data with DSGVO preference
-        result = await llm_gateway.generate(
+        provider = "ollama" if prefer_local else "grok"
+        result_dict = llm_gateway.generate(
             prompt=prompt,
-            prefer_local=prefer_local  # DSGVO mode: use local LLM
+            provider=provider,
+            max_tokens=3000
         )
+        result = result_dict.get("response", "")
 
-        logger.info(f"LLM extraction mode: {llm_mode}")
+        logger.info(f"LLM extraction mode: {llm_mode} using {provider}")
 
         # Parse JSON response
         try:
@@ -669,9 +672,12 @@ Falls ein Feld nicht gefunden wird, lasse es weg oder gib null zurück.
 Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
 """
 
-            result = await llm_gateway.generate(prompt=prompt, prefer_local=prefer_local)
+            # Convert prefer_local to provider
+            provider = "ollama" if prefer_local else "grok"
+            result_dict = llm_gateway.generate(prompt=prompt, provider=provider, max_tokens=4000)
+            result = result_dict.get("response", "")
 
-            logger.info(f"LLM extraction completed with {llm_mode}")
+            logger.info(f"LLM extraction completed with {llm_mode} using {provider}")
 
             # Parse LLM response
             try:
