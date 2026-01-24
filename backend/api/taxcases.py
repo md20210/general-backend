@@ -533,14 +533,20 @@ async def free_upload(
 ):
     """Free tier: Upload documents and extract data without case management"""
     prefer_local = use_local_llm.lower() == "true"
+    llm_mode = "Lokales LLM (DSGVO)" if prefer_local else "Grok API"
 
     # Create temporary directory for files
     upload_dir = f"/tmp/tax_free/{email}"
     os.makedirs(upload_dir, exist_ok=True)
 
-    extracted_data = {}
+    extracted_data = {
+        "verarbeitungsmodus": llm_mode,
+        "email": email
+    }
 
     try:
+        all_content = []
+
         for file in files:
             # Save file
             file_path = os.path.join(upload_dir, file.filename)
@@ -548,40 +554,85 @@ async def free_upload(
                 content = await file.read()
                 f.write(content)
 
-            # Basic content extraction
-            doc_content = f"Uploaded: {file.filename}"
-
-            # Try LLM extraction
-            try:
-                from backend.services.llm_gateway import llm_gateway
-
-                prompt = f"""Extract tax-relevant information from this document:
-- Name, Address, Tax ID
-- Income sources, amounts
-- Deductions, expenses
-- Any other relevant tax information
-
-Document: {file.filename}
-Content preview: {doc_content[:1000]}
-
-Return as JSON.
-"""
-                result = await llm_gateway.generate(prompt=prompt, prefer_local=prefer_local)
+            # Extract text with OCR/DocumentParser
+            doc_content = ""
+            if DocumentParser:
                 try:
-                    data = json.loads(result)
-                    extracted_data.update(data)
-                except:
-                    extracted_data["extracted_text"] = result[:500]
-            except Exception as e:
-                logger.warning(f"LLM extraction failed: {e}")
-                extracted_data["filename"] = file.filename
-                extracted_data["status"] = "Hochgeladen"
+                    parser = DocumentParser()
+                    doc_content = parser.parse(file_path)
+                    logger.info(f"OCR extracted {len(doc_content)} characters from {file.filename}")
+                except Exception as parse_error:
+                    logger.warning(f"OCR failed for {file.filename}: {parse_error}")
+                    doc_content = f"Dokument: {file.filename} (OCR nicht verfügbar)"
+            else:
+                doc_content = f"Dokument: {file.filename}"
+
+            all_content.append(f"--- {file.filename} ---\n{doc_content}\n")
+
+        # Combine all document content
+        combined_content = "\n\n".join(all_content)
+
+        # Extract with LLM
+        try:
+            from backend.services.llm_gateway import llm_gateway
+
+            prompt = f"""Extrahiere steuerrelevante Informationen aus diesen Dokumenten und gib sie strukturiert zurück:
+
+WICHTIGE FELDER:
+- name: Vollständiger Name
+- adresse: Vollständige Adresse
+- steuernummer: Steuernummer oder Tax ID
+- telefon: Telefonnummer
+- email: E-Mail Adresse
+- gesamtbetrag: Gesamtbetrag in EUR
+- datum: Rechnungsdatum
+- beschreibung: Kurze Beschreibung der Leistung/Produkte
+- positionen: Auflistung der Rechnungspositionen
+- umsatzsteuer: Umsatzsteuer/MwSt/IVA Betrag
+- nettobetrag: Nettobetrag
+
+Dokumenteninhalt:
+{combined_content[:8000]}
+
+Gib die extrahierten Daten als JSON-Objekt zurück mit den Feldnamen als Keys.
+Falls ein Feld nicht gefunden wird, lasse es weg.
+"""
+
+            result = await llm_gateway.generate(prompt=prompt, prefer_local=prefer_local)
+
+            logger.info(f"LLM extraction completed with {llm_mode}")
+
+            # Parse LLM response
+            try:
+                llm_data = json.loads(result)
+                extracted_data.update(llm_data)
+                logger.info(f"Successfully parsed {len(llm_data)} fields from LLM response")
+            except json.JSONDecodeError:
+                # If not valid JSON, try to extract key info from text
+                logger.warning("LLM response is not valid JSON, using fallback")
+                extracted_data["llm_antwort"] = result[:1000]
+                # Add some basic extracted info
+                extracted_data["inhalt_vorschau"] = combined_content[:500]
+
+        except Exception as llm_error:
+            logger.error(f"LLM extraction failed: {llm_error}")
+            # Fallback: provide document preview
+            extracted_data["fehler"] = "LLM-Extraktion fehlgeschlagen"
+            extracted_data["dokument_vorschau"] = combined_content[:800]
+            extracted_data["hinweis"] = "Bitte überprüfen und manuell ausfüllen"
+
+        # Ensure we have some data
+        if len(extracted_data) <= 2:  # Only mode and email
+            extracted_data["status"] = "Dokumente hochgeladen"
+            extracted_data["dokument_inhalt"] = combined_content[:500]
+            extracted_data["hinweis"] = "Bitte Daten manuell überprüfen und ergänzen"
 
         return {
             "success": True,
             "extracted_data": extracted_data,
-            "message": "Dokumente erfolgreich verarbeitet"
+            "message": f"Dokumente erfolgreich verarbeitet ({llm_mode})"
         }
+
     except Exception as e:
         logger.error(f"Error in free upload: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -589,13 +640,13 @@ Return as JSON.
 
 @router.post("/free/create-document")
 async def free_create_document(
-    email: str = Form(...),
-    data: str = Form(...),
+    data: dict,
     db: Session = Depends(get_db)
 ):
     """Free tier: Create PDF document from extracted data"""
     try:
-        extracted_data = json.loads(data)
+        email = data.get("email", "unknown@email.com")
+        extracted_data = data.get("data", {})
 
         # Create PDF
         buffer = io.BytesIO()
@@ -603,36 +654,77 @@ async def free_create_document(
         width, height = letter
 
         # Title
-        p.setFont("Helvetica-Bold", 16)
-        p.drawString(50, height - 50, "Steuerdokument")
+        p.setFont("Helvetica-Bold", 20)
+        p.drawString(50, height - 50, "Steuerdokument - Tax Document")
 
-        # Email
+        # Email and date
         p.setFont("Helvetica", 10)
-        p.drawString(50, height - 80, f"Erstellt für: {email}")
+        p.drawString(50, height - 80, f"Erstellt für / Created for: {email}")
+        p.drawString(50, height - 95, f"Datum / Date: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
 
-        # Data
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(50, height - 110, "Extrahierte Daten:")
+        # Separator line
+        p.line(50, height - 105, width - 50, height - 105)
+
+        # Data section
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, height - 130, "Extrahierte Daten / Extracted Data:")
 
         p.setFont("Helvetica", 10)
-        y_position = height - 130
+        y_position = height - 155
+
+        # Sort data to show important fields first
+        priority_fields = ["name", "adresse", "steuernummer", "gesamtbetrag", "datum", "email", "telefon"]
+        sorted_data = {}
+
+        # Add priority fields first
+        for field in priority_fields:
+            if field in extracted_data:
+                sorted_data[field] = extracted_data[field]
+
+        # Add remaining fields
         for key, value in extracted_data.items():
+            if key not in priority_fields:
+                sorted_data[key] = value
+
+        # Render data
+        for key, value in sorted_data.items():
             if y_position < 50:
                 p.showPage()
+                p.setFont("Helvetica", 10)
                 y_position = height - 50
 
-            p.drawString(50, y_position, f"{key}: {value}")
-            y_position -= 15
+            # Format key nicely
+            key_formatted = key.replace("_", " ").title()
+
+            # Handle long values
+            value_str = str(value)
+            if len(value_str) > 100:
+                value_str = value_str[:100] + "..."
+
+            p.setFont("Helvetica-Bold", 10)
+            p.drawString(50, y_position, f"{key_formatted}:")
+            p.setFont("Helvetica", 10)
+            p.drawString(200, y_position, value_str)
+
+            y_position -= 20
+
+        # Footer
+        p.line(50, 50, width - 50, 50)
+        p.setFont("Helvetica-Oblique", 8)
+        p.drawString(50, 35, "Dieses Dokument wurde automatisch erstellt. Bitte überprüfen Sie alle Angaben.")
+        p.drawString(50, 25, "This document was automatically created. Please verify all information.")
 
         p.showPage()
         p.save()
 
         buffer.seek(0)
 
+        logger.info(f"PDF created for {email} with {len(sorted_data)} fields")
+
         return StreamingResponse(
             buffer,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=steuerdokument_{email}.pdf"}
+            headers={"Content-Disposition": f"attachment; filename=steuerdokument_{email.split('@')[0]}.pdf"}
         )
     except Exception as e:
         logger.error(f"Error creating document: {e}")
