@@ -101,13 +101,22 @@ def deskew_image(image: np.ndarray) -> Tuple[np.ndarray, float]:
 
 def get_ocr_quality(image: np.ndarray) -> float:
     """
-    Measure OCR quality/confidence on an image.
+    Measure OCR quality considering BOTH confidence AND text amount.
+
+    IMPORTANT: High confidence alone is NOT enough!
+    Example: "KLAD y" with 95% confidence should NOT get 95% quality.
+
+    Quality factors:
+    1. Confidence: How sure is OCR about recognized text?
+    2. Text amount: How much text was recognized?
 
     Args:
         image: Grayscale image as numpy array
 
     Returns:
-        Average OCR confidence (0-100%)
+        OCR quality score (0-100%)
+        - Considers both confidence and character count
+        - A normal invoice should have ~200+ alphanumeric characters
     """
     if not TESSERACT_AVAILABLE:
         return 0.0
@@ -129,7 +138,23 @@ def get_ocr_quality(image: np.ndarray) -> float:
             return 0.0
 
         avg_confidence = sum(confidences) / len(confidences)
-        return avg_confidence
+
+        # Get full text to count characters
+        text = pytesseract.image_to_string(pil_img, lang=european_langs, config='--psm 1')
+        char_count = len(''.join(c for c in text if c.isalnum()))
+
+        # Expected minimum characters for a normal invoice: 200
+        # If we have 200+ chars → full confidence score
+        # If we have less → reduce quality proportionally
+        EXPECTED_MIN_CHARS = 200
+        char_factor = min(1.0, char_count / EXPECTED_MIN_CHARS)
+
+        # Combined quality: confidence × character completeness
+        quality = avg_confidence * char_factor
+
+        print(f"OCR Quality: {char_count} chars, {avg_confidence:.1f}% conf, char_factor={char_factor:.2f} → {quality:.1f}%")
+
+        return quality
 
     except Exception as e:
         print(f"Failed to measure OCR quality: {e}")
