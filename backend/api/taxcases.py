@@ -529,14 +529,31 @@ async def free_upload(
     email: str = Form(...),
     files: List[UploadFile] = File(...),
     use_local_llm: str = Form("true"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(get_demo_user)
 ):
-    """Free tier: Upload documents and extract data without case management"""
+    """Free tier: Upload documents and extract data - SAVES to database"""
     prefer_local = use_local_llm.lower() == "true"
     llm_mode = "Lokales LLM (DSGVO)" if prefer_local else "Grok API"
 
-    # Create temporary directory for files
-    upload_dir = f"/tmp/tax_free/{email}"
+    # Create a case for this upload (so it appears in Premium tab)
+    from datetime import datetime
+    case_name = f"Free Upload - {email} - {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+
+    new_case = TaxCase(
+        user_id=user.id,
+        name=case_name,
+        status="processing",
+        notes=f"Erstellt über Free Tab mit {llm_mode}"
+    )
+    db.add(new_case)
+    db.flush()
+
+    case_id = new_case.id
+    logger.info(f"Created case {case_id} for free upload from {email}")
+
+    # Create upload directory
+    upload_dir = f"/tmp/tax_uploads/{case_id}"
     os.makedirs(upload_dir, exist_ok=True)
 
     extracted_data = {
@@ -566,6 +583,18 @@ async def free_upload(
                     doc_content = f"Dokument: {file.filename} (OCR nicht verfügbar)"
             else:
                 doc_content = f"Dokument: {file.filename}"
+
+            # Save document to database
+            doc = TaxCaseDocument(
+                tax_case_id=case_id,
+                filename=file.filename,
+                file_path=file_path,
+                doc_type="document",
+                content=doc_content,
+                validated=False
+            )
+            db.add(doc)
+            db.flush()
 
             all_content.append(f"--- {file.filename} ---\n{doc_content}\n")
 
@@ -627,10 +656,30 @@ Falls ein Feld nicht gefunden wird, lasse es weg.
             extracted_data["dokument_inhalt"] = combined_content[:500]
             extracted_data["hinweis"] = "Bitte Daten manuell überprüfen und ergänzen"
 
+        # Save extracted data to database
+        for field_name, field_value in extracted_data.items():
+            if field_value:
+                data_entry = TaxCaseExtractedData(
+                    tax_case_id=case_id,
+                    field_name=field_name,
+                    field_value=str(field_value),
+                    field_type="text",
+                    confidence=0.7,
+                    confirmed=False
+                )
+                db.add(data_entry)
+
+        # Mark case as validated
+        new_case.status = "validated"
+        db.commit()
+
+        logger.info(f"Saved case {case_id} with {len(extracted_data)} extracted fields to database")
+
         return {
             "success": True,
             "extracted_data": extracted_data,
-            "message": f"Dokumente erfolgreich verarbeitet ({llm_mode})"
+            "case_id": case_id,
+            "message": f"Dokumente erfolgreich verarbeitet und gespeichert ({llm_mode})"
         }
 
     except Exception as e:
@@ -753,11 +802,14 @@ async def get_all_users(db: Session = Depends(get_db), user: User = Depends(get_
 
 
 # CASE MANAGEMENT ENDPOINTS
+class CaseUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    notes: Optional[str] = None
+
 @router.put("/cases/{case_id}")
 async def update_case(
     case_id: int,
-    name: str = Form(None),
-    notes: str = Form(None),
+    update_data: CaseUpdateRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_demo_user)
 ):
@@ -770,13 +822,15 @@ async def update_case(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    if name:
-        case.name = name
-    if notes is not None:
-        case.notes = notes
+    if update_data.name:
+        case.name = update_data.name
+    if update_data.notes is not None:
+        case.notes = update_data.notes
 
     db.commit()
     db.refresh(case)
+
+    logger.info(f"Updated case {case_id}: name={update_data.name}")
 
     return {"success": True, "message": "Case updated"}
 
