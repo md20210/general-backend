@@ -301,11 +301,21 @@ Falls Felder nicht gefunden werden, lass sie weg.
 
         # Parse JSON response
         try:
-            extracted = json.loads(result)
+            # Use LLM gateway's robust JSON parser (handles markdown code blocks)
+            extracted = llm_gateway.parse_json_response(result)
+            # Flatten nested objects
+            flattened = {}
+            for key, value in extracted.items():
+                if isinstance(value, dict):
+                    for nested_key, nested_value in value.items():
+                        flattened[nested_key] = nested_value
+                else:
+                    flattened[key] = value
             # Merge with sample data
-            sample_data.update(extracted)
-        except:
-            # If not valid JSON, just use sample data
+            sample_data.update(flattened)
+        except (json.JSONDecodeError, ValueError) as parse_error:
+            # If parsing fails, just use sample data
+            logger.warning(f"JSON parsing failed: {parse_error}")
             sample_data["llm_response"] = result[:200]
 
         logger.info(f"LLM extraction successful for document {doc_id}")
@@ -778,12 +788,22 @@ Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
 
             # Parse LLM response
             try:
-                llm_data = json.loads(result)
-                extracted_data.update(llm_data)
-                logger.info(f"Successfully parsed {len(llm_data)} fields from LLM response")
-            except json.JSONDecodeError:
-                # If not valid JSON, try to extract key info from text
-                logger.warning("LLM response is not valid JSON, using fallback")
+                # Use LLM gateway's robust JSON parser (handles markdown code blocks)
+                llm_data = llm_gateway.parse_json_response(result)
+                # Flatten nested objects (e.g., ABSENDER.absender_name -> absender_name)
+                flattened = {}
+                for key, value in llm_data.items():
+                    if isinstance(value, dict):
+                        # Flatten nested dict
+                        for nested_key, nested_value in value.items():
+                            flattened[nested_key] = nested_value
+                    else:
+                        flattened[key] = value
+                extracted_data.update(flattened)
+                logger.info(f"Successfully parsed {len(flattened)} fields from LLM response")
+            except (json.JSONDecodeError, ValueError) as parse_error:
+                # If parsing fails, use fallback
+                logger.warning(f"LLM response parsing failed: {parse_error}")
                 extracted_data["llm_antwort"] = result[:1000]
                 # Add some basic extracted info
                 extracted_data["inhalt_vorschau"] = combined_content[:500]
