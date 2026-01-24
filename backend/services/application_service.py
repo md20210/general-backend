@@ -103,7 +103,8 @@ def detect_and_correct_rotation(image_path: str) -> np.ndarray:
     """
     Automatic rotation correction for 0°/90°/180°/270° + deskewing.
 
-    Uses Laplace variance to find the best orientation (sharper text = higher score).
+    Uses Tesseract OSD (Orientation and Script Detection) to find correct orientation.
+    Fallback to variance-based method if OSD fails.
     Then applies minAreaRect-based deskewing for slight angle correction.
 
     Args:
@@ -126,22 +127,72 @@ def detect_and_correct_rotation(image_path: str) -> np.ndarray:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.medianBlur(gray, 3)  # Reduce noise
 
+    # Try OSD first (most reliable)
+    detected_rotation = None
+    if TESSERACT_AVAILABLE:
+        try:
+            from PIL import Image as PILImage
+            pil_img = PILImage.fromarray(gray)
+            osd = pytesseract.image_to_osd(pil_img, output_type=pytesseract.Output.DICT)
+            detected_rotation = osd.get('rotate', 0)
+            osd_confidence = osd.get('orientation_conf', 0)
+            print(f"OSD detected rotation: {detected_rotation}° (confidence: {osd_confidence:.1f})")
+
+            # If confidence is high enough, trust it
+            if osd_confidence > 1.5:
+                # Apply the detected rotation
+                if detected_rotation == 0:
+                    best_img = gray
+                elif detected_rotation == 90:
+                    best_img = cv2.rotate(gray, cv2.ROTATE_90_CLOCKWISE)
+                elif detected_rotation == 180:
+                    best_img = cv2.rotate(gray, cv2.ROTATE_180)
+                elif detected_rotation == 270:
+                    best_img = cv2.rotate(gray, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                else:
+                    best_img = gray
+
+                print(f"Using OSD rotation: {detected_rotation}°")
+
+                # Apply deskewing
+                try:
+                    deskewed, skew_angle = deskew_image(best_img)
+                    print(f"Deskew angle: {skew_angle:.2f}°")
+                    return deskewed
+                except Exception as e:
+                    print(f"Deskew failed: {e}")
+                    return best_img
+
+        except Exception as e:
+            print(f"OSD failed: {e}, falling back to variance method")
+
+    # Fallback: Use variance-based method
+    print("Using variance-based rotation detection")
     best_img = gray
     best_score = -np.inf
     best_angle = 0
 
-    # Test all 4 rotations
     for rot in [0, 90, 180, 270]:
-        rotated = np.rot90(gray, k=rot // 90)
+        # Rotate image
+        if rot == 0:
+            rotated = gray
+        elif rot == 90:
+            rotated = cv2.rotate(gray, cv2.ROTATE_90_CLOCKWISE)
+        elif rot == 180:
+            rotated = cv2.rotate(gray, cv2.ROTATE_180)
+        elif rot == 270:
+            rotated = cv2.rotate(gray, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         # Score: Laplace variance (higher = sharper text)
         score = cv2.Laplacian(rotated, cv2.CV_64F).var()
+        print(f"Rotation {rot}°: Laplace variance = {score:.2f}")
+
         if score > best_score:
             best_score = score
             best_img = rotated
             best_angle = rot
 
-    print(f"Best rotation: {best_angle}° (score: {best_score:.2f})")
+    print(f"Best rotation (variance): {best_angle}° (score: {best_score:.2f})")
 
     # Apply deskewing to the best rotation
     try:
