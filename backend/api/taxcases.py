@@ -677,8 +677,10 @@ async def free_upload(
 
     try:
         all_content = []
+        filenames = []
 
         for file in files:
+            filenames.append(file.filename)
             # Save file
             file_path = os.path.join(upload_dir, file.filename)
             with open(file_path, "wb") as f:
@@ -714,6 +716,9 @@ async def free_upload(
 
         # Combine all document content
         combined_content = "\n\n".join(all_content)
+
+        # Add filenames to extracted data
+        extracted_data["dateiname"] = ", ".join(filenames) if len(filenames) > 0 else "Keine Datei"
 
         # Extract with LLM
         try:
