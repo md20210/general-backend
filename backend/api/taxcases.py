@@ -311,8 +311,9 @@ Falls Felder nicht gefunden werden, lass sie weg.
         logger.info(f"LLM extraction successful for document {doc_id}")
 
     except Exception as e:
-        logger.warning(f"LLM extraction failed for document {doc_id}: {e}")
-        # Continue with sample data
+        logger.warning(f"LLM extraction failed for document {doc_id}: {e}", exc_info=True)
+        # Continue with sample data - add error details
+        sample_data["llm_fehler"] = f"{type(e).__name__}: {str(e)}"
 
     # Store extracted data (either from LLM or sample)
     for field_name, field_value in sample_data.items():
@@ -592,6 +593,37 @@ async def debug_check_services():
     return status
 
 
+@router.post("/debug/test-llm")
+async def debug_test_llm(data: dict):
+    """Debug: Test LLM extraction with simple prompt"""
+    try:
+        from backend.services.llm_gateway import llm_gateway
+
+        provider = data.get("provider", "grok")
+        prompt = data.get("prompt", "Extract the invoice number from this text: Invoice RE-2026-001")
+
+        result = llm_gateway.generate(
+            prompt=prompt,
+            provider=provider,
+            max_tokens=200,
+            timeout=60
+        )
+
+        return {
+            "success": True,
+            "provider": provider,
+            "response": result.get("response", ""),
+            "model": result.get("model", ""),
+            "usage": result.get("usage", {})
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
+
 # FREE TAB ENDPOINTS
 @router.post("/free/upload")
 async def free_upload(
@@ -757,9 +789,10 @@ Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
                 extracted_data["inhalt_vorschau"] = combined_content[:500]
 
         except Exception as llm_error:
-            logger.error(f"LLM extraction failed: {llm_error}")
-            # Fallback: provide document preview
-            extracted_data["fehler"] = "LLM-Extraktion fehlgeschlagen"
+            logger.error(f"LLM extraction failed: {llm_error}", exc_info=True)
+            # Fallback: provide document preview with detailed error
+            extracted_data["fehler"] = f"LLM-Extraktion fehlgeschlagen: {type(llm_error).__name__}"
+            extracted_data["fehler_details"] = str(llm_error)
             extracted_data["dokument_vorschau"] = combined_content[:800]
             extracted_data["hinweis"] = "Bitte überprüfen und manuell ausfüllen"
 
