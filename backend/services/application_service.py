@@ -54,12 +54,57 @@ def get_paddle_structure():
     return _paddle_structure_instance
 
 
+def deskew_image(image: np.ndarray) -> Tuple[np.ndarray, float]:
+    """
+    Deskew an image using projection profile method.
+
+    Args:
+        image: Grayscale image as numpy array
+
+    Returns:
+        Tuple of (deskewed image, detected angle in degrees)
+    """
+    if not CV2_AVAILABLE:
+        return image, 0.0
+
+    # Binarize image
+    thresh = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+
+    # Find coordinates of all white pixels
+    coords = np.column_stack(np.where(thresh > 0))
+
+    if len(coords) < 100:
+        # Not enough points, return original
+        return image, 0.0
+
+    # Calculate skew angle using minAreaRect
+    angle = cv2.minAreaRect(coords)[-1]
+
+    # Normalize angle
+    if angle < -45:
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+
+    # Only correct if angle is significant (> 0.5 degrees)
+    if abs(angle) < 0.5:
+        return image, 0.0
+
+    # Rotate image to deskew
+    (h, w) = image.shape
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    deskewed = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+
+    return deskewed, angle
+
+
 def detect_and_correct_rotation(image_path: str) -> np.ndarray:
     """
-    Automatic rotation correction for 0°/90°/180°/270° + light deskewing.
+    Automatic rotation correction for 0°/90°/180°/270° + deskewing.
 
     Uses Laplace variance to find the best orientation (sharper text = higher score).
-    Also applies Hough line detection for slight angle correction.
+    Then applies minAreaRect-based deskewing for slight angle correction.
 
     Args:
         image_path: Path to the image file
@@ -83,33 +128,29 @@ def detect_and_correct_rotation(image_path: str) -> np.ndarray:
 
     best_img = gray
     best_score = -np.inf
+    best_angle = 0
 
     # Test all 4 rotations
     for rot in [0, 90, 180, 270]:
         rotated = np.rot90(gray, k=rot // 90)
-
-        # Light deskew (slight angle correction)
-        try:
-            edges = cv2.Canny(rotated, 50, 150)
-            lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
-            if lines is not None and len(lines) > 0:
-                angles = [np.arctan2(line[0][3] - line[0][1], line[0][2] - line[0][0]) for line in lines]
-                median_angle = np.median(angles)
-                (h, w) = rotated.shape
-                center = (w // 2, h // 2)
-                M = cv2.getRotationMatrix2D(center, np.degrees(median_angle), 1.0)
-                rotated = cv2.warpAffine(rotated, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-        except Exception as e:
-            # If deskew fails, continue with non-deskewed rotation
-            print(f"Deskew failed for rotation {rot}: {e}")
 
         # Score: Laplace variance (higher = sharper text)
         score = cv2.Laplacian(rotated, cv2.CV_64F).var()
         if score > best_score:
             best_score = score
             best_img = rotated
+            best_angle = rot
 
-    return best_img
+    print(f"Best rotation: {best_angle}° (score: {best_score:.2f})")
+
+    # Apply deskewing to the best rotation
+    try:
+        deskewed, skew_angle = deskew_image(best_img)
+        print(f"Deskew angle: {skew_angle:.2f}°")
+        return deskewed
+    except Exception as e:
+        print(f"Deskew failed: {e}")
+        return best_img
 
 
 class DocumentParser:
