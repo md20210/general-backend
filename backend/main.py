@@ -115,8 +115,21 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "DNT",
+        "Cache-Control",
+        "X-Requested-With",
+        "If-Modified-Since",
+        "Keep-Alive",
+        "X-CustomHeader"
+    ],
+    expose_headers=["Content-Disposition"],
 )
 
 # Include routers
