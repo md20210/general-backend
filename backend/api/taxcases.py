@@ -562,22 +562,43 @@ async def debug_check_services():
     except Exception as e:
         status["errors"]["tesseract"] = str(e)
 
-    # Check PaddleOCR
+    # Check PaddleOCR with detailed error tracking
+    paddle_status = {"available": False, "import_error": None, "init_error": None}
     try:
+        # Test 1: Can we import paddleocr?
+        import paddleocr
+        paddle_status["paddleocr_imported"] = True
+        paddle_status["paddleocr_location"] = str(paddleocr.__file__)
+
+        # Test 2: Can we import paddlepaddle?
+        import paddle
+        paddle_status["paddle_imported"] = True
+        paddle_status["paddle_version"] = paddle.__version__
+
+        # Test 3: Can we get singleton instance?
         from backend.services.application_service import get_paddle_ocr, PADDLE_AVAILABLE
+        paddle_status["PADDLE_AVAILABLE"] = PADDLE_AVAILABLE
+
         if PADDLE_AVAILABLE:
             ocr = get_paddle_ocr()
             if ocr:
                 status["paddleocr"] = True
-                status["paddleocr_version"] = "3.3.3 with latin language"
+                status["paddleocr_details"] = paddle_status
             else:
                 status["paddleocr"] = False
-                status["errors"]["paddleocr"] = "Initialization failed"
+                paddle_status["init_error"] = "get_paddle_ocr() returned None"
+                status["errors"]["paddleocr"] = paddle_status
         else:
             status["paddleocr"] = False
-            status["errors"]["paddleocr"] = "PaddleOCR not installed"
+            status["errors"]["paddleocr"] = paddle_status
+    except ImportError as e:
+        status["paddleocr"] = False
+        paddle_status["import_error"] = f"ImportError: {str(e)}"
+        status["errors"]["paddleocr"] = paddle_status
     except Exception as e:
-        status["errors"]["paddleocr"] = str(e)
+        status["paddleocr"] = False
+        paddle_status["other_error"] = f"{type(e).__name__}: {str(e)}"
+        status["errors"]["paddleocr"] = paddle_status
 
     # Check Ollama
     try:
