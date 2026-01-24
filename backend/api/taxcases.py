@@ -730,8 +730,8 @@ async def free_upload_and_preview(
                         original_base64 = base64.b64encode(f.read()).decode('utf-8')
 
                     if CV2_AVAILABLE:
-                        # Apply rotation correction
-                        corrected_array = detect_and_correct_rotation(original_path)
+                        # Apply rotation correction and get OCR quality
+                        corrected_array, ocr_quality = detect_and_correct_rotation(original_path)
 
                         # Save corrected image
                         corrected_path = os.path.join(upload_dir, file.filename)
@@ -741,11 +741,20 @@ async def free_upload_and_preview(
                         _, buffer = cv2.imencode('.jpg', corrected_array)
                         processed_base64 = base64.b64encode(buffer).decode('utf-8')
 
+                        # Check if quality is good enough (>= 80%)
+                        quality_ok = ocr_quality >= 80.0
+                        quality_message = None
+                        if not quality_ok:
+                            quality_message = f"OCR-Qualität zu niedrig ({ocr_quality:.1f}%). Bitte machen Sie ein normales, scharfes Foto der Rechnung."
+
                         processed_images.append({
                             "filename": file.filename,
                             "original_preview": f"data:image/jpeg;base64,{original_base64}",
                             "processed_preview": f"data:image/jpeg;base64,{processed_base64}",
-                            "path": corrected_path
+                            "path": corrected_path,
+                            "ocr_quality": round(ocr_quality, 1),
+                            "quality_ok": quality_ok,
+                            "quality_message": quality_message
                         })
                     else:
                         # No OpenCV, just save original
@@ -755,7 +764,9 @@ async def free_upload_and_preview(
                             "original_preview": f"data:image/jpeg;base64,{original_base64}",
                             "processed_preview": f"data:image/jpeg;base64,{original_base64}",
                             "path": original_path,
-                            "message": "Rotation correction not available"
+                            "ocr_quality": 0.0,
+                            "quality_ok": False,
+                            "quality_message": "Rotation correction not available"
                         })
                 except Exception as img_err:
                     logger.error(f"Image processing failed: {img_err}")
@@ -767,6 +778,9 @@ async def free_upload_and_preview(
                         "original_preview": f"data:image/jpeg;base64,{original_base64}",
                         "processed_preview": f"data:image/jpeg;base64,{original_base64}",
                         "path": original_path,
+                        "ocr_quality": 0.0,
+                        "quality_ok": False,
+                        "quality_message": f"Bildverarbeitung fehlgeschlagen: {str(img_err)}",
                         "error": str(img_err)
                     })
             else:
