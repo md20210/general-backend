@@ -116,8 +116,11 @@ def get_ocr_quality(image: np.ndarray) -> float:
         from PIL import Image as PILImage
         pil_img = PILImage.fromarray(image)
 
+        # Use European languages for quality measurement (same as rotation detection)
+        european_langs = 'deu+eng+spa+fra+ita+pol+ces+nld+por+ron+hun+slk+slv+hrv+bul+ell+swe+dan+nor+fin'
+
         # Get detailed OCR data with confidence scores
-        data = pytesseract.image_to_data(pil_img, lang='eng', output_type=pytesseract.Output.DICT)
+        data = pytesseract.image_to_data(pil_img, lang=european_langs, output_type=pytesseract.Output.DICT)
 
         # Calculate average confidence for all recognized words
         confidences = [int(conf) for conf in data['conf'] if conf != '-1' and int(conf) > 0]
@@ -133,37 +136,61 @@ def get_ocr_quality(image: np.ndarray) -> float:
         return 0.0
 
 
-def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float]:
+def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float, float]:
     """
     Automatic rotation correction for 0°/90°/180°/270° + deskewing.
 
     Smart algorithm:
-    1. Test all rotations using OCR on grayscale
-    2. Apply best rotation to ORIGINAL COLOR image
-    3. Then deskewing for slight angle correction
-    4. Measures final OCR quality (0-100%)
+    1. Test original image first - if quality ≥90%, skip rotation testing (performance optimization)
+    2. Otherwise test all rotations using OCR on grayscale
+    3. Apply best rotation to ORIGINAL COLOR image
+    4. Then deskewing for slight angle correction
+    5. Measures both original and final OCR quality (0-100%)
 
     Args:
         image_path: Path to the image file
 
     Returns:
-        Tuple of (corrected COLOR image as numpy array BGR, OCR quality percentage)
+        Tuple of (corrected COLOR image as numpy array BGR, original OCR quality %, processed OCR quality %)
     """
     if not CV2_AVAILABLE:
         # Fallback: Return PIL image as numpy array
         img = Image.open(image_path).convert('RGB')
-        return np.array(img), 0.0
+        return np.array(img), 0.0, 0.0
 
     # Read ORIGINAL COLOR IMAGE
     img_color = cv2.imread(image_path)
     if img_color is None:
         # Fallback to PIL
         img = Image.open(image_path).convert('RGB')
-        return np.array(img), 0.0
+        return np.array(img), 0.0, 0.0
 
     # Work with grayscale for rotation detection
     gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
     gray = cv2.medianBlur(gray, 3)  # Reduce noise
+
+    # PERFORMANCE OPTIMIZATION: Test original image first
+    print("Testing original orientation (0°)...")
+    original_quality = get_ocr_quality(gray)
+    print(f"Original OCR quality: {original_quality:.1f}%")
+
+    # Early exit if original is already excellent (≥90%)
+    if original_quality >= 90.0:
+        print(f"✓ Original quality is excellent ({original_quality:.1f}%) - skipping rotation testing")
+        # Still apply deskewing for slight angle correction
+        try:
+            deskewed_gray, skew_angle = deskew_image(gray)
+            print(f"Deskew angle: {skew_angle:.2f}°")
+            if abs(skew_angle) > 0.5:
+                (h, w) = gray.shape
+                center = (w // 2, h // 2)
+                M = cv2.getRotationMatrix2D(center, skew_angle, 1.0)
+                final_img_color = cv2.warpAffine(img_color, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+                final_quality = get_ocr_quality(deskewed_gray)
+                return final_img_color, original_quality, final_quality
+        except Exception as e:
+            print(f"Deskew failed: {e}")
+        return img_color, original_quality, original_quality
 
     # Test ALL 4 rotations to find the best one
     print("Testing all 4 rotations to find best orientation...")
@@ -171,6 +198,8 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float]:
     best_img = gray
     best_score = -1
     best_angle = 0
+    original_score = 0
+    original_img = gray
 
     for rot in [0, 90, 180, 270]:
         # Rotate image
@@ -265,10 +294,10 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float]:
         print(f"Deskew failed: {e}")
 
     # Measure final OCR quality (on grayscale)
-    quality = get_ocr_quality(final_img_gray)
-    print(f"OCR Quality: {quality:.1f}%")
+    processed_quality = get_ocr_quality(final_img_gray)
+    print(f"Processed OCR Quality: {processed_quality:.1f}%")
 
-    return final_img_color, quality
+    return final_img_color, original_quality, processed_quality
 
 
 class DocumentParser:

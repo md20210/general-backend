@@ -730,9 +730,9 @@ async def free_upload_and_preview(
                         original_base64 = base64.b64encode(f.read()).decode('utf-8')
 
                     if CV2_AVAILABLE:
-                        # Apply rotation correction and get OCR quality
-                        # Returns COLOR image (BGR format)
-                        corrected_array, ocr_quality = detect_and_correct_rotation(original_path)
+                        # Apply rotation correction and get OCR qualities
+                        # Returns COLOR image (BGR format) + original quality + processed quality
+                        corrected_array, original_quality, processed_quality = detect_and_correct_rotation(original_path)
 
                         # Save corrected image
                         corrected_path = os.path.join(upload_dir, file.filename)
@@ -742,11 +742,11 @@ async def free_upload_and_preview(
                         _, buffer = cv2.imencode('.jpg', corrected_array)
                         processed_base64 = base64.b64encode(buffer).decode('utf-8')
 
-                        # Check if quality is good enough (>= 80%)
-                        quality_ok = ocr_quality >= 80.0
+                        # Check if quality is good enough (>= 90%)
+                        quality_ok = processed_quality >= 90.0
                         quality_message = None
                         if not quality_ok:
-                            quality_message = f"OCR-Qualität zu niedrig ({ocr_quality:.1f}%). Bitte machen Sie ein normales, scharfes Foto der Rechnung."
+                            quality_message = f"OCR-Qualität zu niedrig ({processed_quality:.1f}%). Bitte machen Sie ein normales, scharfes Foto der Rechnung."
 
                         # Extract quick OCR preview (first 200 chars) for debugging
                         ocr_preview = ""
@@ -767,7 +767,9 @@ async def free_upload_and_preview(
                             "original_preview": f"data:image/jpeg;base64,{original_base64}",
                             "processed_preview": f"data:image/jpeg;base64,{processed_base64}",
                             "path": corrected_path,
-                            "ocr_quality": round(ocr_quality, 1),
+                            "original_ocr_quality": round(original_quality, 1),
+                            "processed_ocr_quality": round(processed_quality, 1),
+                            "ocr_quality": round(processed_quality, 1),  # Keep for backward compatibility
                             "quality_ok": quality_ok,
                             "quality_message": quality_message,
                             "ocr_preview": ocr_preview
