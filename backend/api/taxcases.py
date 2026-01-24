@@ -747,6 +747,18 @@ async def free_upload_and_preview(
                         if not quality_ok:
                             quality_message = f"OCR-Qualität zu niedrig ({ocr_quality:.1f}%). Bitte machen Sie ein normales, scharfes Foto der Rechnung."
 
+                        # Extract quick OCR preview (first 200 chars) for debugging
+                        ocr_preview = ""
+                        try:
+                            from PIL import Image as PILImage
+                            import pytesseract
+                            pil_img = PILImage.fromarray(corrected_array)
+                            european_langs = 'deu+eng+spa+fra+ita'
+                            preview_text = pytesseract.image_to_string(pil_img, lang=european_langs, config='--psm 1')
+                            ocr_preview = preview_text[:200].strip() if preview_text else ""
+                        except Exception as ocr_err:
+                            logger.warning(f"OCR preview failed: {ocr_err}")
+
                         processed_images.append({
                             "filename": file.filename,
                             "original_preview": f"data:image/jpeg;base64,{original_base64}",
@@ -754,7 +766,8 @@ async def free_upload_and_preview(
                             "path": corrected_path,
                             "ocr_quality": round(ocr_quality, 1),
                             "quality_ok": quality_ok,
-                            "quality_message": quality_message
+                            "quality_message": quality_message,
+                            "ocr_preview": ocr_preview
                         })
                     else:
                         # No OpenCV, just save original
