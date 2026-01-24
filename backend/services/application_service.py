@@ -14,7 +14,7 @@ except ImportError:
     TESSERACT_AVAILABLE = False
 
 try:
-    from paddleocr import PaddleOCR
+    from paddleocr import PaddleOCR, PPStructure
     PADDLE_AVAILABLE = True
 except ImportError:
     PADDLE_AVAILABLE = False
@@ -25,10 +25,13 @@ class DocumentParser:
 
     def __init__(self):
         self.paddle_ocr = None
+        self.paddle_structure = None
         if PADDLE_AVAILABLE:
             try:
-                # Initialize PaddleOCR with German and English support
-                self.paddle_ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False)
+                # Initialize PaddleOCR with latin language for EU invoices (CPU-only)
+                self.paddle_ocr = PaddleOCR(use_angle_cls=True, lang='latin', use_gpu=False)
+                # Initialize PPStructure for table extraction from invoices
+                self.paddle_structure = PPStructure(table=True, ocr=True, lang='latin', recovery=True, use_gpu=False)
             except Exception as e:
                 print(f"Failed to initialize PaddleOCR: {e}")
 
