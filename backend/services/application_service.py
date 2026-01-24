@@ -189,9 +189,25 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float]:
             try:
                 from PIL import Image as PILImage
                 pil_img = PILImage.fromarray(rotated)
-                text = pytesseract.image_to_string(pil_img, lang='eng', config='--psm 1')
-                score = len(''.join(c for c in text if c.isalnum()))
-                print(f"Rotation {rot}°: {score} alphanumeric chars")
+                # Use European languages for rotation detection (same as final OCR)
+                european_langs = 'deu+eng+spa+fra+ita+pol+ces+nld+por+ron+hun+slk+slv+hrv+bul+ell+swe+dan+nor+fin'
+
+                # Get both text length AND confidence
+                data = pytesseract.image_to_data(pil_img, lang=european_langs, output_type=pytesseract.Output.DICT)
+
+                # Calculate average confidence for recognized words
+                confidences = [int(conf) for conf in data['conf'] if conf != '-1' and int(conf) > 0]
+                avg_confidence = sum(confidences) / len(confidences) if len(confidences) > 0 else 0
+
+                # Get text for character count
+                text = pytesseract.image_to_string(pil_img, lang=european_langs, config='--psm 1')
+                char_count = len(''.join(c for c in text if c.isalnum()))
+
+                # Combined score: character count weighted by confidence
+                # High confidence + many chars = best score
+                score = char_count * (avg_confidence / 100.0)
+
+                print(f"Rotation {rot}°: {char_count} chars, {avg_confidence:.1f}% conf, score={score:.1f}")
             except Exception as e:
                 print(f"Rotation {rot}°: OCR failed ({e})")
                 score = 0
