@@ -801,11 +801,115 @@ async def free_upload_and_preview(
                         "quality_message": f"Bildverarbeitung fehlgeschlagen: {str(img_err)}",
                         "error": str(img_err)
                     })
+            elif file.filename.lower().endswith('.pdf'):
+                # PDF file - convert each page to image and process
+                try:
+                    from pdf2image import convert_from_path
+                    from backend.services.application_service import detect_and_correct_rotation, CV2_AVAILABLE
+                    import cv2
+
+                    logger.info(f"Converting PDF to images: {file.filename}")
+
+                    # Convert PDF pages to images (300 DPI for good quality)
+                    pdf_images = convert_from_path(original_path, dpi=300)
+                    logger.info(f"PDF has {len(pdf_images)} page(s)")
+
+                    # Process each page
+                    for page_num, pdf_page_image in enumerate(pdf_images, start=1):
+                        try:
+                            # Save PDF page as temporary image
+                            page_filename = f"{os.path.splitext(file.filename)[0]}_Seite_{page_num}.jpg"
+                            page_path = os.path.join(upload_dir, f"pdf_page_{page_num}_{file.filename}.jpg")
+                            pdf_page_image.save(page_path, 'JPEG', quality=95)
+
+                            # Convert to base64 for preview
+                            with open(page_path, "rb") as f:
+                                original_base64 = base64.b64encode(f.read()).decode('utf-8')
+
+                            if CV2_AVAILABLE:
+                                # Apply rotation correction and get OCR qualities
+                                corrected_array, original_quality, processed_quality = detect_and_correct_rotation(page_path)
+
+                                # Save corrected image
+                                corrected_path = os.path.join(upload_dir, page_filename)
+                                cv2.imwrite(corrected_path, corrected_array)
+
+                                # Convert corrected to base64
+                                _, buffer = cv2.imencode('.jpg', corrected_array)
+                                processed_base64 = base64.b64encode(buffer).decode('utf-8')
+
+                                # Check if quality is good enough (>= 90%)
+                                quality_ok = processed_quality >= 90.0
+                                quality_message = None
+                                if not quality_ok:
+                                    quality_message = f"OCR-Qualität zu niedrig ({processed_quality:.1f}%). Bitte verwenden Sie ein besseres PDF."
+
+                                # Extract quick OCR preview
+                                ocr_preview = ""
+                                try:
+                                    from PIL import Image as PILImage
+                                    import pytesseract
+                                    corrected_rgb_pil = cv2.cvtColor(corrected_array, cv2.COLOR_BGR2RGB)
+                                    pil_img = PILImage.fromarray(corrected_rgb_pil)
+                                    european_langs = 'deu+eng+spa+fra+ita'
+                                    preview_text = pytesseract.image_to_string(pil_img, lang=european_langs, config='--psm 1')
+                                    ocr_preview = preview_text[:200].strip() if preview_text else ""
+                                except Exception as ocr_err:
+                                    logger.warning(f"OCR preview failed for PDF page {page_num}: {ocr_err}")
+
+                                processed_images.append({
+                                    "filename": page_filename,
+                                    "original_preview": f"data:image/jpeg;base64,{original_base64}",
+                                    "processed_preview": f"data:image/jpeg;base64,{processed_base64}",
+                                    "path": corrected_path,
+                                    "original_ocr_quality": round(original_quality, 1),
+                                    "processed_ocr_quality": round(processed_quality, 1),
+                                    "ocr_quality": round(processed_quality, 1),
+                                    "quality_ok": quality_ok,
+                                    "quality_message": quality_message,
+                                    "ocr_preview": ocr_preview,
+                                    "source_pdf": file.filename,
+                                    "page_number": page_num
+                                })
+                            else:
+                                # No OpenCV, just save original
+                                logger.warning("OpenCV not available, skipping rotation correction for PDF page")
+                                processed_images.append({
+                                    "filename": page_filename,
+                                    "original_preview": f"data:image/jpeg;base64,{original_base64}",
+                                    "processed_preview": f"data:image/jpeg;base64,{original_base64}",
+                                    "path": page_path,
+                                    "ocr_quality": 0.0,
+                                    "quality_ok": False,
+                                    "quality_message": "Rotation correction not available",
+                                    "source_pdf": file.filename,
+                                    "page_number": page_num
+                                })
+                        except Exception as page_err:
+                            logger.error(f"Failed to process PDF page {page_num}: {page_err}")
+                            # Add error entry for this page
+                            processed_images.append({
+                                "filename": f"{os.path.splitext(file.filename)[0]}_Seite_{page_num}.jpg",
+                                "ocr_quality": 0.0,
+                                "quality_ok": False,
+                                "quality_message": f"Fehler bei Seite {page_num}: {str(page_err)}",
+                                "error": str(page_err),
+                                "source_pdf": file.filename,
+                                "page_number": page_num
+                            })
+
+                except Exception as pdf_err:
+                    logger.error(f"PDF conversion failed: {pdf_err}")
+                    processed_images.append({
+                        "filename": file.filename,
+                        "message": f"PDF-Konvertierung fehlgeschlagen: {str(pdf_err)}",
+                        "error": str(pdf_err)
+                    })
             else:
-                # Not an image, skip processing
+                # Not an image or PDF, skip processing
                 processed_images.append({
                     "filename": file.filename,
-                    "message": "Not an image file"
+                    "message": "Nur Bilder und PDF-Dateien werden unterstützt"
                 })
 
         db.commit()

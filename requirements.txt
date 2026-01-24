@@ -62,5 +62,6 @@ Pillow==11.0.0
 # OCR Support
 pytesseract==0.3.10
 opencv-python-headless==4.10.0.84  # For rotation detection and deskewing
+pdf2image==1.17.0  # For converting PDF pages to images
 # paddlepaddle==3.0.0  # Disabled: Railway AVX incompatibility
 # paddleocr==3.3.3     # Disabled: Railway AVX incompatibility
