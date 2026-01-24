@@ -731,6 +731,7 @@ async def free_upload_and_preview(
 
                     if CV2_AVAILABLE:
                         # Apply rotation correction and get OCR quality
+                        # Returns COLOR image (BGR format)
                         corrected_array, ocr_quality = detect_and_correct_rotation(original_path)
 
                         # Save corrected image
@@ -752,7 +753,9 @@ async def free_upload_and_preview(
                         try:
                             from PIL import Image as PILImage
                             import pytesseract
-                            pil_img = PILImage.fromarray(corrected_array)
+                            # Convert BGR to RGB for PIL
+                            corrected_rgb_pil = cv2.cvtColor(corrected_array, cv2.COLOR_BGR2RGB)
+                            pil_img = PILImage.fromarray(corrected_rgb_pil)
                             european_langs = 'deu+eng+spa+fra+ita'
                             preview_text = pytesseract.image_to_string(pil_img, lang=european_langs, config='--psm 1')
                             ocr_preview = preview_text[:200].strip() if preview_text else ""
