@@ -130,7 +130,7 @@ class LLMGateway:
         if not self.grok_client:
             raise ValueError("GROK client failed to initialize. Please check your GROK_API_KEY.")
 
-        model = model or "grok-beta"  # Updated: grok-2-latest was deprecated
+        model = model or "grok-3"  # Current Grok model (was grok-beta, grok-2-latest)
 
         completion = self.grok_client.chat.completions.create(
             model=model,
