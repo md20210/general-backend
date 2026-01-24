@@ -288,7 +288,7 @@ Falls Felder nicht gefunden werden, lass sie weg.
 
         # Use LLM to extract data with DSGVO preference
         provider = "ollama" if prefer_local else "grok"
-        timeout = 120 if provider == "ollama" else 60  # 120 seconds for Ollama, 60 seconds for Grok
+        timeout = 240 if provider == "ollama" else 60  # 240 seconds for Ollama, 60 seconds for Grok
         result_dict = llm_gateway.generate(
             prompt=prompt,
             provider=provider,
@@ -769,8 +769,8 @@ Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
 
             # Convert prefer_local to provider
             provider = "ollama" if prefer_local else "grok"
-            # Ollama on Railway is CPU-only and slow, needs longer timeout
-            timeout = 120 if provider == "ollama" else 60  # 120 seconds for Ollama, 60 seconds for Grok
+            # Ollama on Railway is CPU-only and very slow, needs long timeout
+            timeout = 240 if provider == "ollama" else 60  # 240 seconds for Ollama, 60 seconds for Grok
             result_dict = llm_gateway.generate(prompt=prompt, provider=provider, max_tokens=4000, timeout=timeout)
             result = result_dict.get("response", "")
 
