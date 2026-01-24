@@ -529,6 +529,59 @@ async def health_check():
     return {"status": "ok", "service": "taxcases", "version": "1.0.0"}
 
 
+# Debug endpoint
+@router.get("/debug/check-services")
+async def debug_check_services():
+    """Debug: Check OCR and LLM services availability"""
+    status = {
+        "tesseract": False,
+        "paddleocr": False,
+        "ollama": False,
+        "grok": False,
+        "errors": {}
+    }
+
+    # Check Tesseract
+    try:
+        from PIL import Image
+        import pytesseract
+        status["tesseract"] = True
+    except Exception as e:
+        status["errors"]["tesseract"] = str(e)
+
+    # Check PaddleOCR
+    try:
+        from paddleocr import PaddleOCR, PPStructure
+        ocr = PaddleOCR(use_angle_cls=True, lang='latin', use_gpu=False)
+        status["paddleocr"] = True
+        status["paddleocr_version"] = "3.3.3 (expected)"
+    except Exception as e:
+        status["errors"]["paddleocr"] = str(e)
+
+    # Check Ollama
+    try:
+        from backend.services.llm_gateway import llm_gateway
+        result = llm_gateway.generate(prompt="Test", provider="ollama", max_tokens=10, timeout=10)
+        status["ollama"] = True
+        status["ollama_response"] = result.get("response", "")[:50]
+    except Exception as e:
+        status["errors"]["ollama"] = str(e)
+
+    # Check Grok
+    try:
+        from backend.services.llm_gateway import llm_gateway
+        from backend.config import settings
+        if settings.GROK_API_KEY and settings.GROK_API_KEY.strip():
+            status["grok"] = "API key configured"
+        else:
+            status["grok"] = False
+            status["errors"]["grok"] = "API key not configured"
+    except Exception as e:
+        status["errors"]["grok"] = str(e)
+
+    return status
+
+
 # FREE TAB ENDPOINTS
 @router.post("/free/upload")
 async def free_upload(
