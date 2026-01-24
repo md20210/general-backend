@@ -176,19 +176,25 @@ class DocumentParser:
             else:
                 image = Image.open(io.BytesIO(file_data))
 
-            # Use German + English + Spanish language for OCR (for Canary Islands invoices)
+            # Use all European languages for OCR (covers all EU invoices)
+            # Priority: German, English, Spanish, French, Italian, Polish, Czech, Dutch, Portuguese
+            european_langs = 'deu+eng+spa+fra+ita+pol+ces+nld+por+ron+hun+slk+slv+hrv+bul+ell+swe+dan+nor+fin'
             try:
-                text = pytesseract.image_to_string(image, lang='deu+eng+spa')
+                text = pytesseract.image_to_string(image, lang=european_langs)
             except Exception as tess_err:
-                # If language pack not available, try German + English
+                # Fallback: Try common languages if full list fails
                 try:
-                    text = pytesseract.image_to_string(image, lang='deu+eng')
+                    text = pytesseract.image_to_string(image, lang='deu+eng+spa+fra+ita+pol+ces')
                 except:
-                    # Tesseract binary not found, try without language specification
+                    # Further fallback: Basic languages
                     try:
-                        text = pytesseract.image_to_string(image)
+                        text = pytesseract.image_to_string(image, lang='deu+eng')
                     except:
-                        return f"[Tesseract OCR not installed on system. Install tesseract-ocr package.]"
+                        # Last resort: No language specification
+                        try:
+                            text = pytesseract.image_to_string(image)
+                        except:
+                            return f"[Tesseract OCR not installed on system. Install tesseract-ocr package.]"
 
             if text.strip():
                 return f"[Tesseract OCR]\n{text.strip()}"

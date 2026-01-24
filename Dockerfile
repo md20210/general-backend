@@ -5,7 +5,7 @@
 # Stage 1: Base image with system dependencies
 FROM python:3.11-slim as base
 
-# Install system dependencies including Tesseract OCR
+# Install system dependencies including Tesseract OCR with European languages
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -15,6 +15,23 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-deu \
     tesseract-ocr-eng \
     tesseract-ocr-spa \
+    tesseract-ocr-fra \
+    tesseract-ocr-ita \
+    tesseract-ocr-pol \
+    tesseract-ocr-ces \
+    tesseract-ocr-nld \
+    tesseract-ocr-por \
+    tesseract-ocr-ron \
+    tesseract-ocr-hun \
+    tesseract-ocr-slk \
+    tesseract-ocr-slv \
+    tesseract-ocr-hrv \
+    tesseract-ocr-bul \
+    tesseract-ocr-ell \
+    tesseract-ocr-swe \
+    tesseract-ocr-dan \
+    tesseract-ocr-nor \
+    tesseract-ocr-fin \
     libtesseract-dev \
     libgl1 \
     libglib2.0-0 \
