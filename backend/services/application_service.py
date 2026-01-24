@@ -164,51 +164,18 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float]:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.medianBlur(gray, 3)  # Reduce noise
 
-    # Step 1: Test original image first
-    print("Step 1: Testing original orientation (0°)...")
-    original_score = 0
-
-    if TESSERACT_AVAILABLE:
-        try:
-            from PIL import Image as PILImage
-            pil_img = PILImage.fromarray(gray)
-            # Quick OCR on original
-            text = pytesseract.image_to_string(pil_img, lang='eng', config='--psm 1')
-            original_score = len(''.join(c for c in text if c.isalnum()))
-            print(f"Original (0°): {original_score} alphanumeric chars recognized")
-
-            # If enough text recognized in original, keep it!
-            # Threshold: 100 chars = definitely readable text
-            if original_score >= 100:
-                print(f"✓ Original orientation is good ({original_score} chars) - NO rotation needed!")
-                # Still apply deskewing for slight angle correction
-                try:
-                    deskewed, skew_angle = deskew_image(gray)
-                    print(f"Deskew angle: {skew_angle:.2f}°")
-                    # Measure quality
-                    quality = get_ocr_quality(deskewed)
-                    print(f"OCR Quality: {quality:.1f}%")
-                    return deskewed, quality
-                except Exception as e:
-                    print(f"Deskew failed: {e}")
-                    quality = get_ocr_quality(gray)
-                    print(f"OCR Quality: {quality:.1f}%")
-                    return gray, quality
-
-        except Exception as e:
-            print(f"OCR on original failed: {e}")
-            original_score = 0
-
-    # Step 2: If original has little text, test other rotations
-    print(f"Step 2: Original has only {original_score} chars - testing other rotations...")
+    # Test ALL 4 rotations to find the best one
+    print("Testing all 4 rotations to find best orientation...")
 
     best_img = gray
-    best_score = original_score
+    best_score = -1
     best_angle = 0
 
-    for rot in [90, 180, 270]:  # Don't test 0° again
+    for rot in [0, 90, 180, 270]:
         # Rotate image
-        if rot == 90:
+        if rot == 0:
+            rotated = gray
+        elif rot == 90:
             rotated = cv2.rotate(gray, cv2.ROTATE_90_CLOCKWISE)
         elif rot == 180:
             rotated = cv2.rotate(gray, cv2.ROTATE_180)
