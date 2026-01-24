@@ -226,21 +226,8 @@ async def upload_documents(
             db.add(doc)
             db.flush()
 
-            # Extract data using LLM
-            try:
-                await extract_data_from_document(case.id, doc.id, doc_content, db)
-            except Exception as llm_error:
-                logger.warning(f"Could not extract data from {file.filename}: {llm_error}")
-                # Add placeholder data
-                placeholder_data = TaxCaseExtractedData(
-                    tax_case_id=case.id,
-                    document_id=doc.id,
-                    field_name="document_name",
-                    field_value=file.filename,
-                    field_type="text",
-                    confirmed=False
-                )
-                db.add(placeholder_data)
+            # Extract data using LLM (always creates data, even if LLM fails)
+            await extract_data_from_document(case.id, doc.id, doc_content, db)
 
             uploaded_docs.append(doc.id)
 
@@ -263,10 +250,20 @@ async def upload_documents(
 
 async def extract_data_from_document(case_id: int, doc_id: int, content: str, db: Session):
     """Extract structured data from document using LLM"""
-    from backend.services.llm_gateway import llm_gateway
 
-    # Prepare extraction prompt
-    prompt = f"""Extract the following information from this document:
+    # For MVP: Create sample extracted data
+    sample_data = {
+        "document_content": content[:200] if content else "No content",
+        "status": "Hochgeladen und bereit zur Verarbeitung",
+        "hinweis": "Bitte bearbeiten Sie diese Felder und bestätigen Sie den Fall"
+    }
+
+    # Try to use LLM if available
+    try:
+        from backend.services.llm_gateway import llm_gateway
+
+        # Prepare extraction prompt
+        prompt = f"""Extract the following information from this document:
 - Name (name)
 - Phone number (phone_number)
 - Email (email)
@@ -274,7 +271,6 @@ async def extract_data_from_document(case_id: int, doc_id: int, content: str, db
 - Order positions (order_positions)
 - Total amount (total_amount)
 - Date (date)
-- Any other relevant information
 
 Document content:
 {content[:4000]}
@@ -282,7 +278,6 @@ Document content:
 Return the extracted data as a JSON object with field names as keys.
 """
 
-    try:
         # Use LLM to extract data
         result = await llm_gateway.generate(
             prompt=prompt,
@@ -292,29 +287,34 @@ Return the extracted data as a JSON object with field names as keys.
         # Parse JSON response
         try:
             extracted = json.loads(result)
+            # Merge with sample data
+            sample_data.update(extracted)
         except:
-            # If not valid JSON, create structured response from text
-            extracted = {"raw_text": result}
+            # If not valid JSON, just use sample data
+            sample_data["llm_response"] = result[:200]
 
-        # Store extracted data
-        for field_name, field_value in extracted.items():
-            if field_value:
-                data_entry = TaxCaseExtractedData(
-                    tax_case_id=case_id,
-                    document_id=doc_id,
-                    field_name=field_name,
-                    field_value=str(field_value),
-                    field_type="text",
-                    confidence=0.8,
-                    confirmed=False
-                )
-                db.add(data_entry)
-
-        db.flush()
-        logger.info(f"Extracted {len(extracted)} fields from document {doc_id}")
+        logger.info(f"LLM extraction successful for document {doc_id}")
 
     except Exception as e:
-        logger.error(f"Error extracting data: {e}")
+        logger.warning(f"LLM extraction failed for document {doc_id}: {e}")
+        # Continue with sample data
+
+    # Store extracted data (either from LLM or sample)
+    for field_name, field_value in sample_data.items():
+        if field_value:
+            data_entry = TaxCaseExtractedData(
+                tax_case_id=case_id,
+                document_id=doc_id,
+                field_name=field_name,
+                field_value=str(field_value),
+                field_type="text",
+                confidence=0.5,
+                confirmed=False
+            )
+            db.add(data_entry)
+
+    db.flush()
+    logger.info(f"Stored {len(sample_data)} fields for document {doc_id}")
 
 
 @router.get("/cases/{case_id}/documents", response_model=List[DocumentResponse])
