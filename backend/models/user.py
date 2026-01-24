@@ -24,6 +24,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     chats: Mapped[list["Chat"]] = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
     matches: Mapped[list["Match"]] = relationship("Match", back_populates="user", cascade="all, delete-orphan")
     applications: Mapped[list["Application"]] = relationship("Application", back_populates="user", cascade="all, delete-orphan")
+    tax_cases: Mapped[list["TaxCase"]] = relationship("TaxCase", back_populates="user", cascade="all, delete-orphan")
     # NOTE: LifeChronicle relationship not needed here - we query entries directly via user_id
 
     def __repr__(self):
