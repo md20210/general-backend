@@ -173,12 +173,14 @@ async def upload_documents(
     case_id: int,
     files: List[UploadFile] = File(...),
     use_local_llm: str = Form("true"),  # DSGVO mode by default
+    ocr_engine: str = Form("tesseract"),
     db: Session = Depends(get_db),
     user: User = Depends(get_demo_user)
 ):
     """Upload and process documents for a tax case"""
     prefer_local = use_local_llm.lower() == "true"
-    logger.info(f"Upload mode: {'DSGVO (lokales LLM)' if prefer_local else 'Grok API'}")
+    ocr_mode = "PaddleOCR" if ocr_engine.lower() == "paddle" else "Tesseract OCR"
+    logger.info(f"Upload mode: {'DSGVO (lokales LLM)' if prefer_local else 'Grok API'} mit {ocr_mode}")
     case = db.query(TaxCase).filter(
         TaxCase.id == case_id,
         TaxCase.user_id == user.id
@@ -208,11 +210,12 @@ async def upload_documents(
             if DocumentParser:
                 try:
                     parser = DocumentParser()
-                    doc_content = parser.parse(file_path)
+                    doc_content = parser.parse(file_path, ocr_engine=ocr_engine.lower())
+                    logger.info(f"{ocr_mode} extracted text from {file.filename}")
                 except Exception as parse_error:
-                    logger.warning(f"Could not parse document {file.filename}: {parse_error}")
+                    logger.warning(f"{ocr_mode} could not parse document {file.filename}: {parse_error}")
                     # Use basic content
-                    doc_content = f"Uploaded: {file.filename}"
+                    doc_content = f"Uploaded: {file.filename} ({ocr_mode} nicht verfügbar)"
             else:
                 doc_content = f"Uploaded: {file.filename}"
 
@@ -529,12 +532,14 @@ async def free_upload(
     email: str = Form(...),
     files: List[UploadFile] = File(...),
     use_local_llm: str = Form("true"),
+    ocr_engine: str = Form("tesseract"),
     db: Session = Depends(get_db),
     user: User = Depends(get_demo_user)
 ):
     """Free tier: Upload documents and extract data - SAVES to database"""
     prefer_local = use_local_llm.lower() == "true"
     llm_mode = "Lokales LLM (DSGVO)" if prefer_local else "Grok API"
+    ocr_mode = "PaddleOCR" if ocr_engine.lower() == "paddle" else "Tesseract OCR"
 
     # Create a case for this upload (so it appears in Premium tab)
     from datetime import datetime
@@ -544,13 +549,13 @@ async def free_upload(
         user_id=user.id,
         name=case_name,
         status="processing",
-        notes=f"Erstellt über Free Tab mit {llm_mode}"
+        notes=f"Erstellt über Free Tab mit {llm_mode} und {ocr_mode}"
     )
     db.add(new_case)
     db.flush()
 
     case_id = new_case.id
-    logger.info(f"Created case {case_id} for free upload from {email}")
+    logger.info(f"Created case {case_id} for free upload from {email} using {ocr_mode}")
 
     # Create upload directory
     upload_dir = f"/tmp/tax_uploads/{case_id}"
@@ -558,6 +563,7 @@ async def free_upload(
 
     extracted_data = {
         "verarbeitungsmodus": llm_mode,
+        "ocr_engine": ocr_mode,
         "email": email
     }
 
@@ -576,11 +582,11 @@ async def free_upload(
             if DocumentParser:
                 try:
                     parser = DocumentParser()
-                    doc_content = parser.parse(file_path)
-                    logger.info(f"OCR extracted {len(doc_content)} characters from {file.filename}")
+                    doc_content = parser.parse(file_path, ocr_engine=ocr_engine.lower())
+                    logger.info(f"{ocr_mode} extracted {len(doc_content)} characters from {file.filename}")
                 except Exception as parse_error:
-                    logger.warning(f"OCR failed for {file.filename}: {parse_error}")
-                    doc_content = f"Dokument: {file.filename} (OCR nicht verfügbar)"
+                    logger.warning(f"{ocr_mode} failed for {file.filename}: {parse_error}")
+                    doc_content = f"Dokument: {file.filename} (OCR nicht verfügbar: {str(parse_error)})"
             else:
                 doc_content = f"Dokument: {file.filename}"
 

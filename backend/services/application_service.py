@@ -1,7 +1,7 @@
 """Application Tracker Service - Document parsing and processing"""
 import io
 import zipfile
-from typing import List, Tuple
+from typing import List, Tuple, Literal
 from PyPDF2 import PdfReader
 from docx import Document as DocxDocument
 
@@ -9,16 +9,36 @@ from docx import Document as DocxDocument
 try:
     from PIL import Image
     import pytesseract
-    OCR_AVAILABLE = True
+    TESSERACT_AVAILABLE = True
 except ImportError:
-    OCR_AVAILABLE = False
+    TESSERACT_AVAILABLE = False
+
+try:
+    from paddleocr import PaddleOCR
+    PADDLE_AVAILABLE = True
+except ImportError:
+    PADDLE_AVAILABLE = False
 
 
 class DocumentParser:
     """Parse documents and extract text"""
 
-    def parse(self, file_path: str) -> str:
-        """Parse file from path and return extracted text"""
+    def __init__(self):
+        self.paddle_ocr = None
+        if PADDLE_AVAILABLE:
+            try:
+                # Initialize PaddleOCR with German and English support
+                self.paddle_ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False)
+            except Exception as e:
+                print(f"Failed to initialize PaddleOCR: {e}")
+
+    def parse(self, file_path: str, ocr_engine: Literal['tesseract', 'paddle'] = 'tesseract') -> str:
+        """Parse file from path and return extracted text
+
+        Args:
+            file_path: Path to the file
+            ocr_engine: OCR engine to use ('tesseract' or 'paddle')
+        """
         try:
             with open(file_path, 'rb') as f:
                 file_data = f.read()
@@ -28,7 +48,7 @@ class DocumentParser:
 
             # Check if it's an image
             if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.bmp')):
-                return self._parse_image(file_data)
+                return self._parse_image(file_data, file_path, ocr_engine)
 
             # Use existing parse_file method
             import asyncio
@@ -37,18 +57,68 @@ class DocumentParser:
         except Exception as e:
             return f"[Error parsing file: {str(e)}]"
 
-    def _parse_image(self, file_data: bytes) -> str:
-        """Extract text from image using OCR"""
-        if not OCR_AVAILABLE:
-            return "[OCR not available - install pytesseract and Pillow]"
+    def _parse_image(self, file_data: bytes, file_path: str = None, ocr_engine: str = 'tesseract') -> str:
+        """Extract text from image using OCR
+
+        Args:
+            file_data: Image file bytes
+            file_path: Optional file path for PaddleOCR
+            ocr_engine: OCR engine to use ('tesseract' or 'paddle')
+        """
+        if ocr_engine == 'paddle':
+            return self._parse_image_paddle(file_path or file_data)
+        else:
+            return self._parse_image_tesseract(file_data)
+
+    def _parse_image_tesseract(self, file_data: bytes) -> str:
+        """Extract text from image using Tesseract OCR"""
+        if not TESSERACT_AVAILABLE:
+            return "[Tesseract OCR not available - install pytesseract and Pillow]"
 
         try:
             image = Image.open(io.BytesIO(file_data))
-            # Use German language for OCR
+            # Use German + English language for OCR
             text = pytesseract.image_to_string(image, lang='deu+eng')
-            return text.strip() if text.strip() else "[No text found in image]"
+
+            if text.strip():
+                return f"[Tesseract OCR]\n{text.strip()}"
+            else:
+                return "[Tesseract OCR: No text found in image]"
         except Exception as e:
-            return f"[Error during OCR: {str(e)}]"
+            return f"[Tesseract OCR Error: {str(e)}]"
+
+    def _parse_image_paddle(self, file_path: str) -> str:
+        """Extract text from image using PaddleOCR"""
+        if not PADDLE_AVAILABLE:
+            return "[PaddleOCR not available - install paddleocr]"
+
+        if not self.paddle_ocr:
+            return "[PaddleOCR not initialized]"
+
+        try:
+            # PaddleOCR returns list of [bbox, (text, confidence)]
+            result = self.paddle_ocr.ocr(file_path, cls=True)
+
+            if not result or not result[0]:
+                return "[PaddleOCR: No text found in image]"
+
+            # Extract text from results
+            text_lines = []
+            for line in result[0]:
+                if line and len(line) >= 2:
+                    text = line[1][0]  # Extract text from (text, confidence) tuple
+                    confidence = line[1][1]
+                    text_lines.append(text)
+
+            extracted_text = "\n".join(text_lines)
+
+            if extracted_text.strip():
+                return f"[PaddleOCR]\n{extracted_text.strip()}"
+            else:
+                return "[PaddleOCR: No text extracted]"
+
+        except Exception as e:
+            return f"[PaddleOCR Error: {str(e)}]"
 
     async def parse_file(self, filename: str, file_data: bytes) -> str:
         """Parse file and return extracted text"""
