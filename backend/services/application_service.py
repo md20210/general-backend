@@ -255,6 +255,18 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float, flo
             # Measure original OCR quality for display
             original_quality = get_ocr_quality(rotated)
 
+            # EARLY EXIT: If original quality ≥90%, we have BOTH:
+            # 1. High confidence (≥90%)
+            # 2. Enough text (≥180 chars for 90% quality)
+            # This means the image is correctly oriented!
+            # No need to test other rotations → save ~3 seconds per image
+            if original_quality >= 90.0:
+                print(f"✓ Original quality {original_quality:.1f}% ≥90% → skip rotation testing (early exit)")
+                best_score = original_score
+                best_img = original_img
+                best_angle = 0
+                break
+
         if score > best_score:
             best_score = score
             best_img = rotated
