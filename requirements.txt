@@ -60,5 +60,6 @@ Pillow==11.0.0
 
 # OCR Support
 pytesseract==0.3.10
-paddleocr==2.7.3
-paddlepaddle==2.6.2
+# PaddleOCR disabled due to size/dependency issues on Railway
+# paddleocr==2.7.3
+# paddlepaddle==2.6.2

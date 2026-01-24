@@ -73,12 +73,19 @@ class DocumentParser:
     def _parse_image_tesseract(self, file_data: bytes) -> str:
         """Extract text from image using Tesseract OCR"""
         if not TESSERACT_AVAILABLE:
-            return "[Tesseract OCR not available - install pytesseract and Pillow]"
+            return "[Tesseract OCR not available - Pillow/pytesseract not installed]"
 
         try:
             image = Image.open(io.BytesIO(file_data))
             # Use German + English language for OCR
-            text = pytesseract.image_to_string(image, lang='deu+eng')
+            try:
+                text = pytesseract.image_to_string(image, lang='deu+eng')
+            except Exception as tess_err:
+                # Tesseract binary not found, try without language specification
+                try:
+                    text = pytesseract.image_to_string(image)
+                except:
+                    return f"[Tesseract OCR not installed on system. Install tesseract-ocr package.]"
 
             if text.strip():
                 return f"[Tesseract OCR]\n{text.strip()}"
