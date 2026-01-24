@@ -270,20 +270,20 @@ async def extract_data_from_document(case_id: int, doc_id: int, content: str, db
     try:
         from backend.services.llm_gateway import llm_gateway
 
-        # Prepare extraction prompt
-        prompt = f"""Extract the following information from this document:
-- Name (name)
-- Phone number (phone_number)
-- Email (email)
-- Address (address)
-- Order positions (order_positions)
-- Total amount (total_amount)
-- Date (date)
+        # Prepare extraction prompt (H7-Formular für Kanarische Inseln)
+        prompt = f"""Extrahiere folgende Informationen aus diesem Dokument für Import auf die Kanarischen Inseln:
 
-Document content:
+1. SENDUNGSDATEN: art_der_sendung, warenwert_gesamt_eur, versandkosten, art_der_lieferung
+2. ABSENDER: absender_name, absender_strasse, absender_plz, absender_ort, absender_land, absender_email, absender_telefon
+3. EMPFÄNGER: empfaenger_name, empfaenger_strasse, empfaenger_plz, empfaenger_ort, empfaenger_insel, empfaenger_nif_nie_cif, empfaenger_email, empfaenger_telefon
+4. WARENPOSITION: position_1_beschreibung, position_1_anzahl, position_1_stueckpreis, position_1_gesamtwert, position_1_ursprungsland
+5. RECHNUNG: rechnungsnummer, rechnungsdatum, mehrwertsteuer_ausgewiesen
+
+Dokumenteninhalt:
 {content[:4000]}
 
-Return the extracted data as a JSON object with field names as keys.
+Gib die Daten als JSON zurück. Verwende exakt die angegebenen Feldnamen.
+Falls Felder nicht gefunden werden, lass sie weg.
 """
 
         # Use LLM to extract data with DSGVO preference
@@ -611,26 +611,62 @@ async def free_upload(
         try:
             from backend.services.llm_gateway import llm_gateway
 
-            prompt = f"""Extrahiere steuerrelevante Informationen aus diesen Dokumenten und gib sie strukturiert zurück:
+            prompt = f"""Extrahiere folgende Informationen aus diesem Dokument für Import auf die Kanarischen Inseln (H7-Formular):
 
-WICHTIGE FELDER:
-- name: Vollständiger Name
-- adresse: Vollständige Adresse
-- steuernummer: Steuernummer oder Tax ID
-- telefon: Telefonnummer
-- email: E-Mail Adresse
-- gesamtbetrag: Gesamtbetrag in EUR
-- datum: Rechnungsdatum
-- beschreibung: Kurze Beschreibung der Leistung/Produkte
-- positionen: Auflistung der Rechnungspositionen
-- umsatzsteuer: Umsatzsteuer/MwSt/IVA Betrag
-- nettobetrag: Nettobetrag
+1. ALLGEMEINE SENDUNGSDATEN:
+- art_der_sendung: B2C (Business to Consumer) oder C2C (Consumer to Consumer)
+- warenwert_gesamt_eur: Gesamtwert der Waren in EUR
+- waehrung: Währung (meist EUR)
+- versandkosten: Versandkosten
+- versicherungskosten: Versicherungskosten (optional)
+- gesamtbetrag_fuer_zoll: Summe aus Wert + Versand + Versicherung
+- art_der_lieferung: Kauf oder Geschenk
+
+2. ABSENDER (Versender):
+- absender_name: Name oder Firma des Absenders
+- absender_strasse: Straße und Hausnummer
+- absender_plz: Postleitzahl
+- absender_ort: Ort
+- absender_land: Land (ISO-Code)
+- absender_email: E-Mail (optional)
+- absender_telefon: Telefonnummer (optional)
+
+3. EMPFÄNGER (Kanarische Inseln):
+- empfaenger_name: Name des Empfängers
+- empfaenger_strasse: Straße und Hausnummer
+- empfaenger_plz: Postleitzahl
+- empfaenger_ort: Ort
+- empfaenger_insel: Welche kanarische Insel (wichtig!)
+- empfaenger_nif_nie_cif: NIF/NIE/CIF Nummer (sehr wichtig!)
+- empfaenger_email: E-Mail
+- empfaenger_telefon: Telefonnummer
+
+4. WARENPOSITIONEN (mindestens 1):
+- position_1_beschreibung: Klare Warenbeschreibung
+- position_1_anzahl: Stückzahl
+- position_1_stueckpreis: Preis pro Stück
+- position_1_gesamtwert: Gesamtwert der Position
+- position_1_ursprungsland: Ursprungsland (ISO-Code)
+- position_1_zolltarifnummer: 6-stellige Zolltarifnummer (optional)
+- position_1_gewicht: Gewicht (optional)
+- position_1_zustand: Neu oder gebraucht (optional)
+
+5. RECHNUNGS-/WERTNACHWEIS:
+- rechnungsnummer: Nummer der Rechnung
+- rechnungsdatum: Datum der Rechnung
+- mehrwertsteuer_ausgewiesen: Ja/Nein, wurde MwSt ausgewiesen?
+
+6. ZUSÄTZLICHE ANGABEN:
+- zahlungsnachweis: Art des Zahlungsnachweises (PayPal, Karte, etc.)
+- bemerkungen: Weitere Anmerkungen
 
 Dokumenteninhalt:
 {combined_content[:8000]}
 
-Gib die extrahierten Daten als JSON-Objekt zurück mit den Feldnamen als Keys.
-Falls ein Feld nicht gefunden wird, lasse es weg.
+Gib die extrahierten Daten als JSON-Objekt zurück.
+Verwende exakt die Feldnamen wie oben angegeben.
+Falls ein Feld nicht gefunden wird, lasse es weg oder gib null zurück.
+Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
 """
 
             result = await llm_gateway.generate(prompt=prompt, prefer_local=prefer_local)
