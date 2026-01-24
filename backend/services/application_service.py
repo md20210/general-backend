@@ -5,9 +5,50 @@ from typing import List, Tuple
 from PyPDF2 import PdfReader
 from docx import Document as DocxDocument
 
+# Optional OCR imports
+try:
+    from PIL import Image
+    import pytesseract
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+
 
 class DocumentParser:
     """Parse documents and extract text"""
+
+    def parse(self, file_path: str) -> str:
+        """Parse file from path and return extracted text"""
+        try:
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+
+            # Get filename from path
+            filename = file_path.split('/')[-1]
+
+            # Check if it's an image
+            if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.bmp')):
+                return self._parse_image(file_data)
+
+            # Use existing parse_file method
+            import asyncio
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.parse_file(filename, file_data))
+        except Exception as e:
+            return f"[Error parsing file: {str(e)}]"
+
+    def _parse_image(self, file_data: bytes) -> str:
+        """Extract text from image using OCR"""
+        if not OCR_AVAILABLE:
+            return "[OCR not available - install pytesseract and Pillow]"
+
+        try:
+            image = Image.open(io.BytesIO(file_data))
+            # Use German language for OCR
+            text = pytesseract.image_to_string(image, lang='deu+eng')
+            return text.strip() if text.strip() else "[No text found in image]"
+        except Exception as e:
+            return f"[Error during OCR: {str(e)}]"
 
     async def parse_file(self, filename: str, file_data: bytes) -> str:
         """Parse file and return extracted text"""
