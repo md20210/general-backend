@@ -172,10 +172,13 @@ async def get_tax_case(case_id: int, db: Session = Depends(get_db), user: User =
 async def upload_documents(
     case_id: int,
     files: List[UploadFile] = File(...),
+    use_local_llm: str = Form("true"),  # DSGVO mode by default
     db: Session = Depends(get_db),
     user: User = Depends(get_demo_user)
 ):
     """Upload and process documents for a tax case"""
+    prefer_local = use_local_llm.lower() == "true"
+    logger.info(f"Upload mode: {'DSGVO (lokales LLM)' if prefer_local else 'Grok API'}")
     case = db.query(TaxCase).filter(
         TaxCase.id == case_id,
         TaxCase.user_id == user.id
@@ -227,7 +230,7 @@ async def upload_documents(
             db.flush()
 
             # Extract data using LLM (always creates data, even if LLM fails)
-            await extract_data_from_document(case.id, doc.id, doc_content, db)
+            await extract_data_from_document(case.id, doc.id, doc_content, db, prefer_local)
 
             uploaded_docs.append(doc.id)
 
@@ -248,13 +251,15 @@ async def upload_documents(
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
-async def extract_data_from_document(case_id: int, doc_id: int, content: str, db: Session):
+async def extract_data_from_document(case_id: int, doc_id: int, content: str, db: Session, prefer_local: bool = True):
     """Extract structured data from document using LLM"""
 
     # For MVP: Create sample extracted data
+    llm_mode = "Lokales LLM (DSGVO)" if prefer_local else "Grok API"
     sample_data = {
         "document_content": content[:200] if content else "No content",
         "status": "Hochgeladen und bereit zur Verarbeitung",
+        "verarbeitungsmodus": llm_mode,
         "hinweis": "Bitte bearbeiten Sie diese Felder und bestätigen Sie den Fall"
     }
 
@@ -278,11 +283,13 @@ Document content:
 Return the extracted data as a JSON object with field names as keys.
 """
 
-        # Use LLM to extract data
+        # Use LLM to extract data with DSGVO preference
         result = await llm_gateway.generate(
             prompt=prompt,
-            prefer_local=False  # Use Grok API for better accuracy
+            prefer_local=prefer_local  # DSGVO mode: use local LLM
         )
+
+        logger.info(f"LLM extraction mode: {llm_mode}")
 
         # Parse JSON response
         try:
@@ -514,3 +521,193 @@ async def download_document(doc_id: int, db: Session = Depends(get_db), user: Us
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "service": "taxcases", "version": "1.0.0"}
+
+
+# FREE TAB ENDPOINTS
+@router.post("/free/upload")
+async def free_upload(
+    email: str = Form(...),
+    files: List[UploadFile] = File(...),
+    use_local_llm: str = Form("true"),
+    db: Session = Depends(get_db)
+):
+    """Free tier: Upload documents and extract data without case management"""
+    prefer_local = use_local_llm.lower() == "true"
+
+    # Create temporary directory for files
+    upload_dir = f"/tmp/tax_free/{email}"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    extracted_data = {}
+
+    try:
+        for file in files:
+            # Save file
+            file_path = os.path.join(upload_dir, file.filename)
+            with open(file_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+
+            # Basic content extraction
+            doc_content = f"Uploaded: {file.filename}"
+
+            # Try LLM extraction
+            try:
+                from backend.services.llm_gateway import llm_gateway
+
+                prompt = f"""Extract tax-relevant information from this document:
+- Name, Address, Tax ID
+- Income sources, amounts
+- Deductions, expenses
+- Any other relevant tax information
+
+Document: {file.filename}
+Content preview: {doc_content[:1000]}
+
+Return as JSON.
+"""
+                result = await llm_gateway.generate(prompt=prompt, prefer_local=prefer_local)
+                try:
+                    data = json.loads(result)
+                    extracted_data.update(data)
+                except:
+                    extracted_data["extracted_text"] = result[:500]
+            except Exception as e:
+                logger.warning(f"LLM extraction failed: {e}")
+                extracted_data["filename"] = file.filename
+                extracted_data["status"] = "Hochgeladen"
+
+        return {
+            "success": True,
+            "extracted_data": extracted_data,
+            "message": "Dokumente erfolgreich verarbeitet"
+        }
+    except Exception as e:
+        logger.error(f"Error in free upload: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/free/create-document")
+async def free_create_document(
+    email: str = Form(...),
+    data: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Free tier: Create PDF document from extracted data"""
+    try:
+        extracted_data = json.loads(data)
+
+        # Create PDF
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # Title
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, height - 50, "Steuerdokument")
+
+        # Email
+        p.setFont("Helvetica", 10)
+        p.drawString(50, height - 80, f"Erstellt für: {email}")
+
+        # Data
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, height - 110, "Extrahierte Daten:")
+
+        p.setFont("Helvetica", 10)
+        y_position = height - 130
+        for key, value in extracted_data.items():
+            if y_position < 50:
+                p.showPage()
+                y_position = height - 50
+
+            p.drawString(50, y_position, f"{key}: {value}")
+            y_position -= 15
+
+        p.showPage()
+        p.save()
+
+        buffer.seek(0)
+
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=steuerdokument_{email}.pdf"}
+        )
+    except Exception as e:
+        logger.error(f"Error creating document: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ADMIN TAB ENDPOINTS
+@router.get("/admin/users")
+async def get_all_users(db: Session = Depends(get_db), user: User = Depends(get_demo_user)):
+    """Admin: Get all users with their cases"""
+    # For MVP: Return demo data structure
+    # In production: Query actual users
+
+    cases = db.query(TaxCase).all()
+
+    # Group by user email (for MVP, all belong to demo user)
+    user_data = {
+        "demo@example.com": {
+            "email": "demo@example.com",
+            "folders": [],
+            "case_count": len(cases)
+        }
+    }
+
+    return list(user_data.values())
+
+
+# CASE MANAGEMENT ENDPOINTS
+@router.put("/cases/{case_id}")
+async def update_case(
+    case_id: int,
+    name: str = Form(None),
+    notes: str = Form(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_demo_user)
+):
+    """Update case (rename, edit notes)"""
+    case = db.query(TaxCase).filter(
+        TaxCase.id == case_id,
+        TaxCase.user_id == user.id
+    ).first()
+
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    if name:
+        case.name = name
+    if notes is not None:
+        case.notes = notes
+
+    db.commit()
+    db.refresh(case)
+
+    return {"success": True, "message": "Case updated"}
+
+
+@router.delete("/cases/{case_id}")
+async def delete_case(
+    case_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_demo_user)
+):
+    """Delete a case and all associated data"""
+    case = db.query(TaxCase).filter(
+        TaxCase.id == case_id,
+        TaxCase.user_id == user.id
+    ).first()
+
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Delete case (cascade will delete documents and extracted data)
+    db.delete(case)
+    db.commit()
+
+    logger.info(f"Deleted case {case_id}")
+
+    return {"success": True, "message": "Case deleted"}
