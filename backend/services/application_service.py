@@ -194,18 +194,46 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float, flo
     gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
     gray = cv2.medianBlur(gray, 3)  # Reduce noise
 
-    # ALWAYS test ALL 4 rotations to find the best one
-    # CRITICAL: High OCR quality does NOT guarantee correct orientation!
-    # Example: Invoice rotated 180° can have 91% OCR (numbers readable upside-down)
-    # The ONLY way to ensure correct orientation: test all rotations and pick best score
-    print("Testing all 4 rotations to find best orientation...")
+    original_img = gray
+
+    # STEP 1: Check ORIGINAL image quality FIRST (before any rotation testing)
+    print("Step 1: Checking original image quality...")
+    original_quality = get_ocr_quality(gray)
+    print(f"Original quality: {original_quality:.1f}%")
+
+    # EARLY EXIT: If original ≥90%, skip rotation testing entirely!
+    # Quality ≥90% means BOTH high confidence AND enough text → correctly oriented
+    if original_quality >= 90.0:
+        print(f"✓ Original quality {original_quality:.1f}% ≥90% → No rotation needed! (instant return)")
+        # Apply deskewing only
+        try:
+            deskewed_gray, skew_angle = deskew_image(gray)
+            print(f"Deskew angle: {skew_angle:.2f}°")
+            final_img_gray = deskewed_gray
+
+            # Apply same deskew to color
+            if abs(skew_angle) > 0.5:
+                (h, w) = gray.shape
+                center = (w // 2, h // 2)
+                M = cv2.getRotationMatrix2D(center, skew_angle, 1.0)
+                final_img_color = cv2.warpAffine(img_color, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+            else:
+                final_img_color = img_color
+        except Exception as e:
+            print(f"Deskewing failed: {e}")
+            final_img_gray = gray
+            final_img_color = img_color
+
+        processed_quality = get_ocr_quality(final_img_gray)
+        return final_img_color, original_quality, processed_quality
+
+    # STEP 2: If quality <90%, test ALL 4 rotations to find best orientation
+    print(f"Original quality {original_quality:.1f}% <90% → Testing all 4 rotations...")
 
     best_img = gray
     best_score = -1
     best_angle = 0
     original_score = 0
-    original_img = gray
-    original_quality = 0
 
     for rot in [0, 90, 180, 270]:
         # Rotate image
@@ -251,21 +279,6 @@ def detect_and_correct_rotation(image_path: str) -> Tuple[np.ndarray, float, flo
         # Track scores for all rotations
         if rot == 0:
             original_score = score
-            original_img = rotated
-            # Measure original OCR quality for display
-            original_quality = get_ocr_quality(rotated)
-
-            # EARLY EXIT: If original quality ≥90%, we have BOTH:
-            # 1. High confidence (≥90%)
-            # 2. Enough text (≥180 chars for 90% quality)
-            # This means the image is correctly oriented!
-            # No need to test other rotations → save ~3 seconds per image
-            if original_quality >= 90.0:
-                print(f"✓ Original quality {original_quality:.1f}% ≥90% → skip rotation testing (early exit)")
-                best_score = original_score
-                best_img = original_img
-                best_angle = 0
-                break
 
         if score > best_score:
             best_score = score
