@@ -239,6 +239,44 @@ async def list_all_users(
     }
 
 
+@mvp_auth_router.post("/admin/users/{user_id}/make-admin")
+async def make_user_admin(
+    user_id: str,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_admin)
+):
+    """Make user an admin (admin only)."""
+    try:
+        from uuid import UUID
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format"
+        )
+
+    stmt = select(User).where(User.id == user_uuid)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    user.is_superuser = True
+    db.commit()
+
+    print(f"👑 Admin {admin_user.email} made {user.email} an admin")
+
+    return {
+        "status": "success",
+        "email": user.email,
+        "is_superuser": True
+    }
+
+
 @mvp_auth_router.delete("/admin/users/{user_id}")
 async def delete_user_by_admin(
     user_id: str,
@@ -283,6 +321,38 @@ async def delete_user_by_admin(
         "status": "deleted",
         "email": user_email,
         "user_id": user_id
+    }
+
+
+@mvp_auth_router.post("/debug/make-admin/{email}")
+async def debug_make_user_admin(
+    email: str,
+    db: Session = Depends(get_db)
+):
+    """DEBUG: Make user admin by email (NO AUTH CHECK - REMOVE IN PRODUCTION!)"""
+    stmt = select(User).where(User.email == email)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {email} not found"
+        )
+
+    user.is_superuser = True
+    user.is_active = True  # Also activate
+    user.is_verified = True  # Also verify
+    db.commit()
+
+    print(f"👑 DEBUG: Made {email} an admin")
+
+    return {
+        "status": "success",
+        "email": user.email,
+        "is_superuser": True,
+        "is_active": True,
+        "is_verified": True
     }
 
 
