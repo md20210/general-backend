@@ -36,19 +36,24 @@ def fix_alembic_version():
                     print(f"   - {v[0]}", file=sys.stderr, flush=True)
 
                 # Step 2: Check for specific problematic versions
-                has_folder_attrs = any(v[0] == '20260119_folder_attrs' for v in old_versions)
-                has_app_tracker = any(v[0] == '20260117_add_application_tracker' for v in old_versions)
+                problematic = [
+                    '20260119_folder_attrs',
+                    '20260117_add_application_tracker',
+                    '20260119_add_folder_tracking_attributes',  # Old renamed version
+                ]
 
-                if has_folder_attrs or has_app_tracker:
+                has_problematic = any(v[0] in problematic for v in old_versions)
+
+                if has_problematic:
                     print("🧹 Found problematic versions, clearing and resetting...", file=sys.stderr, flush=True)
 
                     # Delete all
                     conn.execute(text("DELETE FROM alembic_version;"))
 
                     # Insert correct base version
-                    conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('20260117_add_app');"))
+                    conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('20260119_folder_attrs');"))
                     conn.commit()
-                    print("✅ Database version reset to: 20260117_add_app", file=sys.stderr, flush=True)
+                    print("✅ Database version reset to: 20260119_folder_attrs (migrations will continue from there)", file=sys.stderr, flush=True)
                 else:
                     print("✅ Versions look correct, no action needed", file=sys.stderr, flush=True)
             else:
