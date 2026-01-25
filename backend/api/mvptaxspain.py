@@ -210,6 +210,43 @@ async def update_admin_settings(
 
 # ==================== Custom Password Reset with Resend ====================
 
+@mvp_auth_router.get("/debug-tokens/{email}")
+async def debug_tokens(
+    email: str,
+    db: Session = Depends(get_db)
+):
+    """DEBUG: Show recent tokens for email (REMOVE IN PRODUCTION!)"""
+    stmt = select(User).where(User.email == email)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return {"error": "User not found"}
+
+    stmt = select(PasswordResetToken).where(
+        PasswordResetToken.user_id == user.id
+    ).order_by(PasswordResetToken.created_at.desc()).limit(5)
+    result = db.execute(stmt)
+    tokens = result.scalars().all()
+
+    return {
+        "email": email,
+        "user_id": str(user.id),
+        "tokens": [
+            {
+                "id": t.id,
+                "token": t.token[:20] + "...",
+                "full_token_length": len(t.token),
+                "created_at": str(t.created_at),
+                "expires_at": str(t.expires_at),
+                "used": t.used,
+                "is_expired": datetime.utcnow() > t.expires_at
+            }
+            for t in tokens
+        ]
+    }
+
+
 @mvp_auth_router.post("/password-reset-request")
 async def request_password_reset(
     reset_request: PasswordResetRequest,
