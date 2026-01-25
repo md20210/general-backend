@@ -229,6 +229,10 @@ async def request_password_reset(
     reset_token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(hours=1)
 
+    print(f"🔑 Creating password reset token for user {user.email}")
+    print(f"   Token: {reset_token[:20]}...")
+    print(f"   Expires at: {expires_at}")
+
     # Save token to database
     token_record = PasswordResetToken(
         user_id=user.id,
@@ -238,6 +242,8 @@ async def request_password_reset(
     )
     db.add(token_record)
     db.commit()
+
+    print(f"✅ Token saved to database with ID: {token_record.id}")
 
     # Send email via Resend
     email_sent = await resend_email_service.send_password_reset_email(
@@ -257,26 +263,41 @@ async def confirm_password_reset(
     db: Session = Depends(get_db)
 ):
     """Confirm password reset with token."""
-    # Find token
-    stmt = select(PasswordResetToken).where(
-        PasswordResetToken.token == reset_confirm.token,
-        PasswordResetToken.used == "Nein"
-    )
-    result = db.execute(stmt)
-    token_record = result.scalar_one_or_none()
+    print(f"🔐 Password reset attempt with token: {reset_confirm.token[:20]}...")
 
-    if not token_record:
+    # First check if token exists at all
+    stmt_all = select(PasswordResetToken).where(PasswordResetToken.token == reset_confirm.token)
+    result_all = db.execute(stmt_all)
+    any_token = result_all.scalar_one_or_none()
+
+    if not any_token:
+        print(f"❌ Token not found in database")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired token"
+            detail="Invalid token"
+        )
+
+    print(f"✅ Token found - used: {any_token.used}, expires_at: {any_token.expires_at}")
+
+    # Check if already used
+    if any_token.used == "Ja":
+        print(f"❌ Token already used")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token already used"
         )
 
     # Check expiration
-    if datetime.utcnow() > token_record.expires_at:
+    now_utc = datetime.utcnow()
+    print(f"⏰ Now: {now_utc}, Expires: {any_token.expires_at}")
+    if now_utc > any_token.expires_at:
+        print(f"❌ Token expired")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Token expired"
         )
+
+    token_record = any_token
 
     # Get user
     stmt = select(User).where(User.id == token_record.user_id)
