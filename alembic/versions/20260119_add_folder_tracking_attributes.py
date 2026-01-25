@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = '20260119_add_folder_tracking_attributes'
-down_revision = '20260117_add_app'
+down_revision = '20260119_folder_attrs'  # Changed to depend on the dummy migration
 branch_labels = None
 depends_on = None
 
