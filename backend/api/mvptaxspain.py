@@ -749,9 +749,18 @@ async def login_user(
         )
 
     # Generate JWT access token
-    from backend.auth.jwt import get_jwt_strategy
-    strategy = get_jwt_strategy()
-    token = await strategy.write_token(user)
+    import jwt
+    from datetime import datetime, timedelta
+    from backend.config import settings
+
+    payload = {
+        "sub": str(user.id),
+        "email": user.email,
+        "is_superuser": user.is_superuser,
+        "exp": datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        "iat": datetime.utcnow()
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
     return {
         "status": "logged_in",
