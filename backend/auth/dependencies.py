@@ -21,7 +21,7 @@ current_superuser = fastapi_users.current_user(active=True, superuser=True)
 
 async def require_admin(user: User = Depends(current_active_user)) -> User:
     """Dependency to require admin privileges."""
-    if not user.is_admin:
+    if not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin privileges required",

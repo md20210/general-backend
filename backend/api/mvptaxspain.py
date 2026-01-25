@@ -720,7 +720,7 @@ async def login_user(
 ):
     """
     Login with email and password.
-    Returns user information on successful login.
+    Returns user information and access token on successful login.
     """
     # Find user by email
     stmt = select(User).where(User.email == login_data.email)
@@ -748,11 +748,18 @@ async def login_user(
             detail="E-Mail-Adresse noch nicht bestätigt. Bitte prüfen Sie Ihr Postfach."
         )
 
+    # Generate JWT access token
+    from backend.auth.jwt import auth_backend
+    token = await auth_backend.get_strategy().write_token(user)
+
     return {
         "status": "logged_in",
         "user_id": str(user.id),
         "email": user.email,
         "vorname": user.vorname,
         "nachname": user.nachname,
-        "sprache": user.sprache
+        "sprache": user.sprache,
+        "is_superuser": user.is_superuser,
+        "access_token": token,
+        "token_type": "bearer"
     }
