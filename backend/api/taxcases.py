@@ -978,44 +978,29 @@ async def free_upload_and_preview(
                         except Exception as docx_err:
                             logger.error(f"Document extraction failed for {file.filename}: {docx_err}")
 
-                            # Fallback: Convert to PDF then to images and OCR (especially for old .doc format)
+                            # Fallback: Use antiword for old .doc format
                             if file.filename.lower().endswith('.doc'):
-                                logger.info(f"Trying LibreOffice conversion for {file.filename}")
+                                logger.info(f"Trying antiword conversion for {file.filename}")
                                 try:
-                                    # Convert DOC to PDF using LibreOffice
+                                    # Convert DOC to text using antiword
                                     import subprocess
-                                    pdf_path = file_path.replace('.doc', '.pdf')
                                     result = subprocess.run(
-                                        ['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', upload_dir, file_path],
+                                        ['antiword', file_path],
                                         capture_output=True,
-                                        timeout=30
+                                        text=True,
+                                        timeout=30,
+                                        encoding='utf-8',
+                                        errors='ignore'
                                     )
 
-                                    if os.path.exists(pdf_path):
-                                        logger.info(f"Converted {file.filename} to PDF, now converting to images...")
-                                        # Convert PDF to images
-                                        from pdf2image import convert_from_path
-                                        images = convert_from_path(pdf_path, dpi=300)
-
-                                        # OCR on each page
-                                        extracted_texts = []
-                                        for idx, img in enumerate(images):
-                                            img_path = os.path.join(upload_dir, f"{file.filename}_page_{idx+1}.png")
-                                            img.save(img_path, 'PNG')
-
-                                            # OCR
-                                            import pytesseract
-                                            text = pytesseract.image_to_string(img, lang='deu+eng')
-                                            extracted_texts.append(text)
-                                            logger.info(f"OCR extracted {len(text)} chars from page {idx+1}")
-
-                                        extracted_text = "\n\n--- PAGE BREAK ---\n\n".join(extracted_texts)
-                                        logger.info(f"Total OCR extraction: {len(extracted_text)} chars from {len(images)} pages")
+                                    if result.returncode == 0 and result.stdout.strip():
+                                        extracted_text = result.stdout
+                                        logger.info(f"Antiword extracted {len(extracted_text)} chars from {file.filename}")
                                     else:
-                                        raise Exception("LibreOffice conversion failed")
+                                        raise Exception(f"Antiword failed: {result.stderr}")
 
                                 except Exception as convert_err:
-                                    logger.error(f"Conversion and OCR failed for {file.filename}: {convert_err}")
+                                    logger.error(f"Antiword conversion failed for {file.filename}: {convert_err}")
                                     extracted_text = f"[Error: Could not extract from .doc file. Please convert to .docx, PDF, or TXT.]"
                             else:
                                 extracted_text = f"[Error extracting document. File may be corrupted or in unsupported format. Try converting to PDF or TXT.]"

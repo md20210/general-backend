@@ -1,0 +1,2 @@
+[phases.setup]
+aptPkgs = ["antiword", "tesseract-ocr", "tesseract-ocr-deu", "tesseract-ocr-eng", "poppler-utils"]
