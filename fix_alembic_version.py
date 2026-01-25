@@ -26,8 +26,7 @@ def fix_alembic_version():
         with engine.connect() as conn:
             print("🔍 Checking alembic_version table...", file=sys.stderr, flush=True)
 
-            # Step 1: Remove all entries from alembic_version table
-            print("🧹 Clearing alembic_version table completely...", file=sys.stderr, flush=True)
+            # Step 1: Check current versions
             result = conn.execute(text("SELECT version_num FROM alembic_version;"))
             old_versions = result.fetchall()
 
@@ -36,16 +35,22 @@ def fix_alembic_version():
                 for v in old_versions:
                     print(f"   - {v[0]}", file=sys.stderr, flush=True)
 
-                # Delete all
-                conn.execute(text("DELETE FROM alembic_version;"))
-                conn.commit()
-                print(f"✅ Cleared {len(old_versions)} version(s)", file=sys.stderr, flush=True)
+                # Step 2: Check for specific problematic versions
+                has_folder_attrs = any(v[0] == '20260119_folder_attrs' for v in old_versions)
+                has_app_tracker = any(v[0] == '20260117_add_application_tracker' for v in old_versions)
 
-                # Step 2: Insert the correct latest version
-                print("📝 Inserting correct version: 20260117_add_app", file=sys.stderr, flush=True)
-                conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('20260117_add_app');"))
-                conn.commit()
-                print("✅ Database version reset to: 20260117_add_app", file=sys.stderr, flush=True)
+                if has_folder_attrs or has_app_tracker:
+                    print("🧹 Found problematic versions, clearing and resetting...", file=sys.stderr, flush=True)
+
+                    # Delete all
+                    conn.execute(text("DELETE FROM alembic_version;"))
+
+                    # Insert correct base version
+                    conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('20260117_add_app');"))
+                    conn.commit()
+                    print("✅ Database version reset to: 20260117_add_app", file=sys.stderr, flush=True)
+                else:
+                    print("✅ Versions look correct, no action needed", file=sys.stderr, flush=True)
             else:
                 print("✅ Alembic version table is empty, migrations will start from scratch", file=sys.stderr, flush=True)
 
