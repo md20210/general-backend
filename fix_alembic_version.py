@@ -26,29 +26,28 @@ def fix_alembic_version():
         with engine.connect() as conn:
             print("🔍 Checking alembic_version table...", file=sys.stderr, flush=True)
 
-            # Check for multiple problematic versions
-            problematic_versions = [
-                '20260119_folder_attrs',
-                '20260117_add_application_tracker'  # Also check for old tracker version
-            ]
+            # Step 1: Remove all entries from alembic_version table
+            print("🧹 Clearing alembic_version table completely...", file=sys.stderr, flush=True)
+            result = conn.execute(text("SELECT version_num FROM alembic_version;"))
+            old_versions = result.fetchall()
 
-            removed_count = 0
-            for prob_version in problematic_versions:
-                result = conn.execute(text(f"SELECT version_num FROM alembic_version WHERE version_num = '{prob_version}';"))
-                found = result.fetchone()
+            if old_versions:
+                print(f"⚠️  Found {len(old_versions)} existing version(s):", file=sys.stderr, flush=True)
+                for v in old_versions:
+                    print(f"   - {v[0]}", file=sys.stderr, flush=True)
 
-                if found:
-                    print(f"⚠️  Found incorrect version: {found[0]}", file=sys.stderr, flush=True)
-                    print(f"🧹 Removing incorrect version entry: {prob_version}...", file=sys.stderr, flush=True)
-
-                    conn.execute(text(f"DELETE FROM alembic_version WHERE version_num = '{prob_version}';"))
-                    removed_count += 1
-
-            if removed_count > 0:
+                # Delete all
+                conn.execute(text("DELETE FROM alembic_version;"))
                 conn.commit()
-                print(f"✅ Removed {removed_count} incorrect version(s) successfully!", file=sys.stderr, flush=True)
+                print(f"✅ Cleared {len(old_versions)} version(s)", file=sys.stderr, flush=True)
+
+                # Step 2: Insert the correct latest version
+                print("📝 Inserting correct version: 20260117_add_app", file=sys.stderr, flush=True)
+                conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('20260117_add_app');"))
+                conn.commit()
+                print("✅ Database version reset to: 20260117_add_app", file=sys.stderr, flush=True)
             else:
-                print("✅ No problematic versions found, database is clean", file=sys.stderr, flush=True)
+                print("✅ Alembic version table is empty, migrations will start from scratch", file=sys.stderr, flush=True)
 
             # Show current versions
             result = conn.execute(text("SELECT version_num FROM alembic_version ORDER BY version_num;"))
