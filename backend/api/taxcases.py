@@ -1240,7 +1240,11 @@ Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
         return {
             "success": True,
             "extracted_data": extracted_data,
-            "message": f"Daten erfolgreich extrahiert ({llm_mode})"
+            "message": f"Daten erfolgreich extrahiert ({llm_mode})",
+            "debug_info": {
+                "extracted_text": combined_content[:5000],  # First 5000 chars of extracted text
+                "llm_response": result[:5000] if 'result' in locals() else None  # First 5000 chars of LLM response
+            }
         }
 
     except Exception as e:
