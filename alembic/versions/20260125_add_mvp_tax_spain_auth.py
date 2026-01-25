@@ -18,15 +18,27 @@ depends_on = None
 
 
 def upgrade():
-    # Add profile fields to users table
-    op.add_column('users', sa.Column('vorname', sa.String(100), nullable=True))
-    op.add_column('users', sa.Column('nachname', sa.String(100), nullable=True))
-    op.add_column('users', sa.Column('sprache', sa.String(5), nullable=False, server_default='de'))
-    op.add_column('users', sa.Column('telefonnummer', sa.String(50), nullable=True))
+    # Check what already exists
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = inspector.get_table_names()
 
-    # Create h7_form_data table
-    op.create_table(
-        'h7_form_data',
+    # Add profile fields to users table if they don't exist
+    user_columns = [col['name'] for col in inspector.get_columns('users')]
+
+    if 'vorname' not in user_columns:
+        op.add_column('users', sa.Column('vorname', sa.String(100), nullable=True))
+    if 'nachname' not in user_columns:
+        op.add_column('users', sa.Column('nachname', sa.String(100), nullable=True))
+    if 'sprache' not in user_columns:
+        op.add_column('users', sa.Column('sprache', sa.String(5), nullable=False, server_default='de'))
+    if 'telefonnummer' not in user_columns:
+        op.add_column('users', sa.Column('telefonnummer', sa.String(50), nullable=True))
+
+    # Create h7_form_data table only if it doesn't exist
+    if 'h7_form_data' not in existing_tables:
+        op.create_table(
+            'h7_form_data',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
         sa.Column('user_id', UUID(as_uuid=True), sa.ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True),
         sa.Column('email', sa.String(255), nullable=False, index=True),
@@ -65,38 +77,40 @@ def upgrade():
         sa.Column('exported_pdf_url', sa.String(500), nullable=True),
         sa.Column('wahrheitserklaerung', sa.String(10), nullable=True),
 
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
-    )
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
+        )
 
-    # Create admin_settings table
-    op.create_table(
-        'admin_settings',
-        sa.Column('id', sa.Integer(), primary_key=True, server_default='1'),
-        sa.Column('email_sender', sa.String(255), nullable=False, server_default='michael.dabrock@gmx.es'),
-        sa.Column('resend_api_key', sa.String(500), nullable=True),
-        sa.Column('email_verification_required', sa.String(10), server_default='Ja'),
-        sa.Column('auto_logout_minutes', sa.Integer(), server_default='30'),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
-    )
+    # Create admin_settings table only if it doesn't exist
+    if 'admin_settings' not in existing_tables:
+        op.create_table(
+            'admin_settings',
+            sa.Column('id', sa.Integer(), primary_key=True, server_default='1'),
+            sa.Column('email_sender', sa.String(255), nullable=False, server_default='michael.dabrock@gmx.es'),
+            sa.Column('resend_api_key', sa.String(500), nullable=True),
+            sa.Column('email_verification_required', sa.String(10), server_default='Ja'),
+            sa.Column('auto_logout_minutes', sa.Integer(), server_default='30'),
+            sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
+        )
 
-    # Insert default admin settings
-    op.execute("""
-        INSERT INTO admin_settings (id, email_sender, resend_api_key, email_verification_required, auto_logout_minutes)
-        VALUES (1, 'michael.dabrock@gmx.es', 're_hTZxVL5t_9CcWhbdQLNzCC6aJkd6bd1FW', 'Ja', 30)
-        ON CONFLICT (id) DO NOTHING;
-    """)
+        # Insert default admin settings (only if table was just created)
+        op.execute("""
+            INSERT INTO admin_settings (id, email_sender, resend_api_key, email_verification_required, auto_logout_minutes)
+            VALUES (1, 'michael.dabrock@gmx.es', 're_hTZxVL5t_9CcWhbdQLNzCC6aJkd6bd1FW', 'Ja', 30)
+            ON CONFLICT (id) DO NOTHING;
+        """)
 
-    # Create password_reset_tokens table
-    op.create_table(
-        'password_reset_tokens',
+    # Create password_reset_tokens table only if it doesn't exist
+    if 'password_reset_tokens' not in existing_tables:
+        op.create_table(
+            'password_reset_tokens',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
-        sa.Column('user_id', UUID(as_uuid=True), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True),
-        sa.Column('token', sa.String(255), nullable=False, unique=True, index=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
-        sa.Column('used', sa.String(10), server_default='Nein'),
-    )
+            sa.Column('user_id', UUID(as_uuid=True), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True),
+            sa.Column('token', sa.String(255), nullable=False, unique=True, index=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+            sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
+            sa.Column('used', sa.String(10), server_default='Nein'),
+        )
 
 
 def downgrade():
