@@ -952,10 +952,28 @@ async def free_upload_and_preview(
                     with open(file_path, "wb") as f:
                         f.write(content)
 
-                    # Extract text directly using DocumentParser
-                    if DocumentParser:
+                    # Extract text based on file type
+                    if file.filename.lower().endswith('.txt'):
+                        # TXT - simple file read
+                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                            extracted_text = f.read()
+                    elif file.filename.lower().endswith('.doc'):
+                        # Legacy DOC - use antiword or fallback message
+                        try:
+                            import subprocess
+                            result = subprocess.run(['antiword', file_path], capture_output=True, text=True, timeout=30)
+                            if result.returncode == 0:
+                                extracted_text = result.stdout
+                            else:
+                                extracted_text = "[Error: Legacy .doc format. Please convert to .docx, PDF, or TXT.]"
+                        except:
+                            extracted_text = "[Error: Legacy .doc format not supported. Please convert to .docx.]"
+                    elif DocumentParser:
+                        # DOCX/ODT - use DocumentParser
                         parser = DocumentParser()
-                        extracted_text = parser.parse_from_bytes(content, file.filename)
+                        extracted_text = parser.parse(file_path, ocr_engine='none')
+                    else:
+                        extracted_text = "[Error: DocumentParser not available]"
 
                         # Check if extraction was successful
                         if extracted_text and not extracted_text.startswith('[Error'):
@@ -1060,18 +1078,43 @@ async def free_extract(
             file_path = os.path.join(upload_dir, filename)
 
             # Check file type
-            is_text_document = filename.lower().endswith(('.docx', '.odt', '.doc', '.txt'))
+            is_docx = filename.lower().endswith('.docx')
+            is_odt = filename.lower().endswith('.odt')
+            is_txt = filename.lower().endswith('.txt')
+            is_doc = filename.lower().endswith('.doc')  # Legacy Word format
             is_pdf = filename.lower().endswith('.pdf')
 
             if DocumentParser:
                 try:
                     parser = DocumentParser()
 
-                    if is_text_document:
-                        # Text document - use direct extraction
+                    if is_txt:
+                        # TXT - simple file read
+                        logger.info(f"Reading TXT file: {filename}")
+                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                            doc_content = f.read()
+                        logger.info(f"Read {len(doc_content)} characters from TXT {filename}")
+                    elif is_doc:
+                        # Legacy DOC - use fallback to avoid asyncio conflict
+                        logger.warning(f"Legacy .doc format detected: {filename}. Converting to DOCX is recommended.")
+                        try:
+                            # Try to use synchronous parsing
+                            import subprocess
+                            result = subprocess.run(['antiword', file_path], capture_output=True, text=True, timeout=30)
+                            if result.returncode == 0:
+                                doc_content = result.stdout
+                                logger.info(f"Extracted {len(doc_content)} characters from DOC using antiword")
+                            else:
+                                doc_content = "[Error: Could not parse legacy .doc file. Please convert to .docx format.]"
+                                logger.error(f"antiword failed for {filename}")
+                        except Exception as doc_err:
+                            doc_content = "[Error: Legacy .doc format not supported. Please convert to .docx, PDF, or TXT.]"
+                            logger.error(f"Failed to parse .doc file {filename}: {doc_err}")
+                    elif is_docx or is_odt:
+                        # DOCX/ODT - use DocumentParser
                         logger.info(f"Extracting text from document: {filename}")
                         doc_content = parser.parse(file_path, ocr_engine='none')
-                        logger.info(f"Extracted {len(doc_content)} characters from text document {filename}")
+                        logger.info(f"Extracted {len(doc_content)} characters from {filename}")
                     elif is_pdf:
                         # PDF - try direct text extraction first
                         logger.info(f"Extracting text from PDF: {filename}")
@@ -1117,6 +1160,9 @@ async def free_extract(
             all_content.append(f"--- {filename} ---\n{doc_content}\n")
 
         combined_content = "\n\n".join(all_content)
+
+        # Initialize result variable for debug_info
+        result = ""
 
         # LLM Extraction (same as original /free/upload)
         try:
