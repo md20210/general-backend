@@ -967,23 +967,33 @@ async def free_upload_and_preview(
                         # TXT - simple file read
                         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                             extracted_text = f.read()
-                    elif file.filename.lower().endswith('.doc'):
-                        # Legacy DOC - use antiword or fallback message
+                    elif file.filename.lower().endswith('.docx'):
+                        # DOCX - use python-docx (synchronous, no asyncio issues)
                         try:
-                            import subprocess
-                            result = subprocess.run(['antiword', file_path], capture_output=True, text=True, timeout=30)
-                            if result.returncode == 0:
-                                extracted_text = result.stdout
-                            else:
-                                extracted_text = "[Error: Legacy .doc format. Please convert to .docx, PDF, or TXT.]"
-                        except:
-                            extracted_text = "[Error: Legacy .doc format not supported. Please convert to .docx.]"
-                    elif DocumentParser:
-                        # DOCX/ODT - use DocumentParser
-                        parser = DocumentParser()
-                        extracted_text = parser.parse(file_path, ocr_engine='none')
+                            from docx import Document
+                            doc = Document(file_path)
+                            extracted_text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                            logger.info(f"Extracted {len(extracted_text)} chars from DOCX using python-docx")
+                        except Exception as docx_err:
+                            logger.error(f"DOCX extraction failed: {docx_err}")
+                            extracted_text = f"[Error extracting DOCX: {str(docx_err)}]"
+                    elif file.filename.lower().endswith('.odt'):
+                        # ODT - try odfpy
+                        try:
+                            from odf import text, teletype
+                            from odf.opendocument import load
+                            textdoc = load(file_path)
+                            allparas = textdoc.getElementsByType(text.P)
+                            extracted_text = "\n".join([teletype.extractText(p) for p in allparas])
+                            logger.info(f"Extracted {len(extracted_text)} chars from ODT")
+                        except Exception as odt_err:
+                            logger.error(f"ODT extraction failed: {odt_err}")
+                            extracted_text = f"[Error extracting ODT: {str(odt_err)}]"
+                    elif file.filename.lower().endswith('.doc'):
+                        # Legacy DOC - not supported
+                        extracted_text = "[Error: Legacy .doc format not supported. Please convert to .docx, PDF, or TXT.]"
                     else:
-                        extracted_text = "[Error: DocumentParser not available]"
+                        extracted_text = "[Error: Unsupported document format]"
 
                         # Check if extraction was successful
                         if extracted_text and not extracted_text.startswith('[Error'):
@@ -1104,27 +1114,34 @@ async def free_extract(
                         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                             doc_content = f.read()
                         logger.info(f"Read {len(doc_content)} characters from TXT {filename}")
-                    elif is_doc:
-                        # Legacy DOC - use fallback to avoid asyncio conflict
-                        logger.warning(f"Legacy .doc format detected: {filename}. Converting to DOCX is recommended.")
+                    elif is_docx:
+                        # DOCX - use python-docx (synchronous, no asyncio issues)
+                        logger.info(f"Extracting DOCX: {filename}")
                         try:
-                            # Try to use synchronous parsing
-                            import subprocess
-                            result = subprocess.run(['antiword', file_path], capture_output=True, text=True, timeout=30)
-                            if result.returncode == 0:
-                                doc_content = result.stdout
-                                logger.info(f"Extracted {len(doc_content)} characters from DOC using antiword")
-                            else:
-                                doc_content = "[Error: Could not parse legacy .doc file. Please convert to .docx format.]"
-                                logger.error(f"antiword failed for {filename}")
-                        except Exception as doc_err:
-                            doc_content = "[Error: Legacy .doc format not supported. Please convert to .docx, PDF, or TXT.]"
-                            logger.error(f"Failed to parse .doc file {filename}: {doc_err}")
-                    elif is_docx or is_odt:
-                        # DOCX/ODT - use DocumentParser
-                        logger.info(f"Extracting text from document: {filename}")
-                        doc_content = parser.parse(file_path, ocr_engine='none')
-                        logger.info(f"Extracted {len(doc_content)} characters from {filename}")
+                            from docx import Document
+                            doc = Document(file_path)
+                            doc_content = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                            logger.info(f"Extracted {len(doc_content)} characters from DOCX using python-docx")
+                        except Exception as docx_err:
+                            logger.error(f"DOCX extraction failed: {docx_err}")
+                            doc_content = f"[Error extracting DOCX: {str(docx_err)}]"
+                    elif is_odt:
+                        # ODT - use odfpy
+                        logger.info(f"Extracting ODT: {filename}")
+                        try:
+                            from odf import text, teletype
+                            from odf.opendocument import load
+                            textdoc = load(file_path)
+                            allparas = textdoc.getElementsByType(text.P)
+                            doc_content = "\n".join([teletype.extractText(p) for p in allparas])
+                            logger.info(f"Extracted {len(doc_content)} characters from ODT")
+                        except Exception as odt_err:
+                            logger.error(f"ODT extraction failed: {odt_err}")
+                            doc_content = f"[Error extracting ODT: {str(odt_err)}]"
+                    elif is_doc:
+                        # Legacy DOC - not supported
+                        logger.warning(f"Legacy .doc format detected: {filename}")
+                        doc_content = "[Error: Legacy .doc format not supported. Please convert to .docx, PDF, or TXT.]"
                     elif is_pdf:
                         # PDF - try direct text extraction first
                         logger.info(f"Extracting text from PDF: {filename}")
