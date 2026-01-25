@@ -75,6 +75,7 @@ from backend.models.project import Project  # noqa: F401
 from backend.models.jobassistant import JobApplication  # noqa: F401
 from backend.models.elasticsearch_showcase import UserElasticProfile, ElasticJobAnalysis, ComparisonResult  # noqa: F401
 from backend.models.bar import BarInfo, BarNewsletter  # noqa: F401
+from backend.models.h7form import H7FormData, AdminSettings, PasswordResetToken  # noqa: F401
 
 async def create_db_and_tables():
     """Create all database tables and enable pgvector extension with retry logic."""
