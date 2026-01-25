@@ -19,35 +19,43 @@ depends_on = None
 
 
 def upgrade():
-    # Create tax_cases table
-    op.create_table(
-        'tax_cases',
-        sa.Column('id', sa.Integer(), primary_key=True, index=True),
-        sa.Column('user_id', UUID(as_uuid=True), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True),
-        sa.Column('name', sa.String(255), nullable=False, index=True),
-        sa.Column('status', sa.String(50), nullable=False, server_default='created', index=True),
-        sa.Column('validated', sa.Boolean(), nullable=False, server_default='false', index=True),
-        sa.Column('notes', sa.Text(), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
-    )
+    # Check if tables already exist before creating
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = inspector.get_table_names()
 
-    # Create tax_case_folders table
-    op.create_table(
-        'tax_case_folders',
-        sa.Column('id', sa.Integer(), primary_key=True, index=True),
-        sa.Column('tax_case_id', sa.Integer(), sa.ForeignKey('tax_cases.id', ondelete='CASCADE'), nullable=False, index=True),
-        sa.Column('name', sa.String(255), nullable=False),
-        sa.Column('parent_id', sa.Integer(), sa.ForeignKey('tax_case_folders.id', ondelete='CASCADE'), nullable=True, index=True),
-        sa.Column('path', sa.String(2000), nullable=False, index=True),
-        sa.Column('level', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
+    # Create tax_cases table only if it doesn't exist
+    if 'tax_cases' not in existing_tables:
+        op.create_table(
+            'tax_cases',
+            sa.Column('id', sa.Integer(), primary_key=True, index=True),
+            sa.Column('user_id', UUID(as_uuid=True), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True),
+            sa.Column('name', sa.String(255), nullable=False, index=True),
+            sa.Column('status', sa.String(50), nullable=False, server_default='created', index=True),
+            sa.Column('validated', sa.Boolean(), nullable=False, server_default='false', index=True),
+            sa.Column('notes', sa.Text(), nullable=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
+        )
 
-    # Create tax_case_documents table
-    op.create_table(
-        'tax_case_documents',
-        sa.Column('id', sa.Integer(), primary_key=True, index=True),
+    # Create tax_case_folders table only if it doesn't exist
+    if 'tax_case_folders' not in existing_tables:
+        op.create_table(
+            'tax_case_folders',
+            sa.Column('id', sa.Integer(), primary_key=True, index=True),
+            sa.Column('tax_case_id', sa.Integer(), sa.ForeignKey('tax_cases.id', ondelete='CASCADE'), nullable=False, index=True),
+            sa.Column('name', sa.String(255), nullable=False),
+            sa.Column('parent_id', sa.Integer(), sa.ForeignKey('tax_case_folders.id', ondelete='CASCADE'), nullable=True, index=True),
+            sa.Column('path', sa.String(2000), nullable=False, index=True),
+            sa.Column('level', sa.Integer(), nullable=False, server_default='0'),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+        )
+
+    # Create tax_case_documents table only if it doesn't exist
+    if 'tax_case_documents' not in existing_tables:
+        op.create_table(
+            'tax_case_documents',
+            sa.Column('id', sa.Integer(), primary_key=True, index=True),
         sa.Column('tax_case_id', sa.Integer(), sa.ForeignKey('tax_cases.id', ondelete='CASCADE'), nullable=False, index=True),
         sa.Column('folder_id', sa.Integer(), sa.ForeignKey('tax_case_folders.id', ondelete='CASCADE'), nullable=True, index=True),
         sa.Column('filename', sa.String(500), nullable=False),
@@ -56,25 +64,26 @@ def upgrade():
         sa.Column('content', sa.Text(), nullable=True),
         sa.Column('embedding', Vector(384), nullable=True),
         sa.Column('validated', sa.Boolean(), nullable=False, server_default='false', index=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+        )
 
-    # Create tax_case_extracted_data table
-    op.create_table(
-        'tax_case_extracted_data',
-        sa.Column('id', sa.Integer(), primary_key=True, index=True),
-        sa.Column('tax_case_id', sa.Integer(), sa.ForeignKey('tax_cases.id', ondelete='CASCADE'), nullable=False, index=True),
-        sa.Column('document_id', sa.Integer(), sa.ForeignKey('tax_case_documents.id', ondelete='CASCADE'), nullable=True, index=True),
-        sa.Column('field_name', sa.String(255), nullable=False, index=True),
-        sa.Column('field_value', sa.Text(), nullable=False),
-        sa.Column('field_type', sa.String(50), nullable=True),
-        sa.Column('confidence', sa.Float(), nullable=True),
-        sa.Column('confirmed', sa.Boolean(), nullable=False, server_default='false', index=True),
-        sa.Column('edited', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('original_value', sa.Text(), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
-    )
+    # Create tax_case_extracted_data table only if it doesn't exist
+    if 'tax_case_extracted_data' not in existing_tables:
+        op.create_table(
+            'tax_case_extracted_data',
+            sa.Column('id', sa.Integer(), primary_key=True, index=True),
+            sa.Column('tax_case_id', sa.Integer(), sa.ForeignKey('tax_cases.id', ondelete='CASCADE'), nullable=False, index=True),
+            sa.Column('document_id', sa.Integer(), sa.ForeignKey('tax_case_documents.id', ondelete='CASCADE'), nullable=True, index=True),
+            sa.Column('field_name', sa.String(255), nullable=False, index=True),
+            sa.Column('field_value', sa.Text(), nullable=False),
+            sa.Column('field_type', sa.String(50), nullable=True),
+            sa.Column('confidence', sa.Float(), nullable=True),
+            sa.Column('confirmed', sa.Boolean(), nullable=False, server_default='false', index=True),
+            sa.Column('edited', sa.Boolean(), nullable=False, server_default='false'),
+            sa.Column('original_value', sa.Text(), nullable=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()),
+        )
 
 
 def downgrade():
