@@ -26,20 +26,29 @@ def fix_alembic_version():
         with engine.connect() as conn:
             print("🔍 Checking alembic_version table...", file=sys.stderr, flush=True)
 
-            # Check if the problematic version exists
-            result = conn.execute(text("SELECT version_num FROM alembic_version WHERE version_num = '20260119_folder_attrs';"))
-            problematic_version = result.fetchone()
+            # Check for multiple problematic versions
+            problematic_versions = [
+                '20260119_folder_attrs',
+                '20260117_add_application_tracker'  # Also check for old tracker version
+            ]
 
-            if problematic_version:
-                print(f"⚠️  Found incorrect version: {problematic_version[0]}", file=sys.stderr, flush=True)
-                print("🧹 Removing incorrect version entry...", file=sys.stderr, flush=True)
+            removed_count = 0
+            for prob_version in problematic_versions:
+                result = conn.execute(text(f"SELECT version_num FROM alembic_version WHERE version_num = '{prob_version}';"))
+                found = result.fetchone()
 
-                conn.execute(text("DELETE FROM alembic_version WHERE version_num = '20260119_folder_attrs';"))
+                if found:
+                    print(f"⚠️  Found incorrect version: {found[0]}", file=sys.stderr, flush=True)
+                    print(f"🧹 Removing incorrect version entry: {prob_version}...", file=sys.stderr, flush=True)
+
+                    conn.execute(text(f"DELETE FROM alembic_version WHERE version_num = '{prob_version}';"))
+                    removed_count += 1
+
+            if removed_count > 0:
                 conn.commit()
-
-                print("✅ Incorrect version removed successfully!", file=sys.stderr, flush=True)
+                print(f"✅ Removed {removed_count} incorrect version(s) successfully!", file=sys.stderr, flush=True)
             else:
-                print("✅ No problematic version found, database is clean", file=sys.stderr, flush=True)
+                print("✅ No problematic versions found, database is clean", file=sys.stderr, flush=True)
 
             # Show current versions
             result = conn.execute(text("SELECT version_num FROM alembic_version ORDER BY version_num;"))
