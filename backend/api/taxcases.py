@@ -822,15 +822,24 @@ async def free_upload_and_preview(
                         logger.info(f"✅ PDF text extracted directly ({len(extracted_text)} chars, no OCR needed)")
 
                         word_count = len(extracted_text.split())
+
+                        # Save extracted text to a file so the extract endpoint can find it
+                        text_filename = f"{os.path.splitext(file.filename)[0]}.txt"
+                        text_file_path = os.path.join(upload_dir, text_filename)
+                        with open(text_file_path, 'w', encoding='utf-8') as f:
+                            f.write(extracted_text)
+                        logger.info(f"Saved extracted text to {text_filename}")
+
                         processed_images.append({
-                            "filename": file.filename,
+                            "filename": text_filename,  # Save as .txt so extract endpoint finds it
                             "message": f"PDF erfolgreich verarbeitet ({word_count} Wörter, {len(pdf_reader.pages)} Seite(n))",
                             "quality_ok": True,
                             "ocr_quality": 100.0,  # Perfect quality - no OCR needed
                             "document_type": "pdf_text",
                             "text_length": len(extracted_text),
                             "page_count": len(pdf_reader.pages),
-                            "method": "direct_extraction"
+                            "method": "direct_extraction",
+                            "path": text_file_path
                         })
 
                         # Store text for later processing
