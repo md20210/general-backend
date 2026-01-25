@@ -210,6 +210,82 @@ async def update_admin_settings(
 
 # ==================== Custom Password Reset with Resend ====================
 
+@mvp_auth_router.get("/admin/users")
+async def list_all_users(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_admin)
+):
+    """Get all users (admin only)."""
+    stmt = select(User).order_by(User.email)
+    result = db.execute(stmt)
+    users = result.scalars().all()
+
+    return {
+        "users": [
+            {
+                "id": str(user.id),
+                "email": user.email,
+                "vorname": user.vorname,
+                "nachname": user.nachname,
+                "sprache": user.sprache,
+                "telefonnummer": user.telefonnummer,
+                "is_active": user.is_active,
+                "is_verified": user.is_verified,
+                "is_superuser": user.is_superuser,
+            }
+            for user in users
+        ],
+        "total": len(users)
+    }
+
+
+@mvp_auth_router.delete("/admin/users/{user_id}")
+async def delete_user_by_admin(
+    user_id: str,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_admin)
+):
+    """Delete user by ID (admin only)."""
+    try:
+        from uuid import UUID
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format"
+        )
+
+    stmt = select(User).where(User.id == user_uuid)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User not found"
+        )
+
+    # Prevent deleting yourself
+    if user.id == admin_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account"
+        )
+
+    # Delete user (cascades to related records)
+    user_email = user.email
+    db.delete(user)
+    db.commit()
+
+    print(f"🗑️ Admin {admin_user.email} deleted user {user_email}")
+
+    return {
+        "status": "deleted",
+        "email": user_email,
+        "user_id": user_id
+    }
+
+
 @mvp_auth_router.delete("/delete-user/{email}")
 async def delete_user_by_email(
     email: str,
