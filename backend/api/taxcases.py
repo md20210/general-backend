@@ -1779,15 +1779,13 @@ async def delete_case(
 
 @router.post("/free/export-pdf")
 async def export_free_h7_pdf(
-    extracted_data: Dict[str, Any],
-    case_name: Optional[str] = None
+    request: Dict[str, Any]
 ):
     """
     Export extracted H7 data to Spanish PDF
 
     Args:
-        extracted_data: Dictionary with extracted H7 field values
-        case_name: Optional name for the document
+        request: Dictionary with 'extracted_data' and optional 'case_name'
 
     Returns:
         StreamingResponse with PDF file
@@ -1795,8 +1793,15 @@ async def export_free_h7_pdf(
     try:
         from backend.services.document_service import generate_h7_pdf
 
+        # Extract data from request
+        extracted_data = request.get('extracted_data', {})
+        case_name = request.get('case_name', 'H7 Form')
+
+        logger.info(f"📥 Export PDF endpoint called with {len(extracted_data)} fields")
+        logger.info(f"📋 Request keys: {list(request.keys())}")
+
         # Generate PDF
-        pdf_buffer = generate_h7_pdf(extracted_data, case_name or "H7 Form")
+        pdf_buffer = generate_h7_pdf(extracted_data, case_name)
 
         # Generate filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
