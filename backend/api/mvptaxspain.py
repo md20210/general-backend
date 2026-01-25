@@ -749,7 +749,7 @@ async def login_user(
         )
 
     # Generate JWT access token
-    import jwt
+    from jose import jwt
     from datetime import datetime, timedelta
     from backend.config import settings
 
