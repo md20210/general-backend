@@ -156,9 +156,13 @@ def generate_h7_pdf(extracted_data: Dict[str, Any], case_name: str = "") -> Byte
     # Use normalized data instead of original
     extracted_data = normalized_data
     logger.info(f"📦 PDF Generation - Normalized {len(extracted_data)} fields")
-    logger.info(f"🔍 All normalized fields and values:")
-    for key, value in extracted_data.items():
-        logger.info(f"   {key} = {value}")
+
+    # Log sample of key fields
+    sample_fields = ['absender_name', 'empfaenger_name', 'warenwert_gesamt_eur', 'position_1_beschreibung']
+    logger.info(f"🔍 Sample fields:")
+    for field in sample_fields:
+        if field in extracted_data:
+            logger.info(f"   {field} = {extracted_data[field]}")
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
