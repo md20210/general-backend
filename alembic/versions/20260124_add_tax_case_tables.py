@@ -1,7 +1,7 @@
 """Add tax case tables
 
 Revision ID: 20260124_add_tax_case_tables
-Revises: 20260119_add_folder_tracking_attributes
+Revises: 20260119_folder_tracking
 Create Date: 2026-01-24 10:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from pgvector.sqlalchemy import Vector
 
 # revision identifiers, used by Alembic.
 revision = '20260124_add_tax_case_tables'
-down_revision = '20260119_add_folder_tracking_attributes'
+down_revision = '20260119_folder_tracking'  # Updated to use new revision ID
 branch_labels = None
 depends_on = None
 
