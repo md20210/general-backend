@@ -713,16 +713,6 @@ async def free_upload_and_preview(
 
     try:
         for file in files:
-            # Validate file format - reject legacy .doc files
-            if file.filename.lower().endswith('.doc'):
-                processed_images.append({
-                    "filename": file.filename,
-                    "message": "Legacy .doc Format wird nicht unterstützt. Bitte konvertieren Sie zu .docx, PDF oder TXT.",
-                    "quality_ok": False,
-                    "error": "Unsupported file format: .doc (legacy Word). Please convert to .docx"
-                })
-                continue
-
             # Save original file
             original_path = os.path.join(upload_dir, f"original_{file.filename}")
             with open(original_path, "wb") as f:
@@ -967,16 +957,17 @@ async def free_upload_and_preview(
                         # TXT - simple file read
                         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                             extracted_text = f.read()
-                    elif file.filename.lower().endswith('.docx'):
-                        # DOCX - use python-docx (synchronous, no asyncio issues)
+                    elif file.filename.lower().endswith(('.docx', '.doc')):
+                        # DOCX/DOC - use python-docx (synchronous, no asyncio issues)
+                        # python-docx can sometimes read .doc files too
                         try:
                             from docx import Document
                             doc = Document(file_path)
                             extracted_text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-                            logger.info(f"Extracted {len(extracted_text)} chars from DOCX using python-docx")
+                            logger.info(f"Extracted {len(extracted_text)} chars from {file.filename} using python-docx")
                         except Exception as docx_err:
-                            logger.error(f"DOCX extraction failed: {docx_err}")
-                            extracted_text = f"[Error extracting DOCX: {str(docx_err)}]"
+                            logger.error(f"Document extraction failed for {file.filename}: {docx_err}")
+                            extracted_text = f"[Error extracting document. File may be corrupted or in unsupported format. Try converting to PDF or TXT.]"
                     elif file.filename.lower().endswith('.odt'):
                         # ODT - try odfpy
                         try:
@@ -1114,17 +1105,17 @@ async def free_extract(
                         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                             doc_content = f.read()
                         logger.info(f"Read {len(doc_content)} characters from TXT {filename}")
-                    elif is_docx:
-                        # DOCX - use python-docx (synchronous, no asyncio issues)
-                        logger.info(f"Extracting DOCX: {filename}")
+                    elif is_docx or is_doc:
+                        # DOCX/DOC - use python-docx (can handle both)
+                        logger.info(f"Extracting Word document: {filename}")
                         try:
                             from docx import Document
                             doc = Document(file_path)
                             doc_content = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-                            logger.info(f"Extracted {len(doc_content)} characters from DOCX using python-docx")
+                            logger.info(f"Extracted {len(doc_content)} characters from {filename} using python-docx")
                         except Exception as docx_err:
-                            logger.error(f"DOCX extraction failed: {docx_err}")
-                            doc_content = f"[Error extracting DOCX: {str(docx_err)}]"
+                            logger.error(f"Word document extraction failed: {docx_err}")
+                            doc_content = f"[Error extracting document. File may be corrupted or in unsupported format. Try converting to PDF or TXT.]"
                     elif is_odt:
                         # ODT - use odfpy
                         logger.info(f"Extracting ODT: {filename}")
@@ -1138,10 +1129,6 @@ async def free_extract(
                         except Exception as odt_err:
                             logger.error(f"ODT extraction failed: {odt_err}")
                             doc_content = f"[Error extracting ODT: {str(odt_err)}]"
-                    elif is_doc:
-                        # Legacy DOC - not supported
-                        logger.warning(f"Legacy .doc format detected: {filename}")
-                        doc_content = "[Error: Legacy .doc format not supported. Please convert to .docx, PDF, or TXT.]"
                     elif is_pdf:
                         # PDF - try direct text extraction first
                         logger.info(f"Extracting text from PDF: {filename}")
