@@ -980,37 +980,29 @@ async def free_upload_and_preview(
                         except Exception as odt_err:
                             logger.error(f"ODT extraction failed: {odt_err}")
                             extracted_text = f"[Error extracting ODT: {str(odt_err)}]"
-                    elif file.filename.lower().endswith('.doc'):
-                        # Legacy DOC - not supported
-                        extracted_text = "[Error: Legacy .doc format not supported. Please convert to .docx, PDF, or TXT.]"
                     else:
+                        # Unsupported format
                         extracted_text = "[Error: Unsupported document format]"
 
-                        # Check if extraction was successful
-                        if extracted_text and not extracted_text.startswith('[Error'):
-                            word_count = len(extracted_text.split())
-                            processed_images.append({
-                                "filename": file.filename,
-                                "message": f"Textdokument erfolgreich verarbeitet ({word_count} Wörter extrahiert)",
-                                "path": file_path,
-                                "text_preview": extracted_text[:300],  # First 300 chars
-                                "word_count": word_count,
-                                "quality_ok": True,
-                                "ocr_quality": 100.0,  # Text documents don't need OCR
-                                "document_type": "text"
-                            })
-                        else:
-                            processed_images.append({
-                                "filename": file.filename,
-                                "message": f"Textextraktion fehlgeschlagen: {extracted_text}",
-                                "quality_ok": False,
-                                "error": extracted_text
-                            })
+                    # Check if extraction was successful
+                    if extracted_text and not extracted_text.startswith('[Error'):
+                        word_count = len(extracted_text.split())
+                        processed_images.append({
+                            "filename": file.filename,
+                            "message": f"Textdokument erfolgreich verarbeitet ({word_count} Wörter extrahiert)",
+                            "path": file_path,
+                            "text_preview": extracted_text[:300],  # First 300 chars
+                            "word_count": word_count,
+                            "quality_ok": True,
+                            "ocr_quality": 100.0,  # Text documents don't need OCR
+                            "document_type": "text"
+                        })
                     else:
                         processed_images.append({
                             "filename": file.filename,
-                            "message": "DocumentParser nicht verfügbar",
-                            "quality_ok": False
+                            "message": f"Textextraktion fehlgeschlagen: {extracted_text}",
+                            "quality_ok": False,
+                            "error": extracted_text
                         })
                 except Exception as doc_err:
                     logger.error(f"Document processing failed for {file.filename}: {doc_err}")
