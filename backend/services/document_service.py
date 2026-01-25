@@ -324,23 +324,42 @@ def _create_section_table(fields: List[Tuple[str, Dict[str, Any]]]) -> List:
             value
         ])
 
-    # Create table
-    table = Table(data, colWidths=[11*cm, 1.5*cm, 4*cm])
+    # Create table with wider value column
+    table = Table(data, colWidths=[9*cm, 1.5*cm, 6*cm])
     table.setStyle(TableStyle([
-        # Header styling
+        # Background colors
         ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#1f2937')),
-        ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#6b7280')),
+        ('BACKGROUND', (2, 0), (2, -1), colors.HexColor('#f0f9ff')),  # Light blue for value column
+
+        # Text colors
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#1f2937')),  # Label column
+        ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#6b7280')),  # Marker column
+        ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor('#1e3a8a')),  # Value column - dark blue
+
+        # Alignment
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'CENTER'),
         ('ALIGN', (2, 0), (2, -1), 'LEFT'),
+
+        # Fonts - value column is bold
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (2, 0), (2, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),  # Bold for values
+
+        # Font sizes - value column slightly larger
+        ('FONTSIZE', (0, 0), (0, -1), 9),
+        ('FONTSIZE', (1, 0), (1, -1), 9),
+        ('FONTSIZE', (2, 0), (2, -1), 10),  # Larger font for values
+
+        # Padding
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (2, 0), (2, -1), 10),  # Extra padding for value column
+
+        # Grid with thicker right border for value column
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+        ('LINEAFTER', (1, 0), (1, -1), 1.5, colors.HexColor('#93c5fd')),  # Thicker line before value column
+
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
 
