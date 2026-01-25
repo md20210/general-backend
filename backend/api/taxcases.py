@@ -802,13 +802,53 @@ async def free_upload_and_preview(
                         "error": str(img_err)
                     })
             elif file.filename.lower().endswith('.pdf'):
-                # PDF file - convert each page to image and process
+                # PDF file - try direct text extraction first (no OCR needed)
+                try:
+                    from PyPDF2 import PdfReader
+
+                    logger.info(f"Attempting direct PDF text extraction: {file.filename}")
+
+                    # Try to extract text directly from PDF
+                    pdf_reader = PdfReader(original_path)
+                    extracted_text = ""
+
+                    for page_num, page in enumerate(pdf_reader.pages, start=1):
+                        page_text = page.extract_text()
+                        if page_text:
+                            extracted_text += f"\n--- Seite {page_num} ---\n{page_text}"
+
+                    # Check if we got meaningful text (more than 50 characters)
+                    if len(extracted_text.strip()) > 50:
+                        logger.info(f"✅ PDF text extracted directly ({len(extracted_text)} chars, no OCR needed)")
+
+                        word_count = len(extracted_text.split())
+                        processed_images.append({
+                            "filename": file.filename,
+                            "message": f"PDF erfolgreich verarbeitet ({word_count} Wörter, {len(pdf_reader.pages)} Seite(n))",
+                            "quality_ok": True,
+                            "ocr_quality": 100.0,  # Perfect quality - no OCR needed
+                            "document_type": "pdf_text",
+                            "text_length": len(extracted_text),
+                            "page_count": len(pdf_reader.pages),
+                            "method": "direct_extraction"
+                        })
+
+                        # Store text for later processing
+                        extracted_texts[file.filename] = extracted_text
+                        continue  # Skip OCR processing
+                    else:
+                        logger.info(f"⚠️ PDF has no extractable text, falling back to OCR")
+
+                except Exception as extract_err:
+                    logger.warning(f"Direct PDF extraction failed: {str(extract_err)}, falling back to OCR")
+
+                # Fallback: PDF is scanned/image-based - use OCR
                 try:
                     from pdf2image import convert_from_path
                     from backend.services.application_service import detect_and_correct_rotation, CV2_AVAILABLE
                     import cv2
 
-                    logger.info(f"Converting PDF to images: {file.filename}")
+                    logger.info(f"Converting PDF to images for OCR: {file.filename}")
 
                     # Convert PDF pages to images (300 DPI for good quality)
                     pdf_images = convert_from_path(original_path, dpi=300)
