@@ -713,6 +713,16 @@ async def free_upload_and_preview(
 
     try:
         for file in files:
+            # Validate file format - reject legacy .doc files
+            if file.filename.lower().endswith('.doc'):
+                processed_images.append({
+                    "filename": file.filename,
+                    "message": "Legacy .doc Format wird nicht unterstützt. Bitte konvertieren Sie zu .docx, PDF oder TXT.",
+                    "quality_ok": False,
+                    "error": "Unsupported file format: .doc (legacy Word). Please convert to .docx"
+                })
+                continue
+
             # Save original file
             original_path = os.path.join(upload_dir, f"original_{file.filename}")
             with open(original_path, "wb") as f:
