@@ -356,6 +356,38 @@ async def debug_make_user_admin(
     }
 
 
+@mvp_auth_router.post("/debug/make-admin-query")
+async def debug_make_user_admin_query(
+    email: str,
+    db: Session = Depends(get_db)
+):
+    """DEBUG: Make user admin by email using query param (NO AUTH CHECK - REMOVE IN PRODUCTION!)"""
+    stmt = select(User).where(User.email == email)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {email} not found"
+        )
+
+    user.is_superuser = True
+    user.is_active = True  # Also activate
+    user.is_verified = True  # Also verify
+    db.commit()
+
+    print(f"👑 DEBUG: Made {email} an admin via query param")
+
+    return {
+        "status": "success",
+        "email": user.email,
+        "is_superuser": True,
+        "is_active": True,
+        "is_verified": True
+    }
+
+
 @mvp_auth_router.delete("/delete-user/{email}")
 async def delete_user_by_email(
     email: str,
