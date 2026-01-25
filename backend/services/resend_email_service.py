@@ -12,8 +12,9 @@ class ResendEmailService:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("RESEND_API_KEY", "re_hTZxVL5t_9CcWhbdQLNzCC6aJkd6bd1FW")
-        # Use domain-based email for Resend (requires domain verification)
-        self.from_email = os.getenv("RESEND_FROM_EMAIL", "noreply@dabrock.info")
+        # Use Resend's onboarding email (no domain verification needed)
+        # For production: verify your domain and use "noreply@dabrock.info"
+        self.from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
         self.base_url = "https://api.resend.com"
 
     async def send_email(
