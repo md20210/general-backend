@@ -130,7 +130,7 @@ class LLMGateway:
         if not self.grok_client:
             raise ValueError("GROK client failed to initialize. Please check your GROK_API_KEY.")
 
-        model = model or "grok-3"  # Current Grok model (was grok-beta, grok-2-latest)
+        model = model or "grok-4-1-fast"  # Fast model for cost reduction (was grok-3, grok-beta, grok-2-latest)
 
         completion = self.grok_client.chat.completions.create(
             model=model,
@@ -219,7 +219,7 @@ class LLMGateway:
             if self.grok_api_key:
                 models.extend([
                     {
-                        "name": "grok-3",
+                        "name": "grok-4-1-fast",
                         "provider": "grok",
                         "description": "GROK Beta - X.AI's frontier model"
                     },

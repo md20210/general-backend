@@ -133,7 +133,7 @@ Important:
                     'Content-Type': 'application/json'
                 },
                 json={
-                    'model': 'grok-3',
+                    'model': 'grok-4-1-fast',
                     'messages': [
                         {'role': 'user', 'content': prompt}
                     ],

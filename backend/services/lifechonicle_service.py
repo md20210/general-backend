@@ -153,7 +153,7 @@ Buchkapitel:"""
                 result = llm_gateway.generate(
                     prompt=prompt,
                     provider="grok",
-                    model="grok-3",
+                    model="grok-4-1-fast",
                     temperature=0.7,
                     max_tokens=300
                 )
