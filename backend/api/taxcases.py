@@ -1053,25 +1053,64 @@ async def free_extract(
     }
 
     try:
-        # Extract text from all images
+        # Extract text from all files (images, PDFs, text documents)
         all_content = []
 
         for filename in files:
             file_path = os.path.join(upload_dir, filename)
 
-            # Extract text with Tesseract (image is already rotated/corrected)
+            # Check file type
+            is_text_document = filename.lower().endswith(('.docx', '.odt', '.doc', '.txt'))
+            is_pdf = filename.lower().endswith('.pdf')
+
             if DocumentParser:
                 try:
                     parser = DocumentParser()
-                    # Pass file_path=None to skip re-rotation (already done)
-                    doc_content = parser._parse_image_tesseract(
-                        open(file_path, 'rb').read(),
-                        file_path=None  # Skip rotation correction
-                    )
-                    logger.info(f"Extracted {len(doc_content)} characters from {filename}")
+
+                    if is_text_document:
+                        # Text document - use direct extraction
+                        logger.info(f"Extracting text from document: {filename}")
+                        doc_content = parser.parse(file_path, ocr_engine='none')
+                        logger.info(f"Extracted {len(doc_content)} characters from text document {filename}")
+                    elif is_pdf:
+                        # PDF - try direct text extraction first
+                        logger.info(f"Extracting text from PDF: {filename}")
+                        try:
+                            from PyPDF2 import PdfReader
+                            pdf_reader = PdfReader(file_path)
+                            extracted_text = ""
+                            for page in pdf_reader.pages:
+                                page_text = page.extract_text()
+                                if page_text:
+                                    extracted_text += page_text + "\n"
+
+                            if len(extracted_text.strip()) > 50:
+                                doc_content = extracted_text
+                                logger.info(f"Extracted {len(doc_content)} characters from PDF {filename} (direct)")
+                            else:
+                                # Fallback to OCR
+                                doc_content = parser._parse_image_tesseract(
+                                    open(file_path, 'rb').read(),
+                                    file_path=None
+                                )
+                                logger.info(f"Extracted {len(doc_content)} characters from PDF {filename} (OCR)")
+                        except Exception as pdf_err:
+                            logger.warning(f"PDF direct extraction failed, using OCR: {pdf_err}")
+                            doc_content = parser._parse_image_tesseract(
+                                open(file_path, 'rb').read(),
+                                file_path=None
+                            )
+                    else:
+                        # Image - use Tesseract (already rotated/corrected)
+                        doc_content = parser._parse_image_tesseract(
+                            open(file_path, 'rb').read(),
+                            file_path=None  # Skip rotation correction
+                        )
+                        logger.info(f"Extracted {len(doc_content)} characters from image {filename}")
+
                 except Exception as parse_error:
-                    logger.warning(f"OCR failed for {filename}: {parse_error}")
-                    doc_content = f"Dokument: {filename} (OCR fehlgeschlagen: {str(parse_error)})"
+                    logger.warning(f"Extraction failed for {filename}: {parse_error}")
+                    doc_content = f"Dokument: {filename} (Extraktion fehlgeschlagen: {str(parse_error)})"
             else:
                 doc_content = f"Dokument: {filename}"
 
