@@ -905,11 +905,58 @@ async def free_upload_and_preview(
                         "message": f"PDF-Konvertierung fehlgeschlagen: {str(pdf_err)}",
                         "error": str(pdf_err)
                     })
+            elif file.filename.lower().endswith(('.odt', '.docx', '.doc', '.txt')):
+                # Text documents - direct text extraction without OCR
+                try:
+                    file_path = os.path.join(upload_dir, file.filename)
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+
+                    # Extract text directly using DocumentParser
+                    if DocumentParser:
+                        parser = DocumentParser()
+                        extracted_text = parser.parse_from_bytes(content, file.filename)
+
+                        # Check if extraction was successful
+                        if extracted_text and not extracted_text.startswith('[Error'):
+                            word_count = len(extracted_text.split())
+                            processed_images.append({
+                                "filename": file.filename,
+                                "message": f"Textdokument erfolgreich verarbeitet ({word_count} Wörter extrahiert)",
+                                "path": file_path,
+                                "text_preview": extracted_text[:300],  # First 300 chars
+                                "word_count": word_count,
+                                "quality_ok": True,
+                                "ocr_quality": 100.0,  # Text documents don't need OCR
+                                "document_type": "text"
+                            })
+                        else:
+                            processed_images.append({
+                                "filename": file.filename,
+                                "message": f"Textextraktion fehlgeschlagen: {extracted_text}",
+                                "quality_ok": False,
+                                "error": extracted_text
+                            })
+                    else:
+                        processed_images.append({
+                            "filename": file.filename,
+                            "message": "DocumentParser nicht verfügbar",
+                            "quality_ok": False
+                        })
+                except Exception as doc_err:
+                    logger.error(f"Document processing failed for {file.filename}: {doc_err}")
+                    processed_images.append({
+                        "filename": file.filename,
+                        "message": f"Dokumentverarbeitung fehlgeschlagen: {str(doc_err)}",
+                        "error": str(doc_err),
+                        "quality_ok": False
+                    })
             else:
-                # Not an image or PDF, skip processing
+                # Unsupported file type
                 processed_images.append({
                     "filename": file.filename,
-                    "message": "Nur Bilder und PDF-Dateien werden unterstützt"
+                    "message": "Nicht unterstütztes Dateiformat. Unterstützt: PDF, JPG, PNG, ODT, DOCX, DOC, TXT",
+                    "quality_ok": False
                 })
 
         db.commit()
@@ -930,13 +977,14 @@ async def free_upload_and_preview(
 @router.post("/free/extract")
 async def free_extract(
     case_id: int = Form(...),
-    use_local_llm: str = Form("true"),
+    use_local_llm: str = Form("false"),  # Ignored - always use Grok for cost efficiency
     db: Session = Depends(get_db),
     user: User = Depends(get_demo_user)
 ):
-    """Extract data from previously uploaded and processed images"""
-    prefer_local = use_local_llm.lower() == "true"
-    llm_mode = "Lokales LLM (DSGVO)" if prefer_local else "Grok API"
+    """Extract data from previously uploaded and processed images - always uses Grok 4.1 Fast"""
+    # Always use Grok for MVP Tax Spain (cost optimization with grok-4-1-fast)
+    prefer_local = False
+    llm_mode = "Grok 4.1 Fast API"
 
     # Get case
     case = db.query(TaxCase).filter(

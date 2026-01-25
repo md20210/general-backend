@@ -26,6 +26,20 @@ try:
 except ImportError:
     PADDLE_AVAILABLE = False
 
+# Optional document format imports
+try:
+    from odf import text, teletype
+    from odf.opendocument import load as load_odt
+    ODT_AVAILABLE = True
+except ImportError:
+    ODT_AVAILABLE = False
+
+try:
+    import subprocess
+    ANTIWORD_AVAILABLE = True  # Will check at runtime
+except ImportError:
+    ANTIWORD_AVAILABLE = False
+
 
 # Global PaddleOCR instances (singleton to avoid re-initialization error)
 _paddle_ocr_instance = None
@@ -465,6 +479,10 @@ class DocumentParser:
             return self._parse_pdf(file_data)
         elif filename_lower.endswith('.docx'):
             return self._parse_docx(file_data)
+        elif filename_lower.endswith('.odt'):
+            return self._parse_odt(file_data)
+        elif filename_lower.endswith('.doc'):
+            return self._parse_doc(file_data)
         elif filename_lower.endswith('.txt'):
             return self._parse_txt(file_data)
         else:
@@ -509,6 +527,61 @@ class DocumentParser:
                 except:
                     continue
             return "[Unable to decode text file]"
+
+    def _parse_odt(self, file_data: bytes) -> str:
+        """Extract text from ODT (OpenDocument Text)"""
+        if not ODT_AVAILABLE:
+            return "[ODT support not available - install odfpy library]"
+
+        try:
+            odt_file = io.BytesIO(file_data)
+            doc = load_odt(odt_file)
+            text_elements = []
+
+            for para in doc.getElementsByType(text.P):
+                para_text = teletype.extractText(para)
+                if para_text.strip():
+                    text_elements.append(para_text)
+
+            return "\n\n".join(text_elements) if text_elements else "[No text found in ODT]"
+        except Exception as e:
+            return f"[Error parsing ODT: {str(e)}]"
+
+    def _parse_doc(self, file_data: bytes) -> str:
+        """Extract text from DOC (legacy MS Word format)"""
+        try:
+            # Save to temp file for antiword processing
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.doc') as tmp:
+                tmp.write(file_data)
+                tmp_path = tmp.name
+
+            try:
+                # Try using antiword (if available)
+                result = subprocess.run(
+                    ['antiword', tmp_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+
+                import os
+                os.unlink(tmp_path)
+
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip()
+                else:
+                    return "[DOC format not fully supported - please convert to DOCX or PDF]"
+            except FileNotFoundError:
+                import os
+                os.unlink(tmp_path)
+                return "[DOC support requires 'antiword' tool - please install or convert to DOCX]"
+            except subprocess.TimeoutExpired:
+                import os
+                os.unlink(tmp_path)
+                return "[DOC parsing timeout]"
+        except Exception as e:
+            return f"[Error parsing DOC: {str(e)}]"
 
     async def extract_zip(self, zip_data: bytes) -> List[Tuple[str, str, bytes]]:
         """Extract files from ZIP and return list of (path, filename, content)"""
