@@ -710,6 +710,7 @@ async def free_upload_and_preview(
     os.makedirs(upload_dir, exist_ok=True)
 
     processed_images = []
+    extracted_texts = {}  # Store extracted text from PDFs/documents
 
     try:
         for file in files:
