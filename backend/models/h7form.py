@@ -95,3 +95,22 @@ class PasswordResetToken(Base):
 
     def __repr__(self):
         return f"<PasswordResetToken(user_id={self.user_id}, used={self.used})>"
+
+
+class EmailVerificationToken(Base):
+    """Email verification tokens with 24-hour expiration."""
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(255), nullable=False, unique=True, index=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used = Column(String(10), default="Nein")  # Ja/Nein
+
+    # Relationship
+    user = relationship("User")
+
+    def __repr__(self):
+        return f"<EmailVerificationToken(user_id={self.user_id}, used={self.used})>"

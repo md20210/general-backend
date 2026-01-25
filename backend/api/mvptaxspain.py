@@ -9,7 +9,7 @@ from uuid import UUID
 
 from backend.database import get_db
 from backend.models.user import User
-from backend.models.h7form import H7FormData, AdminSettings, PasswordResetToken
+from backend.models.h7form import H7FormData, AdminSettings, PasswordResetToken, EmailVerificationToken
 from backend.schemas.h7form import (
     H7FormDataCreate,
     H7FormDataRead,
@@ -210,6 +210,35 @@ async def update_admin_settings(
 
 # ==================== Custom Password Reset with Resend ====================
 
+@mvp_auth_router.delete("/delete-user/{email}")
+async def delete_user_by_email(
+    email: str,
+    db: Session = Depends(get_db)
+):
+    """DEBUG: Delete user by email (REMOVE IN PRODUCTION!)"""
+    stmt = select(User).where(User.email == email)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {email} not found"
+        )
+
+    # Delete user (cascades to related records)
+    db.delete(user)
+    db.commit()
+
+    print(f"🗑️ User {email} deleted")
+
+    return {
+        "status": "deleted",
+        "email": email,
+        "user_id": str(user.id)
+    }
+
+
 @mvp_auth_router.get("/debug-tokens/{email}")
 async def debug_tokens(
     email: str,
@@ -380,7 +409,7 @@ async def register_user_extended(
             detail="User with this email already exists"
         )
 
-    # Create new user
+    # Create new user (inactive until email verified)
     hashed_password = password_helper.hash(registration.password)
 
     new_user = User(
@@ -390,7 +419,7 @@ async def register_user_extended(
         nachname=registration.nachname,
         sprache=registration.sprache,
         telefonnummer=registration.telefonnummer,
-        is_active=True,  # Or False if email verification required
+        is_active=False,  # User must verify email first
         is_verified=False,
         is_superuser=False,
     )
@@ -399,13 +428,110 @@ async def register_user_extended(
     db.commit()
     db.refresh(new_user)
 
-    # Send registration email (optional - email verification)
-    # TODO: Implement email verification token if needed
+    # Generate email verification token
+    verification_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+
+    print(f"🔑 Creating email verification token for user {new_user.email}")
+    print(f"   Token: {verification_token[:20]}...")
+    print(f"   Expires at: {expires_at}")
+
+    token_record = EmailVerificationToken(
+        user_id=new_user.id,
+        token=verification_token,
+        expires_at=expires_at,
+        used="Nein"
+    )
+    db.add(token_record)
+    db.commit()
+
+    # Send verification email
+    email_sent = await resend_email_service.send_registration_email(
+        to_email=new_user.email,
+        vorname=new_user.vorname,
+        nachname=new_user.nachname,
+        verification_token=verification_token
+    )
+
+    if not email_sent:
+        print(f"⚠️ Failed to send verification email to {new_user.email}")
 
     return {
         "status": "registered",
+        "message": "Bitte überprüfen Sie Ihre E-Mail, um Ihr Konto zu aktivieren.",
         "user_id": str(new_user.id),
-        "email": new_user.email
+        "email": new_user.email,
+        "email_sent": email_sent
+    }
+
+
+@mvp_auth_router.post("/verify-email")
+async def verify_email(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Verify email address with token."""
+    print(f"🔐 Email verification attempt with token: {token[:20]}...")
+
+    # Find token
+    stmt = select(EmailVerificationToken).where(EmailVerificationToken.token == token)
+    result = db.execute(stmt)
+    token_record = result.scalar_one_or_none()
+
+    if not token_record:
+        print(f"❌ Token not found in database")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification token"
+        )
+
+    print(f"✅ Token found - used: {token_record.used}, expires_at: {token_record.expires_at}")
+
+    # Check if already used
+    if token_record.used == "Ja":
+        print(f"❌ Token already used")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token already used"
+        )
+
+    # Check expiration
+    now_utc = datetime.now(timezone.utc)
+    expires_at_aware = token_record.expires_at.replace(tzinfo=timezone.utc) if token_record.expires_at.tzinfo is None else token_record.expires_at
+    print(f"⏰ Now: {now_utc}, Expires: {expires_at_aware}")
+    if now_utc > expires_at_aware:
+        print(f"❌ Token expired")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token expired"
+        )
+
+    # Get user
+    stmt = select(User).where(User.id == token_record.user_id)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Activate user
+    user.is_active = True
+    user.is_verified = True
+
+    # Mark token as used
+    token_record.used = "Ja"
+
+    db.commit()
+
+    print(f"✅ User {user.email} verified and activated")
+
+    return {
+        "status": "verified",
+        "message": "E-Mail erfolgreich bestätigt! Sie können sich jetzt anmelden.",
+        "email": user.email
     }
 
 
@@ -437,11 +563,11 @@ async def login_user(
             detail="Invalid password"
         )
 
-    # Check if user is active
+    # Check if user is active (email verified)
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled"
+            detail="E-Mail-Adresse noch nicht bestätigt. Bitte prüfen Sie Ihr Postfach."
         )
 
     return {
