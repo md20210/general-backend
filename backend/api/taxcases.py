@@ -1182,10 +1182,16 @@ Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
 
             provider = "ollama" if prefer_local else "grok"
             timeout = 240 if provider == "ollama" else 60
+
+            logger.info(f"Sending to LLM: {len(combined_content)} chars of text")
+            logger.info(f"Text preview: {combined_content[:500]}")
+
             result_dict = llm_gateway.generate(prompt=prompt, provider=provider, max_tokens=4000, timeout=timeout)
             result = result_dict.get("response", "")
 
             logger.info(f"LLM extraction completed with {llm_mode}")
+            logger.info(f"LLM response length: {len(result)} chars")
+            logger.info(f"LLM response preview: {result[:500]}")
 
             # Parse JSON
             try:
@@ -1198,8 +1204,12 @@ Bei mehreren Warenpositionen verwende position_2_*, position_3_* usw.
                             flattened[nested_key] = nested_value
                     else:
                         flattened[key] = value
+
+                # Count non-null fields
+                non_null_count = sum(1 for v in flattened.values() if v not in (None, '', 'null'))
                 extracted_data.update(flattened)
-                logger.info(f"Successfully parsed {len(flattened)} fields")
+                logger.info(f"Successfully parsed {len(flattened)} fields ({non_null_count} non-null)")
+                logger.info(f"Sample fields: {dict(list(flattened.items())[:5])}")
             except (json.JSONDecodeError, ValueError) as parse_error:
                 logger.warning(f"JSON parsing failed: {parse_error}")
                 extracted_data["llm_antwort"] = result[:1000]
