@@ -748,19 +748,11 @@ async def login_user(
             detail="E-Mail-Adresse noch nicht bestätigt. Bitte prüfen Sie Ihr Postfach."
         )
 
-    # Generate JWT access token
-    from jose import jwt
-    from datetime import datetime, timedelta
-    from backend.config import settings
+    # Generate JWT access token using FastAPI-Users strategy
+    from backend.auth.jwt import get_jwt_strategy
 
-    payload = {
-        "sub": str(user.id),
-        "email": user.email,
-        "is_superuser": user.is_superuser,
-        "exp": datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
-        "iat": datetime.utcnow()
-    }
-    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    jwt_strategy = get_jwt_strategy()
+    token = await jwt_strategy.write_token(user)
 
     return {
         "status": "logged_in",
