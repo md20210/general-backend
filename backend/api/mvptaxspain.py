@@ -240,10 +240,13 @@ async def request_password_reset(
     db.commit()
 
     # Send email via Resend
-    await resend_email_service.send_password_reset_email(
+    email_sent = await resend_email_service.send_password_reset_email(
         to_email=user.email,
         reset_token=reset_token
     )
+
+    if not email_sent:
+        print(f"⚠️ Failed to send password reset email to {user.email}")
 
     return {"status": "If email exists, reset link sent"}
 

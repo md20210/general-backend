@@ -12,7 +12,8 @@ class ResendEmailService:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("RESEND_API_KEY", "re_hTZxVL5t_9CcWhbdQLNzCC6aJkd6bd1FW")
-        self.from_email = "michael.dabrock@gmx.es"
+        # Use domain-based email for Resend (requires domain verification)
+        self.from_email = os.getenv("RESEND_FROM_EMAIL", "noreply@dabrock.info")
         self.base_url = "https://api.resend.com"
 
     async def send_email(
@@ -51,13 +52,15 @@ class ResendEmailService:
                 )
 
                 if response.status_code == 200:
+                    print(f"✅ Email sent successfully to {to_email}")
                     return True
                 else:
-                    print(f"Failed to send email to {to_email}: {response.text}")
+                    error_msg = f"Resend API error (status {response.status_code}): {response.text}"
+                    print(f"❌ Failed to send email to {to_email}: {error_msg}")
                     return False
 
         except Exception as e:
-            print(f"Failed to send email to {to_email}: {str(e)}")
+            print(f"❌ Exception sending email to {to_email}: {str(e)}")
             return False
 
     async def send_registration_email(
