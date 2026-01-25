@@ -121,7 +121,42 @@ def generate_h7_pdf(extracted_data: Dict[str, Any], case_name: str = "") -> Byte
     logger = logging.getLogger(__name__)
 
     logger.info(f"🔍 PDF Generation - Received data keys: {list(extracted_data.keys())}")
-    logger.info(f"📦 PDF Generation - Full data: {extracted_data}")
+
+    # Map frontend field names to backend field names
+    field_mapping = {
+        'absender_name_firma': 'absender_name',
+        'absender_strasse_hausnummer': 'absender_strasse',
+        'absender_postleitzahl': 'absender_plz',
+        'empfaenger_strasse_hausnummer': 'empfaenger_strasse',
+        'empfaenger_postleitzahl': 'empfaenger_plz',
+        'empfaenger_nif_nie_cif': 'empfaenger_nif',
+        'gesamtbetrag_fuer_zollzwecke': 'gesamtbetrag_fuer_zoll',
+        'erklaerung_wahrheitsgemaess': 'wahrheitsgemaesse_angaben'
+    }
+
+    # Create normalized data with mapped keys
+    normalized_data = {}
+    for key, value in extracted_data.items():
+        # Use mapped key if exists, otherwise use original key
+        normalized_key = field_mapping.get(key, key)
+        normalized_data[normalized_key] = value
+
+    # Handle warenpositionen array -> convert to position_1_*, position_2_*, etc.
+    if 'warenpositionen' in extracted_data and isinstance(extracted_data['warenpositionen'], list):
+        for idx, position in enumerate(extracted_data['warenpositionen'], start=1):
+            if isinstance(position, dict):
+                normalized_data[f'position_{idx}_beschreibung'] = position.get('warenbeschreibung', '')
+                normalized_data[f'position_{idx}_anzahl'] = position.get('anzahl', '')
+                normalized_data[f'position_{idx}_stueckpreis'] = position.get('stueckpreis', '')
+                normalized_data[f'position_{idx}_gesamtwert'] = position.get('gesamtwert', '')
+                normalized_data[f'position_{idx}_ursprungsland'] = position.get('ursprungsland', '')
+                normalized_data[f'position_{idx}_zolltarifnummer'] = position.get('zolltarifnummer', '')
+                normalized_data[f'position_{idx}_gewicht'] = position.get('gewicht', '')
+                normalized_data[f'position_{idx}_zustand'] = position.get('neu_gebraucht', '')
+
+    # Use normalized data instead of original
+    extracted_data = normalized_data
+    logger.info(f"📦 PDF Generation - Normalized {len(extracted_data)} fields")
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
