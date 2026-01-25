@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 from uuid import UUID
 
@@ -240,7 +240,7 @@ async def debug_tokens(
                 "created_at": str(t.created_at),
                 "expires_at": str(t.expires_at),
                 "used": t.used,
-                "is_expired": datetime.utcnow() > t.expires_at
+                "is_expired": datetime.now(timezone.utc) > (t.expires_at.replace(tzinfo=timezone.utc) if t.expires_at.tzinfo is None else t.expires_at)
             }
             for t in tokens
         ]
@@ -264,7 +264,7 @@ async def request_password_reset(
 
     # Generate reset token
     reset_token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=1)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
 
     print(f"🔑 Creating password reset token for user {user.email}")
     print(f"   Token: {reset_token[:20]}...")
@@ -325,9 +325,11 @@ async def confirm_password_reset(
         )
 
     # Check expiration
-    now_utc = datetime.utcnow()
-    print(f"⏰ Now: {now_utc}, Expires: {any_token.expires_at}")
-    if now_utc > any_token.expires_at:
+    now_utc = datetime.now(timezone.utc)
+    # Make sure we compare timezone-aware datetimes
+    expires_at_aware = any_token.expires_at.replace(tzinfo=timezone.utc) if any_token.expires_at.tzinfo is None else any_token.expires_at
+    print(f"⏰ Now: {now_utc}, Expires: {expires_at_aware}")
+    if now_utc > expires_at_aware:
         print(f"❌ Token expired")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
