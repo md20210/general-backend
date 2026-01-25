@@ -117,6 +117,12 @@ def generate_h7_pdf(extracted_data: Dict[str, Any], case_name: str = "") -> Byte
     Returns:
         BytesIO object containing the PDF
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"🔍 PDF Generation - Received data keys: {list(extracted_data.keys())}")
+    logger.info(f"📦 PDF Generation - Full data: {extracted_data}")
+
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
