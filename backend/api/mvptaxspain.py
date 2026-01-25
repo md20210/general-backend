@@ -18,6 +18,7 @@ from backend.schemas.h7form import (
     PasswordResetRequest,
     PasswordResetConfirm,
     UserRegisterExtended,
+    UserLogin,
 )
 from backend.auth.dependencies import current_active_user, require_admin
 from backend.services.resend_email_service import resend_email_service
@@ -347,8 +348,7 @@ async def register_user_extended(
 
 @mvp_auth_router.post("/login")
 async def login_user(
-    email: str,
-    password: str,
+    login_data: UserLogin,
     db: Session = Depends(get_db)
 ):
     """
@@ -356,7 +356,7 @@ async def login_user(
     Returns user information on successful login.
     """
     # Find user by email
-    stmt = select(User).where(User.email == email)
+    stmt = select(User).where(User.email == login_data.email)
     result = db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -367,7 +367,7 @@ async def login_user(
         )
 
     # Verify password
-    is_valid = password_helper.verify_and_update(password, user.hashed_password)
+    is_valid = password_helper.verify_and_update(login_data.password, user.hashed_password)
     if not is_valid[0]:  # verify_and_update returns (is_valid, updated_hash)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

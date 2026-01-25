@@ -144,3 +144,9 @@ class UserRegisterExtended(BaseModel):
     nachname: str
     sprache: str = "de"
     telefonnummer: Optional[str] = None
+
+
+class UserLogin(BaseModel):
+    """Schema for user login."""
+    email: EmailStr
+    password: str
