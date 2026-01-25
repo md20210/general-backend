@@ -215,8 +215,14 @@ async def list_all_users(
     db: Session = Depends(get_db),
     admin_user: User = Depends(require_admin)
 ):
-    """Get all users (admin only)."""
-    stmt = select(User).order_by(User.email)
+    """Get MVP Tax Spain users only (admin only)."""
+    # Filter for MVP Tax Spain users: must have vorname, nachname, and sprache
+    # These fields are set during MVP Tax Spain registration
+    stmt = select(User).where(
+        User.vorname.isnot(None),
+        User.nachname.isnot(None),
+        User.sprache.isnot(None)
+    ).order_by(User.email)
     result = db.execute(stmt)
     users = result.scalars().all()
 
