@@ -343,3 +343,49 @@ async def register_user_extended(
         "user_id": str(new_user.id),
         "email": new_user.email
     }
+
+
+@mvp_auth_router.post("/login")
+async def login_user(
+    email: str,
+    password: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Login with email and password.
+    Returns user information on successful login.
+    """
+    # Find user by email
+    stmt = select(User).where(User.email == email)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Verify password
+    is_valid = password_helper.verify_and_update(password, user.hashed_password)
+    if not is_valid[0]:  # verify_and_update returns (is_valid, updated_hash)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid password"
+        )
+
+    # Check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled"
+        )
+
+    return {
+        "status": "logged_in",
+        "user_id": str(user.id),
+        "email": user.email,
+        "vorname": user.vorname,
+        "nachname": user.nachname,
+        "sprache": user.sprache
+    }
