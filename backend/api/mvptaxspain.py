@@ -749,8 +749,9 @@ async def login_user(
         )
 
     # Generate JWT access token
-    from backend.auth.jwt import auth_backend
-    token = await auth_backend.get_strategy().write_token(user)
+    from backend.auth.jwt import get_jwt_strategy
+    strategy = get_jwt_strategy()
+    token = await strategy.write_token(user)
 
     return {
         "status": "logged_in",
