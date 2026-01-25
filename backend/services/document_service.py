@@ -129,7 +129,6 @@ def generate_h7_pdf(extracted_data: Dict[str, Any], case_name: str = "") -> Byte
         'absender_postleitzahl': 'absender_plz',
         'empfaenger_strasse_hausnummer': 'empfaenger_strasse',
         'empfaenger_postleitzahl': 'empfaenger_plz',
-        'empfaenger_nif_nie_cif': 'empfaenger_nif',
         'gesamtbetrag_fuer_zollzwecke': 'gesamtbetrag_fuer_zoll',
         'erklaerung_wahrheitsgemaess': 'wahrheitsgemaesse_angaben'
     }
@@ -157,6 +156,7 @@ def generate_h7_pdf(extracted_data: Dict[str, Any], case_name: str = "") -> Byte
     # Use normalized data instead of original
     extracted_data = normalized_data
     logger.info(f"📦 PDF Generation - Normalized {len(extracted_data)} fields")
+    logger.info(f"🔍 First 10 normalized fields: {dict(list(extracted_data.items())[:10])}")
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -296,11 +296,15 @@ def _create_section_table(fields: List[Tuple[str, Dict[str, Any]]]) -> List:
     Returns:
         List with Table and Spacer elements
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     data = []
 
     for field_name, extracted_data in fields:
         label = FIELD_TRANSLATIONS.get(field_name, field_name)
         value = str(extracted_data.get(field_name, ''))
+        logger.debug(f"📋 Field: {field_name} -> Label: {label}, Value: {value[:50] if value else '(empty)'}")
         is_obligatory = field_name in OBLIGATORY_FIELDS
 
         # Empty value handling
