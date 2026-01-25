@@ -1,7 +1,7 @@
 """Add folder tracking attributes and ensure folders table exists
 
-Revision ID: 20260119_add_folder_tracking_attributes
-Revises: 20260117_add_application_tracker
+Revision ID: 20260119_folder_tracking
+Revises: 20260119_folder_attrs
 Create Date: 2026-01-19 12:00:00
 
 """
@@ -9,8 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
-revision = '20260119_add_folder_tracking_attributes'
-down_revision = '20260119_folder_attrs'  # Changed to depend on the dummy migration
+revision = '20260119_folder_tracking'  # Shortened to fit VARCHAR(32)
+down_revision = '20260119_folder_attrs'
 branch_labels = None
 depends_on = None
 
