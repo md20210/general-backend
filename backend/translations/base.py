@@ -13,6 +13,7 @@ from backend.translations.privategxt import PRIVATEGXT_TRANSLATIONS
 from backend.translations.lifechonicle import LIFECHONICLE_TRANSLATIONS
 from backend.translations.prompts import LLM_PROMPTS
 from backend.translations.bar import BAR_TRANSLATIONS
+from backend.translations.mvptaxspain import MVPTAXSPAIN_TRANSLATIONS
 
 
 class TranslationService:
@@ -35,6 +36,7 @@ class TranslationService:
         self.UI_TRANSLATIONS.update(PRIVATEGXT_TRANSLATIONS)
         self.UI_TRANSLATIONS.update(LIFECHONICLE_TRANSLATIONS)
         self.UI_TRANSLATIONS.update(BAR_TRANSLATIONS)
+        self.UI_TRANSLATIONS.update(MVPTAXSPAIN_TRANSLATIONS)
 
         # LLM Prompts (separate from UI translations)
         self.LLM_PROMPTS: Dict[str, Dict[Language, str]] = LLM_PROMPTS
