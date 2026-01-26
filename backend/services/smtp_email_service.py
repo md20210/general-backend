@@ -13,6 +13,15 @@ from functools import partial
 
 logger = logging.getLogger(__name__)
 
+# Ensure logger outputs to console
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
 
 class SMTPEmailService:
     """Service for sending emails via SMTP"""
@@ -31,8 +40,12 @@ class SMTPEmailService:
         self.smtp_user = smtp_user or os.getenv("SMTP_USER", "michael.dabrock@gmx.es")
         self.smtp_password = smtp_password or os.getenv("SMTP_PASSWORD", "")
         self.from_email = from_email or os.getenv("SMTP_FROM_EMAIL", "michael.dabrock@gmx.es")
-        
-        logger.info(f"SMTP Email Service initialized: {self.smtp_host}:{self.smtp_port}")
+
+        logger.info(f"🔧 SMTP Email Service initialized")
+        logger.info(f"   Host: {self.smtp_host}:{self.smtp_port}")
+        logger.info(f"   User: {self.smtp_user}")
+        logger.info(f"   From: {self.from_email}")
+        logger.info(f"   Password set: {'Yes' if self.smtp_password else 'No'}")
 
     def _send_email_sync(
         self,
@@ -45,9 +58,9 @@ class SMTPEmailService:
         Synchronous email sending (to be called from async context)
         """
         try:
-            print(f"📧 Attempting to send email to {to_email}")
-            print(f"   SMTP: {self.smtp_host}:{self.smtp_port}")
-            print(f"   User: {self.smtp_user}")
+            logger.info(f"📧 Attempting to send email to {to_email}")
+            logger.info(f"   SMTP: {self.smtp_host}:{self.smtp_port}")
+            logger.info(f"   User: {self.smtp_user}")
 
             # Create message
             msg = MIMEMultipart('alternative')
@@ -60,36 +73,32 @@ class SMTPEmailService:
             msg.attach(html_part)
 
             # Connect to SMTP server
-            print(f"   Connecting to SMTP server...")
+            logger.info(f"   Connecting to SMTP server...")
             server = smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30)
-            print(f"   Starting TLS...")
+            logger.info(f"   Starting TLS...")
             server.starttls()
-            print(f"   Logging in...")
+            logger.info(f"   Logging in...")
             server.login(self.smtp_user, self.smtp_password)
-            print(f"   Sending message...")
+            logger.info(f"   Sending message...")
             server.send_message(msg)
             server.quit()
 
             logger.info(f"✅ Email sent successfully to {to_email}")
-            print(f"✅ Email sent successfully to {to_email}")
             return True
 
         except smtplib.SMTPAuthenticationError as e:
             error_msg = f"SMTP Authentication failed: {str(e)}"
             logger.error(f"❌ {error_msg}")
-            print(f"❌ {error_msg}")
             return False
         except smtplib.SMTPException as e:
             error_msg = f"SMTP error: {str(e)}"
             logger.error(f"❌ {error_msg}")
-            print(f"❌ {error_msg}")
             return False
         except Exception as e:
             error_msg = f"Failed to send email to {to_email}: {type(e).__name__}: {str(e)}"
             logger.error(f"❌ {error_msg}")
-            print(f"❌ {error_msg}")
             import traceback
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
             return False
 
     async def send_email(
