@@ -912,3 +912,39 @@ async def debug_remove_admin(
         "is_superuser": False,
         "message": "Admin rights removed. User can now be deleted."
     }
+
+
+@mvp_auth_router.get("/debug/test-smtp")
+async def debug_test_smtp():
+    """DEBUG: Test SMTP configuration"""
+    import os
+
+    smtp_config = {
+        "SMTP_HOST": os.getenv("SMTP_HOST", "NOT SET"),
+        "SMTP_PORT": os.getenv("SMTP_PORT", "NOT SET"),
+        "SMTP_USER": os.getenv("SMTP_USER", "NOT SET"),
+        "SMTP_PASSWORD": "***" + os.getenv("SMTP_PASSWORD", "NOT SET")[-4:] if os.getenv("SMTP_PASSWORD") else "NOT SET",
+        "SMTP_FROM_EMAIL": os.getenv("SMTP_FROM_EMAIL", "NOT SET"),
+    }
+
+    # Test email send
+    try:
+        email_sent = await smtp_email_service.send_email(
+            to_email="michael.dabrock@gmail.com",
+            subject="Test Email from MVP Tax Spain",
+            html_content="<h1>Test</h1><p>Dies ist eine Test-Email.</p>"
+        )
+
+        return {
+            "status": "success",
+            "smtp_config": smtp_config,
+            "email_sent": email_sent,
+            "message": "Check logs for details"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "smtp_config": smtp_config,
+            "error": str(e),
+            "message": "SMTP test failed"
+        }
