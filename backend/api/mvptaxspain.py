@@ -26,7 +26,7 @@ from backend.schemas.h7form import (
     UserRead,
 )
 from backend.auth.dependencies import current_active_user, require_admin
-from backend.services.resend_email_service import resend_email_service
+from backend.services.smtp_email_service import smtp_email_service
 from fastapi_users.password import PasswordHelper
 
 
@@ -501,7 +501,7 @@ async def request_password_reset(
     print(f"✅ Token saved to database with ID: {token_record.id}")
 
     # Send email via Resend
-    email_sent = await resend_email_service.send_password_reset_email(
+    email_sent = await smtp_email_service.send_password_reset_email(
         to_email=user.email,
         reset_token=reset_token
     )
@@ -635,7 +635,7 @@ async def register_user_extended(
     db.commit()
 
     # Send verification email
-    email_sent = await resend_email_service.send_registration_email(
+    email_sent = await smtp_email_service.send_registration_email(
         to_email=new_user.email,
         vorname=new_user.vorname,
         nachname=new_user.nachname,
