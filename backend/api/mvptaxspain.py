@@ -918,6 +918,8 @@ async def debug_remove_admin(
 async def debug_test_smtp():
     """DEBUG: Test SMTP configuration"""
     import os
+    import smtplib
+    import traceback
 
     smtp_config = {
         "SMTP_HOST": os.getenv("SMTP_HOST", "NOT SET"),
@@ -927,24 +929,43 @@ async def debug_test_smtp():
         "SMTP_FROM_EMAIL": os.getenv("SMTP_FROM_EMAIL", "NOT SET"),
     }
 
-    # Test email send
-    try:
-        email_sent = await smtp_email_service.send_email(
-            to_email="michael.dabrock@gmail.com",
-            subject="Test Email from MVP Tax Spain",
-            html_content="<h1>Test</h1><p>Dies ist eine Test-Email.</p>"
-        )
+    # Direct SMTP test
+    test_result = {
+        "smtp_config": smtp_config,
+        "steps": []
+    }
 
-        return {
-            "status": "success",
-            "smtp_config": smtp_config,
-            "email_sent": email_sent,
-            "message": "Check logs for details"
-        }
+    try:
+        host = os.getenv("SMTP_HOST", "mail.gmx.net")
+        port = int(os.getenv("SMTP_PORT", "587"))
+        user = os.getenv("SMTP_USER", "")
+        password = os.getenv("SMTP_PASSWORD", "")
+
+        test_result["steps"].append(f"Connecting to {host}:{port}...")
+        server = smtplib.SMTP(host, port, timeout=30)
+        test_result["steps"].append("Connected!")
+
+        test_result["steps"].append("Starting TLS...")
+        server.starttls()
+        test_result["steps"].append("TLS started!")
+
+        test_result["steps"].append(f"Logging in as {user}...")
+        server.login(user, password)
+        test_result["steps"].append("Login successful!")
+
+        server.quit()
+
+        test_result["status"] = "success"
+        test_result["message"] = "SMTP connection test passed!"
+
+    except smtplib.SMTPAuthenticationError as e:
+        test_result["status"] = "auth_error"
+        test_result["error"] = f"Authentication failed: {str(e)}"
+        test_result["steps"].append(f"❌ AUTH ERROR: {str(e)}")
     except Exception as e:
-        return {
-            "status": "error",
-            "smtp_config": smtp_config,
-            "error": str(e),
-            "message": "SMTP test failed"
-        }
+        test_result["status"] = "error"
+        test_result["error"] = f"{type(e).__name__}: {str(e)}"
+        test_result["steps"].append(f"❌ ERROR: {type(e).__name__}: {str(e)}")
+        test_result["traceback"] = traceback.format_exc()
+
+    return test_result
