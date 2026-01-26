@@ -831,3 +831,33 @@ async def update_user_profile(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update profile: {str(e)}"
         )
+
+
+@mvp_auth_router.post("/debug/remove-admin/{email}")
+async def debug_remove_admin(
+    email: str,
+    db: Session = Depends(get_db)
+):
+    """DEBUG: Remove admin rights from user by email (NO AUTH CHECK - REMOVE IN PRODUCTION!)"""
+    stmt = select(User).where(User.email == email)
+    result = db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {email} not found"
+        )
+
+    user.is_superuser = False
+    db.commit()
+
+    logger.info(f"🔓 DEBUG: Removed admin rights from {email}")
+    print(f"🔓 DEBUG: Removed admin rights from {email}")
+
+    return {
+        "status": "success",
+        "email": user.email,
+        "is_superuser": False,
+        "message": "Admin rights removed. User can now be deleted."
+    }
