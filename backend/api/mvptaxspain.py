@@ -19,6 +19,8 @@ from backend.schemas.h7form import (
     PasswordResetConfirm,
     UserRegisterExtended,
     UserLogin,
+    UserUpdate,
+    UserRead,
 )
 from backend.auth.dependencies import current_active_user, require_admin
 from backend.services.resend_email_service import resend_email_service
@@ -766,8 +768,40 @@ async def login_user(
         "email": user.email,
         "vorname": user.vorname,
         "nachname": user.nachname,
+        "telefonnummer": user.telefonnummer,
         "sprache": user.sprache,
         "is_superuser": user.is_superuser,
         "access_token": token,
         "token_type": "bearer"
     }
+
+
+@mvp_auth_router.get("/users/me", response_model=UserRead)
+async def get_current_user_profile(
+    user: User = Depends(current_active_user)
+):
+    """Get current user profile."""
+    return user
+
+
+@mvp_auth_router.patch("/users/me", response_model=UserRead)
+async def update_user_profile(
+    update_data: UserUpdate,
+    user: User = Depends(current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user profile."""
+    # Update fields if provided
+    if update_data.vorname is not None:
+        user.vorname = update_data.vorname
+    if update_data.nachname is not None:
+        user.nachname = update_data.nachname
+    if update_data.telefonnummer is not None:
+        user.telefonnummer = update_data.telefonnummer
+    if update_data.sprache is not None:
+        user.sprache = update_data.sprache
+
+    db.commit()
+    db.refresh(user)
+
+    return user

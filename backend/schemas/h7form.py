@@ -150,3 +150,26 @@ class UserLogin(BaseModel):
     """Schema for user login."""
     email: EmailStr
     password: str
+
+
+class UserUpdate(BaseModel):
+    """Schema for updating user profile."""
+    vorname: Optional[str] = None
+    nachname: Optional[str] = None
+    telefonnummer: Optional[str] = None
+    sprache: Optional[str] = None
+
+
+class UserRead(BaseModel):
+    """Schema for reading user data."""
+    id: UUID
+    email: EmailStr
+    vorname: str
+    nachname: str
+    telefonnummer: Optional[str] = None
+    sprache: str
+    is_active: bool
+    is_superuser: bool
+
+    class Config:
+        from_attributes = True
