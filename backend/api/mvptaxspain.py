@@ -5,7 +5,10 @@ from sqlalchemy import select
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 import secrets
+import logging
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 from backend.database import get_db
 from backend.models.user import User
@@ -791,17 +794,26 @@ async def update_user_profile(
     db: Session = Depends(get_db)
 ):
     """Update current user profile."""
-    # Update fields if provided
-    if update_data.vorname is not None:
-        user.vorname = update_data.vorname
-    if update_data.nachname is not None:
-        user.nachname = update_data.nachname
-    if update_data.telefonnummer is not None:
-        user.telefonnummer = update_data.telefonnummer
-    if update_data.sprache is not None:
-        user.sprache = update_data.sprache
+    try:
+        # Update fields if provided
+        if update_data.vorname is not None and update_data.vorname.strip():
+            user.vorname = update_data.vorname.strip()
+        if update_data.nachname is not None and update_data.nachname.strip():
+            user.nachname = update_data.nachname.strip()
+        if update_data.telefonnummer is not None:
+            # Convert empty string to None for database
+            user.telefonnummer = update_data.telefonnummer.strip() if update_data.telefonnummer.strip() else None
+        if update_data.sprache is not None and update_data.sprache.strip():
+            user.sprache = update_data.sprache.strip()
 
-    db.commit()
-    db.refresh(user)
+        db.commit()
+        db.refresh(user)
 
-    return user
+        return user
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating user profile: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update profile: {str(e)}"
+        )
