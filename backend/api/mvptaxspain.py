@@ -790,11 +790,22 @@ async def get_current_user_profile(
 @mvp_auth_router.patch("/users/me", response_model=UserRead)
 async def update_user_profile(
     update_data: UserUpdate,
-    user: User = Depends(current_active_user),
+    current_user: User = Depends(current_active_user),
     db: Session = Depends(get_db)
 ):
     """Update current user profile."""
     try:
+        # Get user from database using current session
+        stmt = select(User).where(User.id == current_user.id)
+        result = db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
         # Update fields if provided
         if update_data.vorname is not None and update_data.vorname.strip():
             user.vorname = update_data.vorname.strip()
@@ -809,7 +820,10 @@ async def update_user_profile(
         db.commit()
         db.refresh(user)
 
+        logger.info(f"User profile updated successfully: {user.email}")
         return user
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error updating user profile: {str(e)}")
