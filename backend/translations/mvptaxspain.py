@@ -563,6 +563,11 @@ MVPTAXSPAIN_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
         "en": "Save",
         "es": "Guardar"
     },
+    "common_edit": {
+        "de": "Bearbeiten",
+        "en": "Edit",
+        "es": "Editar"
+    },
     "common_delete": {
         "de": "Löschen",
         "en": "Delete",
@@ -592,5 +597,22 @@ MVPTAXSPAIN_TRANSLATIONS: Dict[str, Dict[Language, str]] = {
         "de": "Herunterladen",
         "en": "Download",
         "es": "Descargar"
+    },
+
+    # Profile Settings
+    "email_cannot_be_changed": {
+        "de": "E-Mail kann nicht geändert werden",
+        "en": "Email cannot be changed",
+        "es": "El correo electrónico no se puede cambiar"
+    },
+    "profile_updated": {
+        "de": "Profil erfolgreich aktualisiert",
+        "en": "Profile updated successfully",
+        "es": "Perfil actualizado exitosamente"
+    },
+    "profile_update_error": {
+        "de": "Fehler beim Aktualisieren des Profils",
+        "en": "Error updating profile",
+        "es": "Error al actualizar el perfil"
     }
 }
