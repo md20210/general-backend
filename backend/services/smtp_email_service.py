@@ -4,10 +4,12 @@ Supports Gmail, GMX, and other SMTP providers
 """
 import smtplib
 import logging
+import asyncio
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
 import os
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ class SMTPEmailService:
         
         logger.info(f"SMTP Email Service initialized: {self.smtp_host}:{self.smtp_port}")
 
-    async def send_email(
+    def _send_email_sync(
         self,
         to_email: str,
         subject: str,
@@ -40,18 +42,13 @@ class SMTPEmailService:
         from_email: Optional[str] = None
     ) -> bool:
         """
-        Send email via SMTP
-
-        Args:
-            to_email: Recipient email address
-            subject: Email subject
-            html_content: HTML email content
-            from_email: Sender email (optional, uses default if not provided)
-
-        Returns:
-            bool: True if sent successfully, False otherwise
+        Synchronous email sending (to be called from async context)
         """
         try:
+            print(f"📧 Attempting to send email to {to_email}")
+            print(f"   SMTP: {self.smtp_host}:{self.smtp_port}")
+            print(f"   User: {self.smtp_user}")
+
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
@@ -63,19 +60,63 @@ class SMTPEmailService:
             msg.attach(html_part)
 
             # Connect to SMTP server
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()  # Enable TLS
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
+            print(f"   Connecting to SMTP server...")
+            server = smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30)
+            print(f"   Starting TLS...")
+            server.starttls()
+            print(f"   Logging in...")
+            server.login(self.smtp_user, self.smtp_password)
+            print(f"   Sending message...")
+            server.send_message(msg)
+            server.quit()
 
             logger.info(f"✅ Email sent successfully to {to_email}")
             print(f"✅ Email sent successfully to {to_email}")
             return True
 
-        except Exception as e:
-            logger.error(f"❌ Failed to send email to {to_email}: {str(e)}")
-            print(f"❌ Failed to send email to {to_email}: {str(e)}")
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = f"SMTP Authentication failed: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            print(f"❌ {error_msg}")
             return False
+        except smtplib.SMTPException as e:
+            error_msg = f"SMTP error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            print(f"❌ {error_msg}")
+            return False
+        except Exception as e:
+            error_msg = f"Failed to send email to {to_email}: {type(e).__name__}: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            print(f"❌ {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    async def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        from_email: Optional[str] = None
+    ) -> bool:
+        """
+        Send email via SMTP (async wrapper)
+
+        Args:
+            to_email: Recipient email address
+            subject: Email subject
+            html_content: HTML email content
+            from_email: Sender email (optional, uses default if not provided)
+
+        Returns:
+            bool: True if sent successfully, False otherwise
+        """
+        # Run synchronous SMTP in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            partial(self._send_email_sync, to_email, subject, html_content, from_email)
+        )
 
     async def send_registration_email(
         self,
