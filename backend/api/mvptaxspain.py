@@ -969,3 +969,29 @@ async def debug_test_smtp():
         test_result["traceback"] = traceback.format_exc()
 
     return test_result
+
+
+@mvp_auth_router.get("/debug/send-test-email/{email}")
+async def debug_send_test_email(email: str):
+    """DEBUG: Send a real test email"""
+    try:
+        result = await smtp_email_service.send_registration_email(
+            to_email=email,
+            vorname="Test",
+            nachname="User",
+            verification_token="test-token-12345"
+        )
+
+        return {
+            "status": "success" if result else "failed",
+            "email_sent": result,
+            "to_email": email,
+            "message": "Email sent!" if result else "Failed to send email"
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
