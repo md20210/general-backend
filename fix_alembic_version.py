@@ -40,6 +40,7 @@ def fix_alembic_version():
                     '20260119_folder_attrs',
                     '20260117_add_application_tracker',
                     '20260119_add_folder_tracking_attributes',  # Old renamed version
+                    '20260127_extend_h7_form_full_schema',  # Too long for VARCHAR(32)
                 ]
 
                 has_problematic = any(v[0] in problematic for v in old_versions)
