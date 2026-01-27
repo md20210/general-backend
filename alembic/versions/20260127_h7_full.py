@@ -1,6 +1,6 @@
 """Extend H7 form schema with full fields and goods_positions table
 
-Revision ID: 20260127_extend_h7_form_full_schema
+Revision ID: 20260127_h7_full
 Revises: 20260125_make_michael_admin
 Create Date: 2026-01-27 20:00:00.000000
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers, used by Alembic.
-revision = '20260127_extend_h7_form_full_schema'
+revision = '20260127_h7_full'
 down_revision = '20260125_make_michael_admin'
 branch_labels = None
 depends_on = None
