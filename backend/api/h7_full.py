@@ -28,8 +28,7 @@ router = APIRouter(prefix="/h7-full", tags=["h7-full-forms"])
 @router.post("/save-b2c", response_model=H7FormStatusResponse)
 async def save_h7_form_b2c(
     form_data: FullH7FormB2CSchema,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(current_active_user)
+    db: Session = Depends(get_db)
 ):
     """
     Save complete H7 form with B2C workflow.
@@ -39,9 +38,10 @@ async def save_h7_form_b2c(
     """
     try:
         # Create main H7 form record
+        # TODO: Add authentication support - for now always anonymous
         h7_form = H7FormData(
-            user_id=current_user.id if current_user else None,
-            email=current_user.email if current_user else form_data.recipient_data.email,
+            user_id=None,  # Anonymous submission
+            email=form_data.recipient_data.email,
 
             # Workflow
             workflow='B2C',
@@ -135,8 +135,7 @@ async def save_h7_form_b2c(
 @router.post("/save-c2c", response_model=H7FormStatusResponse)
 async def save_h7_form_c2c(
     form_data: FullH7FormC2CSchema,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(current_active_user)
+    db: Session = Depends(get_db)
 ):
     """
     Save complete H7 form with C2C workflow.
@@ -146,9 +145,10 @@ async def save_h7_form_c2c(
     """
     try:
         # Create main H7 form record
+        # TODO: Add authentication support - for now always anonymous
         h7_form = H7FormData(
-            user_id=current_user.id if current_user else None,
-            email=current_user.email if current_user else form_data.recipient_data.email,
+            user_id=None,  # Anonymous submission
+            email=form_data.recipient_data.email,
 
             # Workflow
             workflow='C2C',
