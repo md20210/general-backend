@@ -32,7 +32,7 @@ class SenderDataSchema(BaseModel):
     postleitzahl: str = Field(..., max_length=20)
     ort: str = Field(..., max_length=100)
     land: Optional[str] = Field(None, max_length=100, description="Full country name")
-    land_iso: str = Field(..., regex="^[A-Z]{2}$", description="ISO 2-letter country code")
+    land_iso: str = Field(..., pattern="^[A-Z]{2}$", description="ISO 2-letter country code")
     email: Optional[EmailStr] = None
     telefon: Optional[str] = Field(None, max_length=50)
 
@@ -80,8 +80,8 @@ class GoodsPositionSchema(BaseModel):
     anzahl: int = Field(..., ge=1, description="Quantity >= 1")
     stueckpreis: Decimal = Field(..., ge=0.01, description="Unit price >= 0.01")
     gesamtwert: Decimal = Field(..., ge=0, description="Total value (calculated)")
-    ursprungsland_iso: str = Field(..., regex="^[A-Z]{2}$")
-    zolltarifnummer: Optional[str] = Field(None, regex="^[0-9]{6,8}$", description="6-8 digit tariff code")
+    ursprungsland_iso: str = Field(..., pattern="^[A-Z]{2}$")
+    zolltarifnummer: Optional[str] = Field(None, pattern="^[0-9]{6,8}$", description="6-8 digit tariff code")
     gewicht: Optional[Decimal] = Field(None, ge=0)
     zustand: Optional[Literal['Neu', 'Gebraucht']] = None
 
