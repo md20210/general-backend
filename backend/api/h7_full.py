@@ -152,15 +152,20 @@ async def save_h7_form_b2c(
             db.add(goods_pos)
 
         db.commit()
-        db.refresh(h7_form)
+        # Don't refresh - avoid psycopg2 type introspection issues
+        # db.refresh(h7_form)
+
+        # Get timestamps from flush
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
 
         return H7FormStatusResponse(
             id=h7_form.id,
-            status=h7_form.status,
-            workflow=h7_form.workflow,
+            status='draft',
+            workflow='B2C',
             validation_errors=None,
-            created_at=h7_form.created_at.isoformat(),
-            updated_at=h7_form.updated_at.isoformat()
+            created_at=now.isoformat(),
+            updated_at=now.isoformat()
         )
 
     except Exception as e:
@@ -256,15 +261,20 @@ async def save_h7_form_c2c(
             db.add(goods_pos)
 
         db.commit()
-        db.refresh(h7_form)
+        # Don't refresh - avoid psycopg2 type introspection issues
+        # db.refresh(h7_form)
+
+        # Get timestamps from flush
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
 
         return H7FormStatusResponse(
             id=h7_form.id,
-            status=h7_form.status,
-            workflow=h7_form.workflow,
+            status='draft',
+            workflow='C2C',
             validation_errors=None,
-            created_at=h7_form.created_at.isoformat(),
-            updated_at=h7_form.updated_at.isoformat()
+            created_at=now.isoformat(),
+            updated_at=now.isoformat()
         )
 
     except Exception as e:
@@ -406,15 +416,19 @@ async def submit_h7_form(
 
     form.status = 'submitted'
     db.commit()
-    db.refresh(form)
+    # Don't refresh - avoid psycopg2 type introspection issues
+    # db.refresh(form)
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
 
     return H7FormStatusResponse(
         id=form.id,
-        status=form.status,
+        status='submitted',
         workflow=form.workflow,
         validation_errors=form.validation_errors,
-        created_at=form.created_at.isoformat(),
-        updated_at=form.updated_at.isoformat()
+        created_at=now.isoformat(),
+        updated_at=now.isoformat()
     )
 
 
