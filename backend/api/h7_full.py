@@ -63,6 +63,34 @@ async def debug_table_structure(db: Session = Depends(get_db)):
         )
 
 
+@router.post("/debug/test-insert")
+async def debug_test_insert(db: Session = Depends(get_db)):
+    """Debug endpoint to test simple H7FormData insert without goods positions."""
+    try:
+        from sqlalchemy import text
+
+        # Try raw SQL insert first
+        result = db.execute(text("""
+            INSERT INTO h7_form_data (email, workflow, warenwert_gesamt, waehrung, versandkosten, art_lieferung,
+                absender_name, absender_strasse, absender_plz, absender_ort, absender_land_iso,
+                empfaenger_name, empfaenger_strasse, empfaenger_plz, empfaenger_ort, empfaenger_insel, empfaenger_nif, empfaenger_email, empfaenger_telefon,
+                wahrheitserklaerung, status)
+            VALUES ('test@test.com', 'B2C', 100.50, 'EUR', 10.00, 'Kauf',
+                'Test GmbH', 'Test 1', '12345', 'Berlin', 'DE',
+                'Test User', 'Test 2', '38001', 'Santa Cruz', 'Tenerife', 'Y1234567Z', 'test@test.com', '+34666777888',
+                true, 'draft')
+            RETURNING id
+        """))
+        new_id = result.scalar()
+        db.commit()
+
+        return {"success": True, "id": new_id, "message": "Raw SQL insert worked"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Debug insert error: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
 # ==================== Create/Save Endpoints ====================
 
 @router.post("/save-b2c", response_model=H7FormStatusResponse)
