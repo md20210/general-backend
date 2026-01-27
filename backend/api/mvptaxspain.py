@@ -1010,3 +1010,13 @@ async def debug_send_test_email(email: str):
             "error": str(e),
             "traceback": traceback.format_exc()
         }
+
+
+@mvp_auth_router.get("/debug/email-log")
+async def debug_email_log():
+    """DEBUG: Get email debug log"""
+    from backend.services.smtp_email_service import email_debug_log
+    return {
+        "total_attempts": len(email_debug_log),
+        "log": email_debug_log
+    }

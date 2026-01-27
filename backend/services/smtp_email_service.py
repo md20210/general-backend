@@ -22,6 +22,9 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
+# Global list to track email attempts (for debugging)
+email_debug_log = []
+
 
 class SMTPEmailService:
     """Service for sending emails via SMTP"""
@@ -57,8 +60,17 @@ class SMTPEmailService:
         """
         Synchronous email sending (to be called from async context)
         """
+        import datetime
+        log_entry = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "to_email": to_email,
+            "subject": subject,
+            "steps": []
+        }
+
         try:
             logger.info(f"📧 Attempting to send email to {to_email}")
+            log_entry["steps"].append("Starting email send")
             logger.info(f"   SMTP: {self.smtp_host}:{self.smtp_port}")
             logger.info(f"   User: {self.smtp_user}")
 
@@ -71,34 +83,60 @@ class SMTPEmailService:
             # Attach HTML content
             html_part = MIMEText(html_content, 'html')
             msg.attach(html_part)
+            log_entry["steps"].append("Message created")
 
             # Connect to SMTP server
             logger.info(f"   Connecting to SMTP server...")
+            log_entry["steps"].append(f"Connecting to {self.smtp_host}:{self.smtp_port}")
             server = smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30)
+            log_entry["steps"].append("Connected")
+
             logger.info(f"   Starting TLS...")
             server.starttls()
+            log_entry["steps"].append("TLS started")
+
             logger.info(f"   Logging in...")
             server.login(self.smtp_user, self.smtp_password)
+            log_entry["steps"].append("Login successful")
+
             logger.info(f"   Sending message...")
             server.send_message(msg)
+            log_entry["steps"].append("Message sent")
             server.quit()
 
             logger.info(f"✅ Email sent successfully to {to_email}")
+            log_entry["status"] = "success"
+            log_entry["result"] = True
+            email_debug_log.append(log_entry)
+            if len(email_debug_log) > 20:  # Keep only last 20
+                email_debug_log.pop(0)
             return True
 
         except smtplib.SMTPAuthenticationError as e:
             error_msg = f"SMTP Authentication failed: {str(e)}"
             logger.error(f"❌ {error_msg}")
+            log_entry["status"] = "auth_error"
+            log_entry["error"] = error_msg
+            log_entry["result"] = False
+            email_debug_log.append(log_entry)
             return False
         except smtplib.SMTPException as e:
             error_msg = f"SMTP error: {str(e)}"
             logger.error(f"❌ {error_msg}")
+            log_entry["status"] = "smtp_error"
+            log_entry["error"] = error_msg
+            log_entry["result"] = False
+            email_debug_log.append(log_entry)
             return False
         except Exception as e:
             error_msg = f"Failed to send email to {to_email}: {type(e).__name__}: {str(e)}"
             logger.error(f"❌ {error_msg}")
             import traceback
             logger.error(traceback.format_exc())
+            log_entry["status"] = "exception"
+            log_entry["error"] = error_msg
+            log_entry["result"] = False
+            email_debug_log.append(log_entry)
             return False
 
     async def send_email(
