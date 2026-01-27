@@ -120,12 +120,21 @@ class SMTPEmailService:
         Returns:
             bool: True if sent successfully, False otherwise
         """
-        # Run synchronous SMTP in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            partial(self._send_email_sync, to_email, subject, html_content, from_email)
-        )
+        logger.info(f"📮 send_email called for {to_email}")
+        try:
+            # Run synchronous SMTP in thread pool to avoid blocking
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None,
+                partial(self._send_email_sync, to_email, subject, html_content, from_email)
+            )
+            logger.info(f"📬 send_email result: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"❌ send_email exception: {type(e).__name__}: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
 
     async def send_registration_email(
         self,
