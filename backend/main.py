@@ -35,6 +35,7 @@ from backend.api.bar_chat import router as bar_chat_router
 from backend.api.applications import router as applications_router
 from backend.api.taxcases import router as taxcases_router
 from backend.api.mvptaxspain import h7_router, admin_settings_router, mvp_auth_router
+from backend.api.h7_full import router as h7_full_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -158,6 +159,7 @@ app.include_router(bar_chat_router)
 app.include_router(applications_router, prefix="/api/applications", tags=["Applications"])
 app.include_router(taxcases_router, prefix="/api/taxcases", tags=["Tax Cases"])
 app.include_router(h7_router, prefix="/api", tags=["H7 Forms"])
+app.include_router(h7_full_router, prefix="/api", tags=["H7 Full Forms"])
 app.include_router(admin_settings_router, prefix="/api", tags=["Admin Settings"])
 app.include_router(mvp_auth_router, prefix="/api", tags=["MVP Auth"])
 
