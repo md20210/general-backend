@@ -146,6 +146,7 @@ class SMTPEmailService:
         Returns:
             bool: True if sent successfully
         """
+        logger.info(f"📨 send_registration_email called for {to_email}")
         verification_url = f"https://www.dabrock.info/mvptaxspain/verify-email?token={verification_token}"
 
         html_content = f"""

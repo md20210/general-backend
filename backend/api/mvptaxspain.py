@@ -686,23 +686,38 @@ async def register_user_extended(
     db.commit()
 
     # Send verification email
-    email_sent = await smtp_email_service.send_registration_email(
-        to_email=new_user.email,
-        vorname=new_user.vorname,
-        nachname=new_user.nachname,
-        verification_token=verification_token
-    )
+    email_error = None
+    try:
+        logger.info(f"🚀 Calling send_registration_email for {new_user.email}")
+        email_sent = await smtp_email_service.send_registration_email(
+            to_email=new_user.email,
+            vorname=new_user.vorname,
+            nachname=new_user.nachname,
+            verification_token=verification_token
+        )
+        logger.info(f"📬 Email send result: {email_sent}")
+    except Exception as e:
+        logger.error(f"❌ Exception in send_registration_email: {type(e).__name__}: {str(e)}")
+        email_sent = False
+        email_error = f"{type(e).__name__}: {str(e)}"
+        import traceback
+        logger.error(traceback.format_exc())
 
     if not email_sent:
         print(f"⚠️ Failed to send verification email to {new_user.email}")
 
-    return {
+    response = {
         "status": "registered",
         "message": "Bitte überprüfen Sie Ihre E-Mail, um Ihr Konto zu aktivieren.",
         "user_id": str(new_user.id),
         "email": new_user.email,
         "email_sent": email_sent
     }
+
+    if email_error:
+        response["email_error"] = email_error
+
+    return response
 
 
 @mvp_auth_router.post("/verify-email")
