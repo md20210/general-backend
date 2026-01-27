@@ -23,6 +23,46 @@ from backend.auth.dependencies import current_active_user
 router = APIRouter(prefix="/h7-full", tags=["h7-full-forms"])
 
 
+# ==================== Debug Endpoint ====================
+
+@router.get("/debug/table-structure")
+async def debug_table_structure(db: Session = Depends(get_db)):
+    """Debug endpoint to check H7FormData table structure."""
+    try:
+        from sqlalchemy import inspect, text
+        inspector = inspect(db.bind)
+
+        # Get columns for h7_form_data
+        columns = inspector.get_columns('h7_form_data')
+
+        # Also check if goods_positions table exists
+        tables = inspector.get_table_names()
+
+        # Try a simple query
+        result = db.execute(text("SELECT COUNT(*) FROM h7_form_data"))
+        count = result.scalar()
+
+        return {
+            "h7_form_data_columns": [
+                {
+                    "name": col["name"],
+                    "type": str(col["type"]),
+                    "nullable": col["nullable"]
+                }
+                for col in columns
+            ],
+            "tables": tables,
+            "h7_form_data_count": count,
+            "goods_positions_exists": "goods_positions" in tables
+        }
+    except Exception as e:
+        logger.error(f"Debug error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
+
+
 # ==================== Create/Save Endpoints ====================
 
 @router.post("/save-b2c", response_model=H7FormStatusResponse)
