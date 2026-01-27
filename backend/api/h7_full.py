@@ -1,14 +1,15 @@
 """API endpoints for full H7 form implementation with goods positions."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, text
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 import logging
 
 logger = logging.getLogger(__name__)
 
-from backend.database import get_db
+from backend.database import get_db, get_async_session
 from backend.models.user import User
 from backend.models.h7form import H7FormData, GoodsPosition
 from backend.schemas.h7_full_form import (
@@ -67,8 +68,6 @@ async def debug_table_structure(db: Session = Depends(get_db)):
 async def debug_test_insert(db: Session = Depends(get_db)):
     """Debug endpoint to test simple H7FormData insert without goods positions."""
     try:
-        from sqlalchemy import text
-
         # Try raw SQL insert first
         result = db.execute(text("""
             INSERT INTO h7_form_data (email, workflow, warenwert_gesamt, waehrung, versandkosten, art_lieferung,
@@ -89,6 +88,129 @@ async def debug_test_insert(db: Session = Depends(get_db)):
         db.rollback()
         logger.error(f"Debug insert error: {str(e)}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/save-b2c-async", response_model=H7FormStatusResponse)
+async def save_h7_form_b2c_async(
+    form_data: FullH7FormB2CSchema,
+    db: AsyncSession = Depends(get_async_session)
+):
+    """
+    Save complete H7 form with B2C workflow using async/asyncpg.
+    This avoids psycopg2 type introspection issues.
+    """
+    try:
+        from datetime import datetime, timezone
+
+        # Insert main H7 form using raw SQL to avoid ORM type issues
+        result = await db.execute(text("""
+            INSERT INTO h7_form_data (
+                email, workflow, sendungsart, warenwert_gesamt, waehrung, versandkosten,
+                versicherungskosten, gesamtbetrag_zoll, art_lieferung,
+                absender_name, absender_strasse, absender_plz, absender_ort, absender_land, absender_land_iso,
+                absender_email, absender_telefon,
+                empfaenger_name, empfaenger_strasse, empfaenger_plz, empfaenger_ort, empfaenger_insel,
+                empfaenger_nif, empfaenger_email, empfaenger_telefon,
+                rechnungsnummer, rechnungsdatum, rechnung_hochgeladen, mwst_ausgewiesen, mwst_warnung_akzeptiert,
+                zahlungsnachweis_file_path,
+                wahrheitserklaerung, bemerkungen, status
+            ) VALUES (
+                :email, :workflow, :sendungsart, :warenwert_gesamt, :waehrung, :versandkosten,
+                :versicherungskosten, :gesamtbetrag_zoll, :art_lieferung,
+                :absender_name, :absender_strasse, :absender_plz, :absender_ort, :absender_land, :absender_land_iso,
+                :absender_email, :absender_telefon,
+                :empfaenger_name, :empfaenger_strasse, :empfaenger_plz, :empfaenger_ort, :empfaenger_insel,
+                :empfaenger_nif, :empfaenger_email, :empfaenger_telefon,
+                :rechnungsnummer, :rechnungsdatum, :rechnung_hochgeladen, :mwst_ausgewiesen, :mwst_warnung_akzeptiert,
+                :zahlungsnachweis_file_path,
+                :wahrheitserklaerung, :bemerkungen, :status
+            ) RETURNING id
+        """), {
+            "email": form_data.recipient_data.email,
+            "workflow": "B2C",
+            "sendungsart": form_data.general_data.sendungsart,
+            "warenwert_gesamt": float(form_data.general_data.warenwert_gesamt),
+            "waehrung": form_data.general_data.waehrung,
+            "versandkosten": float(form_data.general_data.versandkosten),
+            "versicherungskosten": float(form_data.general_data.versicherungskosten) if form_data.general_data.versicherungskosten else None,
+            "gesamtbetrag_zoll": float(form_data.general_data.gesamtbetrag_zoll) if form_data.general_data.gesamtbetrag_zoll else None,
+            "art_lieferung": form_data.general_data.art_lieferung,
+            "absender_name": form_data.sender_data.name_firma,
+            "absender_strasse": form_data.sender_data.strasse_hausnummer,
+            "absender_plz": form_data.sender_data.postleitzahl,
+            "absender_ort": form_data.sender_data.ort,
+            "absender_land": form_data.sender_data.land,
+            "absender_land_iso": form_data.sender_data.land_iso,
+            "absender_email": form_data.sender_data.email,
+            "absender_telefon": form_data.sender_data.telefon,
+            "empfaenger_name": form_data.recipient_data.name,
+            "empfaenger_strasse": form_data.recipient_data.strasse_hausnummer,
+            "empfaenger_plz": form_data.recipient_data.postleitzahl,
+            "empfaenger_ort": form_data.recipient_data.ort,
+            "empfaenger_insel": form_data.recipient_data.insel,
+            "empfaenger_nif": form_data.recipient_data.nif_nie_cif,
+            "empfaenger_email": form_data.recipient_data.email,
+            "empfaenger_telefon": form_data.recipient_data.telefon,
+            "rechnungsnummer": form_data.invoice_proof.rechnungsnummer,
+            "rechnungsdatum": form_data.invoice_proof.rechnungsdatum,
+            "rechnung_hochgeladen": form_data.invoice_proof.rechnung_hochgeladen,
+            "mwst_ausgewiesen": form_data.invoice_proof.mwst_ausgewiesen,
+            "mwst_warnung_akzeptiert": form_data.invoice_proof.mwst_warnung_akzeptiert,
+            "zahlungsnachweis_file_path": form_data.invoice_proof.zahlungsnachweis_file_path,
+            "wahrheitserklaerung": form_data.additional_info.wahrheitserklaerung,
+            "bemerkungen": form_data.additional_info.bemerkungen,
+            "status": "draft"
+        })
+
+        h7_form_id = result.scalar()
+
+        # Insert goods positions
+        for pos_data in form_data.goods_data.positions:
+            await db.execute(text("""
+                INSERT INTO goods_positions (
+                    id, h7_form_id, position_nr, warenbeschreibung, warenbeschreibung_es,
+                    anzahl, stueckpreis, gesamtwert, ursprungsland_iso, zolltarifnummer,
+                    gewicht, zustand
+                ) VALUES (
+                    :id, :h7_form_id, :position_nr, :warenbeschreibung, :warenbeschreibung_es,
+                    :anzahl, :stueckpreis, :gesamtwert, :ursprungsland_iso, :zolltarifnummer,
+                    :gewicht, :zustand
+                )
+            """), {
+                "id": str(uuid4()),
+                "h7_form_id": h7_form_id,
+                "position_nr": pos_data.position_nr,
+                "warenbeschreibung": pos_data.warenbeschreibung,
+                "warenbeschreibung_es": pos_data.warenbeschreibung_es,
+                "anzahl": pos_data.anzahl,
+                "stueckpreis": float(pos_data.stueckpreis),
+                "gesamtwert": float(pos_data.gesamtwert),
+                "ursprungsland_iso": pos_data.ursprungsland_iso,
+                "zolltarifnummer": pos_data.zolltarifnummer,
+                "gewicht": float(pos_data.gewicht) if pos_data.gewicht else None,
+                "zustand": pos_data.zustand
+            })
+
+        await db.commit()
+
+        now = datetime.now(timezone.utc)
+
+        return H7FormStatusResponse(
+            id=h7_form_id,
+            status="draft",
+            workflow="B2C",
+            validation_errors=None,
+            created_at=now.isoformat(),
+            updated_at=now.isoformat()
+        )
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error saving B2C H7 form (async): {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error saving form: {str(e)}"
+        )
 
 
 # ==================== Create/Save Endpoints ====================
