@@ -38,8 +38,10 @@ def wait_for_db(database_url: str, max_attempts: int = 30, delay: int = 3) -> bo
     import time
     import psycopg2
 
-    # Convert asyncpg URL to psycopg2 URL if needed
-    db_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+    # Normalize URL for psycopg2 (handles postgres://, postgresql+asyncpg://, postgresql://)
+    db_url = database_url
+    db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+    db_url = db_url.replace("postgres://", "postgresql://")  # Railway sometimes uses postgres://
 
     print(f"⏳ Waiting for database to be ready...", file=sys.stderr, flush=True)
     for attempt in range(1, max_attempts + 1):

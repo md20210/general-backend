@@ -18,7 +18,10 @@ from backend.config import settings
 config = context.config
 
 # Override sqlalchemy.url with DATABASE_URL from settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"))
+# Normalize URL (Railway uses postgres:// shorthand)
+_alembic_url = settings.DATABASE_URL.replace("postgres://", "postgresql://")
+_alembic_url = _alembic_url.replace("postgresql://", "postgresql+asyncpg://")
+config.set_main_option("sqlalchemy.url", _alembic_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

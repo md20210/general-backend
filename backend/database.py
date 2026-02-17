@@ -6,8 +6,12 @@ from typing import AsyncGenerator
 from backend.config import settings
 
 
-# Convert postgres:// to postgresql+asyncpg://
-DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+# Normalize DATABASE_URL - Railway sometimes uses postgres:// instead of postgresql://
+_raw_url = settings.DATABASE_URL
+_raw_url = _raw_url.replace("postgres://", "postgresql://")  # normalize shorthand first
+
+# Convert to asyncpg format
+DATABASE_URL = _raw_url.replace("postgresql://", "postgresql+asyncpg://")
 
 # SQLAlchemy async engine
 engine = create_async_engine(
@@ -48,7 +52,7 @@ import time
 
 # Create synchronous engine with lazy connection (pool_pre_ping ensures reconnect)
 sync_engine = create_engine(
-    settings.DATABASE_URL.replace("postgresql://", "postgresql://"),
+    _raw_url,  # already normalized to postgresql://
     echo=True if settings.LOG_LEVEL == "DEBUG" else False,
     pool_pre_ping=True,
     pool_size=5,
