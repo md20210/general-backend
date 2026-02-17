@@ -107,8 +107,12 @@ from backend.models.bar import BarInfo, BarNewsletter  # noqa: F401
 from backend.models.h7form import H7FormData, AdminSettings, PasswordResetToken  # noqa: F401
 
 async def create_db_and_tables():
-    """Create all database tables and enable pgvector extension with retry logic."""
-    max_attempts = 30
+    """Create all database tables and enable pgvector extension with retry logic.
+
+    Only tries a few times quickly - the caller (lifespan) catches failures
+    and starts the server anyway so DB-less endpoints still work.
+    """
+    max_attempts = 5
     delay = 2  # seconds
 
     for attempt in range(1, max_attempts + 1):

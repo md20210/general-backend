@@ -49,8 +49,12 @@ async def lifespan(app: FastAPI):
     # NOTE: Alembic migrations are run in patch_and_start.py BEFORE uvicorn starts.
     # Do NOT run them here again to avoid race conditions and duplicate migration errors.
     logger.info("Starting General Backend...")
-    await create_db_and_tables()
-    logger.info("Database tables created/verified")
+    try:
+        await create_db_and_tables()
+        logger.info("Database tables created/verified")
+    except Exception as e:
+        logger.error(f"❌ Database initialization failed: {e}")
+        logger.warning("⚠️  Starting without database - DB-dependent endpoints will return errors until DB recovers")
 
     # Initialize Elasticsearch indices
     try:

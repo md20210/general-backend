@@ -33,8 +33,12 @@ bcrypt.checkpw = patched_checkpw
 print("✅ Bcrypt patched - passwords truncated to 72 bytes", file=sys.stderr, flush=True)
 
 
-def wait_for_db(database_url: str, max_attempts: int = 30, delay: int = 3) -> bool:
-    """Wait until PostgreSQL is ready to accept connections."""
+def wait_for_db(database_url: str, max_attempts: int = 60, delay: int = 5) -> bool:
+    """Wait until PostgreSQL is ready to accept connections.
+
+    Default: 60 attempts × 5s = 5 minutes total wait time.
+    Railway PostgreSQL can take 2-3 minutes to restart after a crash.
+    """
     import time
     import psycopg2
 
@@ -43,7 +47,7 @@ def wait_for_db(database_url: str, max_attempts: int = 30, delay: int = 3) -> bo
     db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
     db_url = db_url.replace("postgres://", "postgresql://")  # Railway sometimes uses postgres://
 
-    print(f"⏳ Waiting for database to be ready...", file=sys.stderr, flush=True)
+    print(f"⏳ Waiting for database to be ready (max {max_attempts * delay}s)...", file=sys.stderr, flush=True)
     for attempt in range(1, max_attempts + 1):
         try:
             conn = psycopg2.connect(db_url, connect_timeout=5)
@@ -51,7 +55,11 @@ def wait_for_db(database_url: str, max_attempts: int = 30, delay: int = 3) -> bo
             print(f"✅ Database is ready (attempt {attempt})", file=sys.stderr, flush=True)
             return True
         except psycopg2.OperationalError as e:
-            print(f"⏳ DB not ready yet (attempt {attempt}/{max_attempts}): {e}", file=sys.stderr, flush=True)
+            # Only log every 10 attempts to reduce noise
+            if attempt % 10 == 1 or attempt <= 3:
+                print(f"⏳ DB not ready yet (attempt {attempt}/{max_attempts}): {e}", file=sys.stderr, flush=True)
+            elif attempt % 10 == 0:
+                print(f"⏳ Still waiting... (attempt {attempt}/{max_attempts})", file=sys.stderr, flush=True)
             if attempt < max_attempts:
                 time.sleep(delay)
 
@@ -111,16 +119,18 @@ if __name__ == "__main__":
         # Step 1: Wait for DB to be ready before doing anything
         db_ready = wait_for_db(database_url)
 
-        if not db_ready:
-            print("❌ Cannot start: database is not available", file=sys.stderr, flush=True)
-            sys.exit(1)
-
-        # Step 2: Run migrations (with retry)
-        run_alembic_migrations()
+        if db_ready:
+            # Step 2: Run migrations (with retry) only if DB is available
+            run_alembic_migrations()
+        else:
+            # DB is not available but we still start the server.
+            # Endpoints that don't need DB (e.g. /health, /translations/*) will work.
+            # DB-dependent endpoints will return 500 until the DB recovers.
+            print("⚠️  Database unavailable - starting server anyway (DB-less endpoints will still work)", file=sys.stderr, flush=True)
     else:
         print("⚠️  No DATABASE_URL set - skipping DB wait and migrations", file=sys.stderr, flush=True)
 
-    # Step 3: Start uvicorn
+    # Step 3: Start uvicorn (always, regardless of DB state)
     import uvicorn
     port = int(os.getenv("PORT", "8080"))
     print(f"🚀 Starting server on port {port}...", file=sys.stderr, flush=True)
