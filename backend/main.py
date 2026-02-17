@@ -46,28 +46,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
+    # NOTE: Alembic migrations are run in patch_and_start.py BEFORE uvicorn starts.
+    # Do NOT run them here again to avoid race conditions and duplicate migration errors.
     logger.info("Starting General Backend...")
     await create_db_and_tables()
     logger.info("Database tables created/verified")
-
-    # Run Alembic migrations automatically in a thread pool to avoid event loop conflicts
-    try:
-        import asyncio
-        from concurrent.futures import ThreadPoolExecutor
-        from alembic.config import Config
-        from alembic import command
-
-        logger.info("Running Alembic migrations...")
-        alembic_cfg = Config("alembic.ini")
-
-        # Run migrations in a thread pool executor to avoid event loop conflicts
-        loop = asyncio.get_event_loop()
-        with ThreadPoolExecutor() as executor:
-            await loop.run_in_executor(executor, command.upgrade, alembic_cfg, "head")
-
-        logger.info("✅ Alembic migrations completed successfully")
-    except Exception as e:
-        logger.warning(f"⚠️  Alembic migrations failed (non-critical): {e}")
 
     # Initialize Elasticsearch indices
     try:

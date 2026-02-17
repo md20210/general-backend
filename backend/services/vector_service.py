@@ -5,13 +5,6 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 import re
 
-try:
-    from sentence_transformers import SentenceTransformer
-    EMBEDDINGS_AVAILABLE = True
-except ImportError:
-    EMBEDDINGS_AVAILABLE = False
-    print("WARNING: sentence-transformers not installed - embeddings disabled")
-
 from backend.models.document import Document
 
 
@@ -19,16 +12,29 @@ class VectorService:
     """Vector service for document embeddings using pgvector."""
 
     def __init__(self):
-        """Initialize embedding model."""
-        self.model = None
-        if EMBEDDINGS_AVAILABLE:
+        """Defer model loading to first use to reduce startup time/memory."""
+        self._model = None
+        self._model_loaded = False
+
+    def _get_model(self):
+        """Lazy-load the SentenceTransformer model on first use."""
+        if not self._model_loaded:
+            self._model_loaded = True
             try:
-                # Using all-MiniLM-L6-v2 (384 dimensions, fast, good quality)
-                self.model = SentenceTransformer('all-MiniLM-L6-v2')
+                from sentence_transformers import SentenceTransformer
+                self._model = SentenceTransformer('all-MiniLM-L6-v2')
                 print("✅ Embedding model loaded: all-MiniLM-L6-v2")
+            except ImportError:
+                print("WARNING: sentence-transformers not installed - embeddings disabled")
+                self._model = None
             except Exception as e:
                 print(f"⚠️ Failed to load embedding model: {e}")
-                self.model = None
+                self._model = None
+        return self._model
+
+    @property
+    def model(self):
+        return self._get_model()
 
     def chunk_text(
         self,
@@ -380,5 +386,5 @@ class VectorService:
             return [(doc, 0.5) for doc in documents[:limit]]
 
 
-# Global instance
+# Global instance - lazy initialized (model loads on first use, not at import time)
 vector_service = VectorService()

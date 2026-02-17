@@ -16,6 +16,8 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
+    # Give the DB time to become ready on Railway startup
+    connect_args={"timeout": 30},
 )
 
 # Async session factory
@@ -38,17 +40,23 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 # Synchronous session for compatibility with older endpoints
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import OperationalError
 from typing import Generator
+import time
 
-# Create synchronous engine
+# Create synchronous engine with lazy connection (pool_pre_ping ensures reconnect)
 sync_engine = create_engine(
     settings.DATABASE_URL.replace("postgresql://", "postgresql://"),
     echo=True if settings.LOG_LEVEL == "DEBUG" else False,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5,
+    max_overflow=10,
+    # pool_timeout: wait up to 30s for a connection from the pool
+    pool_timeout=30,
+    # pool_recycle: recycle connections after 30 min to avoid stale connections
+    pool_recycle=1800,
 )
 
 # Synchronous session factory
@@ -56,12 +64,29 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 
 def get_db() -> Generator[Session, None, None]:
-    """Dependency to get synchronous database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """Dependency to get synchronous database session with retry logic."""
+    max_retries = 5
+    retry_delay = 2
+    for attempt in range(max_retries):
+        db = SessionLocal()
+        try:
+            yield db
+            return
+        except OperationalError as e:
+            db.close()
+            if attempt < max_retries - 1:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"DB connection attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                raise
+        finally:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 import asyncio

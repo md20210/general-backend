@@ -3,14 +3,6 @@ import os
 from typing import List, Dict, Optional
 from uuid import UUID
 
-try:
-    import chromadb
-    from chromadb.config import Settings as ChromaSettings
-    CHROMADB_AVAILABLE = True
-except ImportError:
-    CHROMADB_AVAILABLE = False
-    print("WARNING: ChromaDB not installed - vector store features disabled")
-
 from backend.config import settings
 
 
@@ -18,28 +10,37 @@ class VectorStore:
     """Vector store for document embeddings using ChromaDB."""
 
     def __init__(self):
-        """Initialize ChromaDB client."""
-        if not CHROMADB_AVAILABLE:
-            self.client = None
-            return
+        """Defer ChromaDB initialization to first use to reduce startup time/memory."""
+        self._client = None
+        self._initialized = False
 
-        try:
-            # Ensure persist directory exists
-            os.makedirs(settings.CHROMA_PERSIST_DIRECTORY, exist_ok=True)
+    def _get_client(self):
+        """Lazy-initialize ChromaDB on first use."""
+        if not self._initialized:
+            self._initialized = True
+            try:
+                import chromadb
+                os.makedirs(settings.CHROMA_PERSIST_DIRECTORY, exist_ok=True)
+                self._client = chromadb.PersistentClient(
+                    path=settings.CHROMA_PERSIST_DIRECTORY
+                )
+                print(f"✅ ChromaDB initialized at {settings.CHROMA_PERSIST_DIRECTORY}")
+            except ImportError:
+                print("WARNING: ChromaDB not installed - vector store features disabled")
+                self._client = None
+            except Exception as e:
+                print(f"⚠️  ChromaDB initialization failed: {e}")
+                print("ChromaDB features will be disabled")
+                self._client = None
+        return self._client
 
-            # Initialize ChromaDB client
-            self.client = chromadb.PersistentClient(
-                path=settings.CHROMA_PERSIST_DIRECTORY
-            )
-            print(f"✅ ChromaDB initialized at {settings.CHROMA_PERSIST_DIRECTORY}")
-        except Exception as e:
-            print(f"⚠️  ChromaDB initialization failed: {e}")
-            print("ChromaDB features will be disabled")
-            self.client = None
+    @property
+    def client(self):
+        return self._get_client()
 
     def is_available(self) -> bool:
         """Check if ChromaDB is available and initialized."""
-        return self.client is not None
+        return self._get_client() is not None
 
     def _get_collection_name(self, user_id: UUID, project_id: Optional[UUID] = None) -> str:
         """

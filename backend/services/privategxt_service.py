@@ -6,11 +6,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from io import BytesIO
 
-import chromadb
-from chromadb.config import Settings
-from PyPDF2 import PdfReader
-from docx import Document as DocxDocument
-
+# Heavy imports are deferred to first use to reduce startup memory and time
 from backend.services.llm_gateway import llm_gateway
 
 
@@ -18,18 +14,9 @@ class PrivateGxTService:
     """Service for PrivateGxT - RAG-powered document chat showcase."""
 
     def __init__(self):
-        """Initialize PrivateGxT service with ChromaDB."""
-        # Initialize ChromaDB client (persistent storage)
-        self.chroma_client = chromadb.PersistentClient(
-            path="./chroma_data/privategxt",
-            settings=Settings(anonymized_telemetry=False)
-        )
-
-        # Get or create collection for demo
-        self.collection = self.chroma_client.get_or_create_collection(
-            name="privategxt_demo",
-            metadata={"description": "PrivateGxT Demo Collection"}
-        )
+        """Defer heavy initialization until first use."""
+        self._chroma_client = None
+        self._collection = None
 
         # In-memory chat history (demo purposes)
         self.chat_history: List[Dict[str, Any]] = []
@@ -38,9 +25,34 @@ class PrivateGxTService:
         self.chunk_size = 500  # characters per chunk
         self.chunk_overlap = 50  # overlap between chunks
 
+    def _get_collection(self):
+        """Lazy-initialize ChromaDB on first use."""
+        if self._collection is None:
+            import chromadb
+            from chromadb.config import Settings
+            self._chroma_client = chromadb.PersistentClient(
+                path="./chroma_data/privategxt",
+                settings=Settings(anonymized_telemetry=False)
+            )
+            self._collection = self._chroma_client.get_or_create_collection(
+                name="privategxt_demo",
+                metadata={"description": "PrivateGxT Demo Collection"}
+            )
+        return self._collection
+
+    @property
+    def collection(self):
+        return self._get_collection()
+
+    @property
+    def chroma_client(self):
+        self._get_collection()
+        return self._chroma_client
+
     def extract_text_from_pdf(self, file_bytes: bytes) -> str:
         """Extract text from PDF file."""
         try:
+            from PyPDF2 import PdfReader
             pdf_reader = PdfReader(BytesIO(file_bytes))
             text = ""
             for page in pdf_reader.pages:
@@ -52,6 +64,7 @@ class PrivateGxTService:
     def extract_text_from_docx(self, file_bytes: bytes) -> str:
         """Extract text from DOCX file."""
         try:
+            from docx import Document as DocxDocument
             doc = DocxDocument(BytesIO(file_bytes))
             text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
             return text.strip()
