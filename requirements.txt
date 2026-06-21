@@ -48,6 +48,12 @@ odfpy==1.4.1  # For ODT template processing
 anthropic==0.18.1
 openai==1.12.0
 
+# Google Calendar API
+google-api-python-client==2.111.0
+google-auth==2.26.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+
 # RAG Evaluation (let pip resolve compatible versions)
 ragas>=0.1.0,<0.2.0
 langchain>=0.1.0,<0.3.0

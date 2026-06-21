@@ -36,6 +36,7 @@ from backend.api.applications import router as applications_router
 from backend.api.taxcases import router as taxcases_router
 from backend.api.mvptaxspain import h7_router, admin_settings_router, mvp_auth_router
 from backend.api.h7_full import router as h7_full_router
+from backend.api.calendar import router as calendar_router
 
 # Setup logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -93,6 +94,8 @@ cors_origins = list(set(settings.allowed_origins_list + [
     "https://dabrock.info",
     "http://dabrock.info",
     "http://www.dabrock.info",
+    "https://www.dabrock.ai",
+    "https://dabrock.ai",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
@@ -149,6 +152,7 @@ app.include_router(h7_router, prefix="/api", tags=["H7 Forms"])
 app.include_router(h7_full_router, prefix="/api", tags=["H7 Full Forms"])
 app.include_router(admin_settings_router, prefix="/api", tags=["Admin Settings"])
 app.include_router(mvp_auth_router, prefix="/api", tags=["MVP Auth"])
+app.include_router(calendar_router, prefix="/api", tags=["Google Calendar"])
 
 # Mount static files for uploads (LifeChronicle photos, etc.)
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./uploads"))
